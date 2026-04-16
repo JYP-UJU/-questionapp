@@ -1,0 +1,164 @@
+.sh-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+    padding-bottom: 80px;
+}
+
+.sh-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-size: 16px;
+    color: #666;
+}
+
+.sh-header {
+    background: white;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.sh-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+}
+
+.sh-back-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #555;
+    cursor: pointer;
+    padding: 4px 8px;
+    width: 32px;
+}
+
+.sh-user-bar {
+    background: linear-gradient(135deg, #64748b, #94a3b8);
+    padding: 10px 20px;
+    text-align: center;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.sh-content {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.sh-empty {
+    text-align: center;
+    padding: 40px;
+    color: #aaa;
+    font-size: 14px;
+}
+
+/* 날짜 그룹 */
+.sh-date-group {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.sh-date-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 0.5px solid #e5e7eb;
+}
+
+/* 개별 항목 */
+.sh-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 0.5px solid #f3f4f6;
+}
+
+.sh-item:last-of-type {
+    border-bottom: none;
+}
+
+.sh-item-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.sh-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.sh-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.sh-item-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+}
+
+.sh-item-question {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    max-width: 100%;
+}
+
+.sh-amount {
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.sh-amount.plus {
+    color: #3bb36e;
+}
+
+.sh-amount.minus {
+    color: #e05555;
+}
+
+.sh-date-total {
+    font-size: 12px;
+    color: #aaa;
+    text-align: right;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 0.5px solid #f3f4f6;
+}
+
+@media (max-width: 400px) {
+    .sh-content {
+        padding: 12px;
+    }
+    .sh-item-question {
+        max-width: 180px;
+    }
+}

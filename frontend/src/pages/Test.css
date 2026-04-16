@@ -1,0 +1,312 @@
+/* 전체 컨테이너 - 밝은 배경 */
+.create-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+    padding-bottom: 80px;
+}
+
+
+
+
+.create-content {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px 20px;
+}
+
+/* 안내문 */
+.instruction {
+    text-align: center;
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 1px;
+    font-weight: bold;
+    padding: 12px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.instruction-animated {
+    animation: fadeInOut 1s ease-in-out;
+}
+
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 폼 레이아웃 */
+.create-form {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+}
+
+/* 아이콘이 있는 입력 섹션 */
+.input-section-with-icon {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.input-section-with-icon:first-child {
+    margin-top: 0;
+}
+
+.input-section-tight {
+    margin-top: 0;
+}
+
+.icon-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.input-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.form-label-bright {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.char-count {
+    text-align: right;
+    font-size: 12px;
+    color: #64748b;
+    margin: 2px 0 0 0;
+}
+
+/* 밝은 입력창 스타일 */
+.form-input-bright {
+    padding: 14px 18px;
+    border: 2px solid #bae6fd;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: all 0.3s;
+    background: #f0f9ff;
+}
+
+.form-input-bright:focus {
+    outline: none;
+    border-color: #38bdf8;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
+}
+
+/* 질문 입력 - 크게 (4줄) */
+.form-input-bright-large {
+    padding: 12px 16px;
+    border: 2px solid #bae6fd;
+    border-radius: 12px;
+    font-size: 17px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    transition: all 0.3s;
+    background: #f0f9ff;
+}
+
+.form-input-bright-large:focus {
+    outline: none;
+    border-color: #38bdf8;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
+}
+
+.form-input-bright-large::placeholder {
+    font-size: 16px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* 설명 입력 - 작게 */
+.form-textarea-bright-small {
+    padding: 12px 16px;
+    border: 2px solid #bae6fd;
+    border-radius: 12px;
+    font-size: 17px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 50px;
+    transition: all 0.3s;
+    background: #f0f9ff;
+}
+
+.form-textarea-bright-small:focus {
+    outline: none;
+    border-color: #38bdf8;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
+}
+
+.form-textarea-bright-small::placeholder {
+    font-size: 16px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.form-textarea-bright {
+    padding: 14px 18px;
+    border: 2px solid #bae6fd;
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 100px;
+    transition: all 0.3s;
+    background: #f0f9ff;
+}
+
+.form-textarea-bright:focus {
+    outline: none;
+    border-color: #38bdf8;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
+}
+
+.char-count {
+    text-align: right;
+    font-size: 12px;
+    color: #64748b;
+}
+
+/* 제출 버튼 - 밝고 화려하게 */
+.form-actions {
+    margin-top: 8px;
+}
+
+.submit-button-bright {
+    width: 100%;
+    padding: 8px;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
+}
+
+.submit-button-bright:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5);
+}
+
+.submit-button-bright:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* 리워드 안내 */
+.reward-info-bright {
+    text-align: center;
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.2);
+}
+
+.reward-info-bright p {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #92400e;
+}
+
+/* 에러 메시지 */
+.error-message {
+    color: #dc2626;
+    background: #fee2e2;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin: 16px 0;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* 하단 네비게이션 */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 8px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.bottom-nav button {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 12px;
+    transition: all 0.3s;
+    border-radius: 12px;
+}
+
+.bottom-nav button:hover {
+    background: #f1f5f9;
+}
+
+.bottom-nav button.active {
+    color: #38bdf8;
+    font-weight: 700;
+    background: #e0f7ff;
+}
+
+.bottom-nav button span:first-child {
+    font-size: 24px;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .form-layout {
+        flex-direction: column;
+    }
+    
+    .image-section {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+    
+    .thumbnail-preview-new {
+        aspect-ratio: 16/9;
+    }
+}

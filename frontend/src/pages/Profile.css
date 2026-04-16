@@ -1,0 +1,273 @@
+.profile-container {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: #f8f9ff;
+    padding-bottom: 80px;
+}
+
+.profile-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: #888;
+    font-size: 14px;
+}
+
+/* 헤더 */
+.profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: white;
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.profile-header h1 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #6b84c4;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+/* 콘텐츠 */
+.profile-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 유저 카드 */
+.user-card {
+    background: linear-gradient(135deg, #6b84c4, #8b9fd4);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: white;
+    position: relative;
+}
+
+.profile-avatar {
+    font-size: 36px;
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.profile-user-info {
+    flex: 1;
+}
+
+.profile-username {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.profile-joined {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-bottom: 4px;
+}
+
+.profile-songi {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.edit-username-btn {
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: white;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.edit-username-btn:hover {
+    background: rgba(255,255,255,0.35);
+}
+
+/* 섹션 공통 */
+.profile-section {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 16px 0;
+}
+
+/* 통계 그리드 */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.stat-item {
+    background: #f0f4ff;
+    border-radius: 12px;
+    padding: 14px 8px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #6b84c4;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #888;
+    font-weight: 500;
+}
+
+/* 상품권 내역 */
+.rewards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reward-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: #f0fdf4;
+    border-radius: 10px;
+    border-left: 3px solid #6bbf6b;
+}
+
+.reward-desc {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.reward-date {
+    font-size: 12px;
+    color: #888;
+}
+
+.rewards-empty {
+    text-align: center;
+    padding: 20px;
+    color: #aaa;
+}
+
+.rewards-empty p {
+    margin: 4px 0;
+    font-size: 13px;
+}
+
+.rewards-hint {
+    font-size: 12px !important;
+    color: #6bbf6b !important;
+    margin-top: 8px !important;
+}
+
+/* 모달 */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.modal-content h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    color: #1a1a2e;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+    outline: none;
+}
+
+.modal-input:focus {
+    border-color: #6b84c4;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.modal-cancel {
+    flex: 1;
+    padding: 10px;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-confirm {
+    flex: 1;
+    padding: 10px;
+    background: #6b84c4;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+}

@@ -1,0 +1,441 @@
+/* 전체 컨테이너 */
+.saved-container {
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #94a3b8 0%, #cbd5e1 50%, #e0f2fe 100%);
+    padding-bottom: 80px;
+}
+
+.loading {
+    text-align: center;
+    padding: 100px 20px;
+    font-size: 16px;
+    color: #666;
+}
+
+/* 콘텐츠 영역 */
+.saved-content {
+    max-width: 600px !important;
+    margin: 0 auto !important;
+    padding: 8px 20px !important;
+}
+
+@media (max-width: 768px) {
+    .saved-content {
+        padding: 12px !important;
+    }
+}
+
+.instruction {
+    text-align: center;
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 8px;
+    font-weight: bold;
+    padding: 12px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.instruction-animated {
+    animation: fadeInOut 3s infinite;
+}
+
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+/* 질문 리스트 */
+.questions-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+/* 더보기 버튼 */
+.load-more-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    background: white;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.load-more-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+/* 질문 카드 — question-card 클래스로 통일 (saved-question-card도 동일) */
+.question-card,
+.saved-question-card {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.question-card:hover,
+.saved-question-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 출처 표시 */
+.question-source {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.source-icon { font-size: 16px; }
+
+.source-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    background: #fef3c7;
+    padding: 3px 8px;
+    border-radius: 8px;
+}
+
+.question-time {
+    margin-left: auto;
+    font-size: 11px;
+    color: #999;
+}
+
+/* 질문 내용 */
+.question-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.5;
+    word-break: break-word;
+    margin-bottom: 4px;
+}
+
+/* 분야 배지 (퀴즈/질문고르기) */
+.category-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0369a1;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+}
+
+.question-content {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+    word-break: break-word;
+    margin-bottom: 6px;
+}
+
+/* ✅ 의견/관련질문 미리보기 (B방식) */
+.preview-section {
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+}
+
+.preview-related-section {
+    background: #f0fdf4;
+    border-left-color: #22c55e;
+}
+
+.preview-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    font-size: 13px;
+    line-height: 1.5;
+    flex-wrap: wrap;
+}
+
+.preview-row-indent {
+    padding-left: 4px;
+    margin-top: 4px;
+    opacity: 0.85;
+}
+
+.preview-icon {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.preview-author {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: #92400e;
+    font-size: 13px;
+}
+
+.preview-related-section .preview-author {
+    color: #16a34a;
+}
+
+.preview-text {
+    color: #78350f;
+    font-size: 13px;
+    word-break: break-word;
+    flex: 1;
+}
+
+.preview-related-section .preview-text {
+    color: #166534;
+}
+
+.tree-connector {
+    flex-shrink: 0;
+    color: #9ca3af;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+/* 토글 버튼 */
+.preview-toggle-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    font-size: 11px;
+    font-weight: 700;
+    color: #b45309;
+    cursor: pointer;
+    padding: 0 2px;
+    transition: color 0.2s;
+}
+
+.preview-toggle-btn:hover {
+    color: #92400e;
+}
+
+.preview-related-section .preview-toggle-btn {
+    color: #16a34a;
+}
+
+.preview-related-section .preview-toggle-btn:hover {
+    color: #15803d;
+}
+
+/* ✅ 5버튼 액션바 (IcebreakingNew 동일) */
+.action-bar {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.action-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    min-height: 48px;
+}
+
+.btn-icon {
+    font-size: 15px;
+    line-height: 1;
+}
+
+.btn-label {
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* 필수 버튼 (관심있음/없음) */
+.required-btn {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 2px solid #bae6fd;
+}
+
+.required-btn:hover {
+    background: #bae6fd;
+}
+
+.active-like {
+    background: #2563eb !important;
+    border-color: #1d4ed8 !important;
+    color: white !important;
+}
+
+.active-dislike {
+    background: #2563eb !important;
+    border-color: #1d4ed8 !important;
+    color: white !important;
+}
+
+/* 선택 버튼 (의견/관련질문) */
+.optional-btn {
+    background: white;
+    color: #666;
+    border: 2px solid #e5e7eb;
+}
+
+.optional-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+/* 제거 버튼 */
+.remove-btn {
+    background: #fff1f2;
+    color: #e11d48;
+    border: 2px solid #fecdd3;
+}
+
+.remove-btn:hover {
+    background: #fecdd3;
+    border-color: #fb7185;
+}
+
+/* 없을 때 */
+.no-saved {
+    text-align: center;
+    padding: 80px 20px;
+    color: #666;
+}
+
+.no-saved p {
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.goto-button {
+    padding: 12px 24px;
+    background: #78716c;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.goto-button:hover {
+    background: #57534e;
+    transform: translateY(-2px);
+}
+
+.error-message {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+/* 모달 */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-content h3 {
+    margin: 0 0 16px 0;
+    color: #333;
+    font-size: 18px;
+    text-align: center;
+}
+
+.opinions-modal { max-width: 500px; }
+
+.opinions-list {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.opinion-item {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+}
+
+.opinion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.opinion-time { font-size: 12px; color: #999; }
+.opinion-text { font-size: 14px; color: #666; line-height: 1.5; }
+.no-opinions { text-align: center; color: #999; padding: 40px 20px; font-size: 14px; }
+
+.modal-buttons {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 10px;
+}
+
+.cancel-button, .submit-button {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cancel-button { background: #e5e7eb; color: #666; }
+.cancel-button:hover { background: #d1d5db; }
+.submit-button { background: #f59e0b; color: white; }
+.submit-button:hover { background: #d97706; }

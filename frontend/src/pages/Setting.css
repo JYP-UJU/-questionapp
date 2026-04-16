@@ -1,0 +1,328 @@
+/* ===== 설정 페이지 ===== */
+.setting-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+    padding-bottom: 80px;
+}
+
+.setting-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-size: 16px;
+    color: #666;
+}
+
+/* 헤더 */
+.setting-header {
+    background: white;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.setting-header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+}
+
+/* 사용자 정보 바 */
+.setting-user-bar {
+    background: linear-gradient(135deg, #64748b, #94a3b8);
+    padding: 12px 20px;
+    text-align: center;
+}
+
+.user-info-text {
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* 콘텐츠 영역 */
+.setting-content {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 16px 12px;
+}
+
+/* 메뉴 그리드 (2x4) */
+.menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.menu-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 18px 10px 14px;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.menu-btn:active {
+    transform: scale(0.97);
+}
+
+.menu-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.menu-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+    margin-top: 2px;
+}
+
+.menu-desc {
+    font-size: 11px;
+    color: #888;
+}
+
+/* 버튼 색상별 */
+.report-btn {
+    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+}
+
+.report-btn:hover {
+    background: linear-gradient(135deg, #bae6fd, #7dd3fc);
+}
+
+.songi-btn {
+    background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+}
+
+.songi-btn:hover {
+    background: linear-gradient(135deg, #fbcfe8, #f9a8d4);
+}
+
+.account-btn {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+}
+
+.account-btn:hover {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+}
+
+.logout-btn {
+    background: linear-gradient(135deg, #f5f5f4, #e7e5e4);
+}
+
+.logout-btn:hover {
+    background: linear-gradient(135deg, #e7e5e4, #d6d3d1);
+}
+
+.delete-btn {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+}
+
+.delete-btn:hover {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+}
+
+.delete-btn .menu-label {
+    color: #b91c1c;
+}
+
+/* 카피라이트 */
+.copyright {
+    margin-top: 28px;
+    text-align: center;
+    padding: 16px;
+}
+
+.copyright p {
+    margin: 0;
+    font-size: 12px;
+    color: #9ca3af;
+    line-height: 1.8;
+}
+
+.copyright .made-by {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #b0b8c4;
+}
+
+/* ===== 모달 ===== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+    margin: 0 0 20px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    color: #333;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #60a5fa;
+}
+
+.modal-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.modal-cancel,
+.modal-confirm,
+.modal-delete {
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modal-cancel {
+    background: #e5e7eb;
+    color: #666;
+}
+
+.modal-cancel:hover {
+    background: #d1d5db;
+}
+
+.modal-confirm {
+    background: #60a5fa;
+    color: white;
+}
+
+.modal-confirm:hover {
+    background: #3b82f6;
+}
+
+.modal-delete {
+    background: #ef4444;
+    color: white;
+}
+
+.modal-delete:hover {
+    background: #dc2626;
+}
+
+/* 회원탈퇴 모달 */
+.delete-modal .delete-warning {
+    font-size: 14px;
+    color: #ef4444;
+    text-align: center;
+    margin: 0 0 8px;
+    line-height: 1.5;
+}
+
+.delete-modal .delete-instruction {
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+    margin: 0 0 14px;
+    line-height: 1.5;
+}
+
+/* ===== 하단 네비게이션 ===== */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.bottom-nav button {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 5px 8px;
+    color: #666;
+    font-size: 11px;
+    transition: color 0.2s;
+}
+
+.bottom-nav button.active {
+    color: #64748b;
+    font-weight: 600;
+}
+
+.bottom-nav button:hover {
+    color: #64748b;
+}
+
+.bottom-nav button span:first-child {
+    font-size: 22px;
+}
+
+/* 모바일 반응형 */
+@media (max-width: 400px) {
+    .setting-content {
+        padding: 12px 8px;
+    }
+
+    .menu-btn {
+        padding: 14px 8px 12px;
+    }
+
+    .menu-icon {
+        font-size: 24px;
+    }
+
+    .menu-label {
+        font-size: 13px;
+    }
+}
