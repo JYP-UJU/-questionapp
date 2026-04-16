@@ -1,0 +1,8 @@
+{
+  "build": {
+    "cmd": "npm install && npm run build"
+  },
+  "deploy": {
+    "cmd": "npx serve -s build -l $PORT"
+  }
+}
