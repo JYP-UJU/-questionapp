@@ -1,8 +1,5 @@
 {
-  "build": {
-    "cmd": "npm install && npm run build"
-  },
-  "deploy": {
-    "cmd": "npx serve -s build -l $PORT"
-  }
+  "providers": ["node"],
+  "buildCmd": "npm install && npm run build",
+  "startCmd": "npx serve -s build -l $PORT"
 }
