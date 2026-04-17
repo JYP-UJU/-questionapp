@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import BottomNav from '../components/BottomNav';
 import './Profile.css';
 
@@ -17,10 +17,7 @@ function Profile() {
 
     const loadProfile = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:5000/api/users/me/profile-stats', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/users/me/profile-stats');
             setData(res.data);
         } catch (err) {
             console.error('프로필 로드 오류:', err);
@@ -35,12 +32,7 @@ function Profile() {
             return;
         }
         try {
-            const token = localStorage.getItem('token');
-            await axios.put('http://localhost:5000/api/users/me', {
-                username: newUsername
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put('/users/me', { username: newUsername });
             alert('닉네임이 변경되었어요! 🎉');
             setShowUsernameModal(false);
             setNewUsername('');

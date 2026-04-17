@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import BottomNav from '../components/BottomNav';
 import './SongiStatus.css';
 
@@ -18,10 +18,7 @@ function SongiStatus() {
 
     const loadUserInfo = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/users/me', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/users/me');
             setUser(response.data.user || response.data);
         } catch (err) {
             console.error('사용자 정보 로드 오류:', err);

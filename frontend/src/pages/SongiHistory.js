@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import BottomNav from '../components/BottomNav';
 import './SongiHistory.css';
 
@@ -41,10 +41,7 @@ function SongiHistory() {
 
   const loadHistory = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/users/songi-history', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/users/songi-history');
       setTransactions(response.data.transactions || []);
       setTotalSongi(response.data.total_songi || 0);
     } catch (err) {
