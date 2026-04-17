@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api'; 
 import './Setting.css';
 import BottomNav from '../components/BottomNav';
 
@@ -30,10 +30,7 @@ function Setting() {
 
     const loadUserInfo = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:5000/api/users/me', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/users/me');
             setUser(response.data.user || response.data);
         } catch (err) {
             console.error('사용자 정보 로드 오류:', err);
@@ -66,13 +63,10 @@ function Setting() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.put('http://localhost:5000/api/users/me/password', {
+            await api.put('/users/me/password', {
                 currentPassword,
                 newPassword
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            }, );
             alert('비밀번호가 변경되었어요! 🎉');
             setShowPasswordModal(false);
             setCurrentPassword('');
@@ -95,12 +89,9 @@ function Setting() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.put('http://localhost:5000/api/users/me', {
+            await api.put('/users/me', {
                 username: newUsername
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            }, );
             alert('닉네임이 변경되었어요! 🎉');
             setShowProfileModal(false);
             setNewUsername('');
@@ -118,10 +109,7 @@ function Setting() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete('http://localhost:5000/api/users/me', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete('/users/me', );
             alert('계정이 삭제되었습니다. 그동안 감사했어요 🌸');
             localStorage.removeItem('token');
             navigate('/login');
