@@ -66,20 +66,22 @@ const questionsListResult = await pool.query(
 // 3-2. 이번 주 남긴 의견 목록
 const opinionsListResult = await pool.query(
   `SELECT qo.opinion as content, qo.created_at,
-    uq.id as question_id, uq.title as question_title
+    COALESCE(uq.title, sq.question) as question_title
    FROM question_opinions qo
-   JOIN user_questions uq ON qo.question_id = uq.id
+   LEFT JOIN user_questions uq ON qo.question_id = uq.id AND qo.question_type IN ('user_question', 'friend_question', 'user')
+   LEFT JOIN seed_questions sq ON qo.question_id = sq.id AND qo.question_type IN ('seed', 'quiz', 'icebreaking')
    WHERE qo.user_id = $1 AND qo.created_at >= $2 AND qo.created_at <= $3
    ORDER BY qo.created_at DESC`,
   [userId, weekStart, weekEnd]
 );
 // 3-3. 좋아요/싫어요 목록
     const reactionsListResult = await pool.query(
-      `SELECT qr.reaction_type, uq.id as question_id, uq.title as question_title
+      `SELECT qr.reaction_type,
+        COALESCE(uq.title, sq.question) as question_title
        FROM question_reactions qr
-       JOIN user_questions uq ON qr.question_id = uq.id
+       LEFT JOIN user_questions uq ON qr.question_id = uq.id AND qr.question_type IN ('user_question', 'friend_question', 'user')
+       LEFT JOIN seed_questions sq ON qr.question_id = sq.id AND qr.question_type IN ('seed', 'quiz', 'icebreaking')
        WHERE qr.user_id = $1 AND qr.created_at >= $2 AND qr.created_at <= $3
-       AND qr.question_type = 'user_question'
        ORDER BY qr.created_at DESC`,
       [userId, weekStart, weekEnd]
     );
