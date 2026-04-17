@@ -144,7 +144,7 @@ router.get('/with-status', authenticateToken, async (req, res) => {
         EXISTS(SELECT 1 FROM question_reactions WHERE question_id = uq.id AND user_id = $4 AND reaction_type = 'dislike') as user_disliked
        FROM user_questions uq
        JOIN users u ON uq.user_id = u.id
-       WHERE uq.parent_question_id IS NULL
+       WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
        ORDER BY ${orderBy}
        LIMIT 100`,
       [userId, userId, userId, userId]
