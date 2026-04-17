@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import './SavedQuestions.css';
 import BottomNav from '../components/BottomNav';
 import TopHeader from '../components/TopHeader';
@@ -26,8 +26,6 @@ function SavedQuestions() {
     const navigate = useNavigate();
     const [visibleCount, setVisibleCount] = useState(15);
 
-    const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
     const rotatingMessages = [
         "과학과 관련한 호기심을 나눠볼까요?",
         "여러분이 저장한 질문의 목록입니다.",
@@ -48,11 +46,8 @@ function SavedQuestions() {
     const loadSavedQuestions = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
 
-            const response = await axios.get(`${API_BASE}/api/saved`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/saved');
 
             const allQuestions = response.data.savedQuestions || [];
 
@@ -68,9 +63,8 @@ function SavedQuestions() {
                     if (!q.questionId) return { ...q, latestOpinion: null, latestRelated: null };
 
                     try {
-                        const statsRes = await axios.get(
-                            `${API_BASE}/api/questions/${q.questionId}?type=${q.questionType}`,
-                            { headers: { Authorization: `Bearer ${token}` } }
+                        const statsRes = await api.get(
+                            `/questions/${q.questionId}?type=${q.questionType}`
                         );
                         const stats = statsRes.data;
 
@@ -79,13 +73,12 @@ function SavedQuestions() {
                         let actualOpinionCount = stats.opinionCount || 0;
                         if (actualOpinionCount > 0) {
                             try {
-                                const opRes = await axios.get(
-                                    `${API_BASE}/api/questions/${q.questionId}/opinions?type=${q.questionType}`,
-                                    { headers: { Authorization: `Bearer ${token}` } }
+                                const opRes = await api.get(
+                                    `/questions/${q.questionId}/opinions?type=${q.questionType}`
                                 );
                                 const opinions = opRes.data.opinions || [];
                                 latestOpinion = opinions[0] || null;
-                                actualOpinionCount = opinions.length; // 실제 개수로 덮어쓰기
+                                actualOpinionCount = opinions.length;
                             } catch (err) {}
                         }
 
@@ -94,13 +87,12 @@ function SavedQuestions() {
                         let actualRelatedCount = stats.relatedCount || 0;
                         if (actualRelatedCount > 0) {
                             try {
-                                const relRes = await axios.get(
-                                    `${API_BASE}/api/questions/${q.questionId}/related?type=${q.questionType}`,
-                                    { headers: { Authorization: `Bearer ${token}` } }
+                                const relRes = await api.get(
+                                    `/questions/${q.questionId}/related?type=${q.questionType}`
                                 );
                                 const related = relRes.data.relatedQuestions || [];
                                 latestRelated = related[0] || null;
-                                actualRelatedCount = related.length; // 실제 개수로 덮어쓰기
+                                actualRelatedCount = related.length;
                             } catch (err) {}
                         }
 
@@ -127,9 +119,7 @@ function SavedQuestions() {
             setSavedQuestions(questionsWithData);
 
             try {
-                const songiRes = await axios.get(`${API_BASE}/api/users/me`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const songiRes = await api.get('/users/me');
                 const userData = songiRes.data.user || songiRes.data;
                 setTotalSongi(userData.songi_count || userData.songiCount || 0);
             } catch (err) {
@@ -155,10 +145,7 @@ function SavedQuestions() {
     // 제거 (담기 해제)
     const handleRemove = async (savedId) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`${API_BASE}/api/saved/${savedId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/saved/${savedId}`);
             setSavedQuestions(prev => prev.filter(q => q.savedId !== savedId));
         } catch (err) {
             alert('제거에 실패했습니다');
@@ -167,15 +154,12 @@ function SavedQuestions() {
 
     const handleReaction = async (questionId, reactionType) => {
         try {
-            const token = localStorage.getItem('token');
             const question = savedQuestions.find(q => q.questionId === questionId);
             if (!question) return;
             const qType = question.questionType || 'user_question';
 
             if (question.userReaction === reactionType) {
-                await axios.delete(`${API_BASE}/api/questions/${questionId}/reaction?type=${qType}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.delete(`/questions/${questionId}/reaction?type=${qType}`);
                 setSavedQuestions(prev => prev.map(q => {
                     if (q.questionId !== questionId) return q;
                     return {
@@ -186,10 +170,9 @@ function SavedQuestions() {
                     };
                 }));
             } else {
-                await axios.post(
-                    `${API_BASE}/api/questions/${questionId}/reaction`,
-                    { reactionType, questionType: qType },
-                    { headers: { Authorization: `Bearer ${token}` } }
+                await api.post(
+                    `/questions/${questionId}/reaction`,
+                    { reactionType, questionType: qType }
                 );
                 setSavedQuestions(prev => prev.map(q => {
                     if (q.questionId !== questionId) return q;
@@ -214,13 +197,11 @@ function SavedQuestions() {
 
     const handleOpinionSubmit = async (text) => {
         try {
-            const token = localStorage.getItem('token');
             const question = savedQuestions.find(q => q.questionId === selectedQuestion);
             const qType = question?.questionType || 'user_question';
-            await axios.post(
-                `${API_BASE}/api/questions/${selectedQuestion}/opinion`,
-                { opinion: text, questionType: qType },
-                { headers: { Authorization: `Bearer ${token}` } }
+            await api.post(
+                `/questions/${selectedQuestion}/opinion`,
+                { opinion: text, questionType: qType }
             );
             setSelectedQuestion(null);
             await refreshWithScroll();
@@ -231,11 +212,9 @@ function SavedQuestions() {
 
     const handleRelatedSubmit = async (text) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(
-                `${API_BASE}/api/questions/${relatedModal.id}/related`,
-                { title: text, questionType: relatedModal.questionType || 'user_question' },
-                { headers: { Authorization: `Bearer ${token}` } }
+            await api.post(
+                `/questions/${relatedModal.id}/related`,
+                { title: text, questionType: relatedModal.questionType || 'user_question' }
             );
             setRelatedModal(null);
             await refreshWithScroll();
@@ -251,11 +230,7 @@ function SavedQuestions() {
             return;
         }
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(
-                `${API_BASE}/api/questions/${questionId}/opinions?type=${questionType}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await api.get(`/questions/${questionId}/opinions?type=${questionType}`);
             setAllOpinions(prev => ({ ...prev, [questionId]: res.data.opinions || [] }));
             setExpandedOpinions(prev => ({ ...prev, [questionId]: true }));
         } catch (err) {}
@@ -268,11 +243,7 @@ function SavedQuestions() {
             return;
         }
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(
-                `${API_BASE}/api/questions/${questionId}/related?type=${questionType}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await api.get(`/questions/${questionId}/related?type=${questionType}`);
             setAllRelated(prev => ({ ...prev, [questionId]: res.data.relatedQuestions || [] }));
             setExpandedRelated(prev => ({ ...prev, [questionId]: true }));
         } catch (err) {}

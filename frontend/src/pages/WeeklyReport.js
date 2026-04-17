@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import './WeeklyReport.css';
 import BottomNav from '../components/BottomNav';
 
@@ -21,9 +21,10 @@ function WeeklyReport() {
     const [saving, setSaving] = useState(false);
     const [openToggles, setOpenToggles] = useState({});
 
-const toggleSection = (key) => {
-    setOpenToggles(prev => ({ ...prev, [key]: !prev[key] }));
-};
+    const toggleSection = (key) => {
+        setOpenToggles(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
     // 주차 이동
     const [weekOffset, setWeekOffset] = useState(0);
 
@@ -50,13 +51,9 @@ const toggleSection = (key) => {
     const loadReport = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
             const { start, end } = getWeekRange(weekOffset);
             
-            const response = await axios.get(
-                `http://localhost:5000/api/reports/weekly?start=${start}&end=${end}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const response = await api.get(`/reports/weekly?start=${start}&end=${end}`);
             
             setReport(response.data);
             
@@ -94,22 +91,17 @@ const toggleSection = (key) => {
 
         try {
             setSaving(true);
-            const token = localStorage.getItem('token');
             const { start } = getWeekRange(weekOffset);
             
-            await axios.post(
-                'http://localhost:5000/api/reports/weekly/reflection',
-                {
-                    weekStart: start,
-                    mostCurious,
-                    didResearch,
-                    researchTopic: didResearch ? researchTopic : '',
-                    researchNote: didResearch ? researchNote : '',
-                    funFriendQuestion,
-                    weeklyFeeling
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.post('/reports/weekly/reflection', {
+                weekStart: start,
+                mostCurious,
+                didResearch,
+                researchTopic: didResearch ? researchTopic : '',
+                researchNote: didResearch ? researchNote : '',
+                funFriendQuestion,
+                weeklyFeeling
+            });
             
             alert('돌아보기가 저장되었어요! 8송이 획득 🌸');
             setReflectionSaved(true);
@@ -156,8 +148,6 @@ const toggleSection = (key) => {
                     disabled={weekOffset >= 0}
                 >▶</button>
             </div>
-
-            {/* 탭 없음 - 돌아보기 먼저, 활동통계 아래 */}
 
             <div className="wr-content">
                 {/* ===== 돌아보기 (맨 위) ===== */}
