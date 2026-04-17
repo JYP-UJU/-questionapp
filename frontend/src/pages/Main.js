@@ -40,6 +40,15 @@ function Main() {
             <div className="main-content">
                 <div className="button-grid">
                     <button 
+                        className="main-button purple"
+                        onClick={() => navigate('/create')}
+                    >
+                        <div className="button-icon">✏️</div>
+                        <div className="button-title">내 질문하기</div>
+                        <div className="button-reward">+5송이</div>
+                    </button>
+
+                    <button 
                         className="main-button blue"
                         onClick={() => navigate('/icebreaking')}
                     >
@@ -54,15 +63,6 @@ function Main() {
                     >
                         <div className="button-icon">🎯</div>
                         <div className="button-title">재미있는 퀴즈 풀기</div>
-                        <div className="button-reward">+5송이</div>
-                    </button>
-
-                    <button 
-                        className="main-button purple"
-                        onClick={() => navigate('/create')}
-                    >
-                        <div className="button-icon">✏️</div>
-                        <div className="button-title">내 질문하기</div>
                         <div className="button-reward">+5송이</div>
                     </button>
 
