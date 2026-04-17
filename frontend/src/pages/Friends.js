@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import './Friends.css';
 import BottomNav from '../components/BottomNav';
 import TopHeader from '../components/TopHeader';
@@ -21,7 +21,6 @@ function Friends() {
     const [allRelated, setAllRelated] = useState({});
 
     const navigate = useNavigate();
-    const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
     const friendsMessages = [
         "친구들은 어떤 궁금증이 있을까요?",
@@ -42,17 +41,13 @@ function Friends() {
     const loadQuestions = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
 
-            const response = await axios.get(`${API_BASE}/api/questions/with-status`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await api.get('/questions/with-status');
 
             const sortedQuestions = response.data.questions
                 .filter(q => !q.is_mine)
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-            // 최신 의견 1개 + 최신 관련질문 1개 미리보기 로드
             const questionsWithPreview = await Promise.all(
                 sortedQuestions.map(async (q) => {
                     let latestOpinion = null;
@@ -60,20 +55,14 @@ function Friends() {
 
                     if (q.opinion_count > 0) {
                         try {
-                            const opRes = await axios.get(
-                                `${API_BASE}/api/questions/${q.id}/opinions`,
-                                { headers: { Authorization: `Bearer ${token}` } }
-                            );
+                            const opRes = await api.get(`/questions/${q.id}/opinions`);
                             latestOpinion = opRes.data.opinions[0] || null;
                         } catch (err) {}
                     }
 
                     if (q.related_count > 0) {
                         try {
-                            const relRes = await axios.get(
-                                `${API_BASE}/api/questions/${q.id}/related`,
-                                { headers: { Authorization: `Bearer ${token}` } }
-                            );
+                            const relRes = await api.get(`/questions/${q.id}/related`);
                             latestRelated = relRes.data.relatedQuestions[0] || null;
                         } catch (err) {}
                     }
@@ -93,28 +82,19 @@ function Friends() {
 
     const handleSave = async (questionId) => {
         try {
-            const token = localStorage.getItem('token');
             const question = questions.find(q => q.id === questionId);
             if (!question) return;
 
             if (question.is_saved) {
-                const savedRes = await axios.get(`${API_BASE}/api/saved`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const savedRes = await api.get('/saved');
                 const savedItem = savedRes.data.savedQuestions.find(
                     sq => sq.questionType === 'user_question' && sq.questionId === questionId
                 );
                 if (savedItem) {
-                    await axios.delete(`${API_BASE}/api/saved/${savedItem.savedId}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
+                    await api.delete(`/saved/${savedItem.savedId}`);
                 }
             } else {
-                await axios.post(
-                    `${API_BASE}/api/saved`,
-                    { questionId, questionType: 'user_question' },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
+                await api.post('/saved', { questionId, questionType: 'user_question' });
             }
 
             setQuestions(prev => prev.map(q =>
@@ -127,14 +107,11 @@ function Friends() {
 
     const handleReaction = async (questionId, reactionType) => {
         try {
-            const token = localStorage.getItem('token');
             const question = questions.find(q => q.id === questionId);
             if (!question) return;
 
             if (question.user_reaction === reactionType) {
-                await axios.delete(`${API_BASE}/api/questions/${questionId}/reaction?type=user_question`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.delete(`/questions/${questionId}/reaction?type=user_question`);
                 setQuestions(prev => prev.map(q => {
                     if (q.id !== questionId) return q;
                     return {
@@ -145,11 +122,7 @@ function Friends() {
                     };
                 }));
             } else {
-                await axios.post(
-                    `${API_BASE}/api/questions/${questionId}/reaction`,
-                    { reactionType, questionType: 'user_question' },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
+                await api.post(`/questions/${questionId}/reaction`, { reactionType, questionType: 'user_question' });
                 setQuestions(prev => prev.map(q => {
                     if (q.id !== questionId) return q;
                     const old = q.user_reaction;
@@ -172,12 +145,7 @@ function Friends() {
 
     const handleOpinionSubmit = async (text) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(
-                `${API_BASE}/api/questions/${selectedQuestion}/opinion`,
-                { opinion: text },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.post(`/questions/${selectedQuestion}/opinion`, { opinion: text });
             setSelectedQuestion(null);
             await loadQuestions();
         } catch (err) {
@@ -187,12 +155,7 @@ function Friends() {
 
     const handleRelatedSubmit = async (text) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post(
-                `${API_BASE}/api/questions/${relatedModal.id}/related`,
-                { title: text, questionType: 'friend_question' },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.post(`/questions/${relatedModal.id}/related`, { title: text, questionType: 'friend_question' });
             setRelatedModal(null);
             await loadQuestions();
         } catch (err) {
@@ -207,11 +170,11 @@ function Friends() {
             return;
         }
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(
-                `${API_BASE}/api/questions/${questionId}/opinions`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await api.get(`/questions/${questionId}/opinions`);
+            setAllOpinions(prev => ({ ...prev, [questionId]: res.data.opinions || [] }));
+            setExpandedOpinions(prev => ({ ...prev, [questionId]: true }));
+        } catch (err) {}
+    };
             setAllOpinions(prev => ({ ...prev, [questionId]: res.data.opinions || [] }));
             setExpandedOpinions(prev => ({ ...prev, [questionId]: true }));
         } catch (err) {}
@@ -224,11 +187,7 @@ function Friends() {
             return;
         }
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get(
-                `${API_BASE}/api/questions/${questionId}/related`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await api.get(`/questions/${questionId}/related`);
             setAllRelated(prev => ({ ...prev, [questionId]: res.data.relatedQuestions || [] }));
             setExpandedRelated(prev => ({ ...prev, [questionId]: true }));
         } catch (err) {}
