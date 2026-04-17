@@ -35,7 +35,8 @@ router.get('/weekly', authenticateToken, async (req, res) => {
     // 1. 만든 질문 수
     const questionsResult = await pool.query(
       `SELECT COUNT(*) as cnt FROM user_questions 
-       WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3`,
+       WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3
+       AND parent_question_id IS NULL AND related_seed_question_id IS NULL`,
       [userId, weekStart, weekEnd]
     );
 
@@ -59,6 +60,7 @@ const questionsListResult = await pool.query(
     (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id) as opinion_count
    FROM user_questions uq
    WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3
+   AND parent_question_id IS NULL AND related_seed_question_id IS NULL
    ORDER BY created_at DESC`,
   [userId, weekStart, weekEnd]
 );
@@ -158,7 +160,8 @@ const opinionsListResult = await pool.query(
     // 6. 관련질문 수 (parent_question_id가 있는 질문)
     const relatedResult = await pool.query(
       `SELECT COUNT(*) as cnt FROM user_questions 
-       WHERE user_id = $1 AND parent_question_id IS NOT NULL 
+       WHERE user_id = $1 
+       AND (parent_question_id IS NOT NULL OR related_seed_question_id IS NOT NULL)
        AND created_at >= $2 AND created_at <= $3`,
       [userId, weekStart, weekEnd]
     );
