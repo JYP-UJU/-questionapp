@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 
 // CSV 다운로드 함수 (wide format)
 function downloadExcel(activities) {
@@ -73,7 +73,7 @@ function downloadExcel(activities) {
   URL.revokeObjectURL(url);
 }
 
-const API = 'http://localhost:5000/api';
+
 
 const ACTIVITY_LABELS = {
   all: '전체',
@@ -110,15 +110,13 @@ function Admin() {
   const [deductAmount, setDeductAmount] = useState('');
   const [deductReason, setDeductReason] = useState('');
 
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
 
   const loadActivities = useCallback(async () => {
     setLoading(true);
     try {
       const params = { type: typeFilter, order };
       if (selectedUser) params.user_id = selectedUser.id;
-      const res = await axios.get(`${API}/admin/activities`, { headers, params });
+      const res = await api.get('/admin/activities', { params });
       setActivities(res.data.activities || []);
     } catch (err) {
       if (err.response?.status === 403) {
@@ -133,7 +131,7 @@ function Admin() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API}/admin/users`, { headers });
+      const res = await api.get('/admin/users');
       setUsers(res.data.users || []);
     } catch (err) {
       if (err.response?.status === 403) {
@@ -153,7 +151,7 @@ function Admin() {
   const handleDelete = async (type, id) => {
     if (!window.confirm('이 항목을 삭제할까요?')) return;
     try {
-      await axios.delete(`${API}/admin/activity`, { headers, params: { type, id } });
+      await api.delete('/admin/activity', { params: { type, id } });
       setActivities(prev => prev.filter(a => !(a.id === id && a.activity_type === type)));
     } catch (err) {
       alert('삭제 실패');
@@ -166,11 +164,11 @@ function Admin() {
       return;
     }
     try {
-      await axios.post(`${API}/admin/deduct-songi`, {
+      await api.post('/admin/deduct-songi', {
         userId: deductModal.userId,
         amount: parseInt(deductAmount),
         reason: deductReason || '관리자 회수'
-      }, { headers });
+      });
       alert(`${deductAmount}송이 회수 완료`);
       setDeductModal(null);
       setDeductAmount('');
