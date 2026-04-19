@@ -1,8 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL 
-  ? `${process.env.REACT_APP_API_URL}/api`
-  : 'https://meticulous-enchantment-production-f653.up.railway.app/api';
+const API_URL = 'https://meticulous-enchantment-production-f653.up.railway.app/api';
 
 // 토큰 저장/가져오기
 export const setToken = (token) => {
