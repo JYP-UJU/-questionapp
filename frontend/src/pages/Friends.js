@@ -171,10 +171,7 @@ function Friends() {
         }
         try {
             const res = await api.get(`/questions/${questionId}/opinions`);
-            setAllOpinions(prev => ({ ...prev, [questionId]: res.data.opinions || [] }));
-            setExpandedOpinions(prev => ({ ...prev, [questionId]: true }));
-        } catch (err) {}
-    };
+            
             setAllOpinions(prev => ({ ...prev, [questionId]: res.data.opinions || [] }));
             setExpandedOpinions(prev => ({ ...prev, [questionId]: true }));
         } catch (err) {}
