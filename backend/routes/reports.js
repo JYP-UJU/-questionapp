@@ -134,27 +134,17 @@ const opinionsListResult = await pool.query(
       [userId, weekStart, weekEnd]
     );
 
-    // 5. 퀴즈 완료 수 (테이블 없을 수 있음)
+    // 5. 퀴즈 완료 수 (5문제 = 1회)
     let quizCount = 0;
     try {
       const quizResult = await pool.query(
         `SELECT COUNT(*) as cnt FROM quiz_responses 
-         WHERE user_id = $1 AND completed_at >= $2 AND completed_at <= $3`,
+         WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3`,
         [userId, weekStart, weekEnd]
       );
-      quizCount = parseInt(quizResult.rows[0].cnt);
+      quizCount = Math.floor(parseInt(quizResult.rows[0].cnt) / 5);
     } catch (e) {
-      // quiz_responses 테이블이 없거나 completed_at 컬럼이 없을 수 있음
-      try {
-        const quizResult2 = await pool.query(
-          `SELECT COUNT(*) as cnt FROM quiz_responses 
-           WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3`,
-          [userId, weekStart, weekEnd]
-        );
-        quizCount = parseInt(quizResult2.rows[0].cnt);
-      } catch (e2) {
-        quizCount = 0;
-      }
+      quizCount = 0;
     }
 
     // 6. 관련질문 수 (parent_question_id가 있는 질문)
