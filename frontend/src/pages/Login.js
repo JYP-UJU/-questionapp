@@ -25,7 +25,7 @@ function Login() {
             }
 
             setToken(response.data.token);
-            navigate('/main');
+            navigate('/questions'); // /main 대신 친구질문으로 바로 이동
         } catch (err) {
             setError(err.response?.data?.message || '오류가 발생했습니다');
         } finally {
@@ -36,8 +36,8 @@ function Login() {
     return (
         <div className="auth-container">
             <div className="auth-box">
-                <h1 className="auth-title">🌸 물음송이</h1>
-                <p className="auth-subtitle">궁금증을 키우는 질문 플랫폼</p>
+                <h1 className="auth-title">🌱 물음송이</h1>
+                <p className="auth-subtitle">호기심을 키우는 질문 플랫폼</p>
 
                 <div className="auth-tabs">
                     <button
@@ -75,7 +75,7 @@ function Login() {
                     {error && <p className="auth-error">{error}</p>}
 
                     <button type="submit" disabled={loading} className="auth-button">
-                        {loading ? '처리 중...' : (isLogin ? '로그인' : '회원가입')}
+                        {loading ? '로딩 중...' : (isLogin ? '로그인' : '회원가입')}
                     </button>
                 </form>
             </div>
