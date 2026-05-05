@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const menus = [
-    { path: '/icebreaking', emoji: '🏅', label: '질문올림픽' },
+    { path: '/olympic', emoji: '🏅', label: '질문올림픽' },
     { path: '/quiz', emoji: '🎯', label: '질문대기실' },
     { path: '/questions', emoji: '👥', label: '친구질문' },
     { path: '/saved', emoji: '📝', label: '내 활동' },

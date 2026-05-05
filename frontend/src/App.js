@@ -14,6 +14,7 @@ import SongiHistory from './pages/SongiHistory';
 import { getToken } from './services/api';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
+import QuizOlympics from './pages/QuizOlympics';
 import MonthlyReport from './pages/MonthlyReport';
 
 // 보호된 라우트 컴포넌트
@@ -33,6 +34,7 @@ function App() {
 
                 <Route path="/create" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                 <Route path="/icebreaking" element={<ProtectedRoute><IcebreakingNew /></ProtectedRoute>} />
+                <Route path="/olympic" element={<ProtectedRoute><QuizOlympics /></ProtectedRoute>} />
                 <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
                 <Route path="/saved" element={<ProtectedRoute><SavedQuestions /></ProtectedRoute>} />
                 <Route path="/questions" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
