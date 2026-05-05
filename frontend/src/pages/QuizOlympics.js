@@ -310,22 +310,25 @@ function QuizOlympics() {
           {currentPairs.map((pair, pairIdx) => {
             const selId = selections[`${currentRound}-${pairIdx}`];
             return (
-              <div key={pairIdx} className="pair-row">
-                {pair.map((q, qi) => (
-                  <div
-                    key={q.id}
-                    className={`q-card ${selId === q.id ? 'selected' : ''}`}
-                    onClick={() => handleSelect(pairIdx, q)}
-                  >
-                    <div className="q-card-text">{q.text}</div>
-                    <button
-                      className={`star-btn ${starredIds.has(q.id) ? 'starred' : ''}`}
-                      onClick={(e) => handleStar(e, q.id)}
+              <div key={pairIdx} className={`pair-row ${pairIdx % 2 === 0 ? 'pair-even' : 'pair-odd'}`}>
+                <div className="pair-num">{pairIdx + 1}</div>
+                <div className="pair-cards">
+                  {pair.map((q, qi) => (
+                    <div
+                      key={q.id}
+                      className={`q-card ${selId === q.id ? 'selected' : ''}`}
+                      onClick={() => handleSelect(pairIdx, q)}
                     >
-                      {starredIds.has(q.id) ? '🏷️' : '🏷️'} 관심있음
-                    </button>
-                  </div>
-                ))}
+                      <div className="q-card-text">{q.text}</div>
+                      <button
+                        className={`star-btn ${starredIds.has(q.id) ? 'starred' : ''}`}
+                        onClick={(e) => handleStar(e, q.id)}
+                      >
+                        🏷️
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}

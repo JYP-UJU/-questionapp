@@ -42,6 +42,26 @@
   gap: 10px;
 }
 .pair-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 10px 12px;
+  border-radius: 14px;
+}
+.pair-even {
+  background: #eaf6fa;
+}
+.pair-odd {
+  background: #f0f8f4;
+}
+.pair-num {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #5bb8c4;
+  margin-bottom: 2px;
+}
+.pair-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -70,7 +90,7 @@
   box-shadow: 0 0 0 2px rgba(91,184,196,0.25);
 }
 .q-card-text {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: #1a1a1a;
   line-height: 1.55;
   font-weight: 500;
@@ -84,8 +104,8 @@
   background: none;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 3px 7px;
-  font-size: 10px;
+  padding: 4px 8px;
+  font-size: 14px;
   color: #aaa;
   cursor: pointer;
   align-self: flex-start;
