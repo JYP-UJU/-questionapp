@@ -241,8 +241,8 @@ useEffect(() => {
             <div className="quiz-container">
                 <TopHeader
     icon="🎯"
-    title="재미있는 퀴즈"
-    messages={["가장 그럴듯한 설명을 선택해주세요!", "퀴즈를 풀고 5송이를 획득해요 🌸"]}
+    title="질문대기실"
+    messages={["가장 그럴듯한 설명을 선택해주세요!", "질문대기실에서 5송이를 획득해요 🌸"]}
     backTo="/main"
 />
 
@@ -420,7 +420,7 @@ useEffect(() => {
                 <button onClick={() => navigate('/main')} className="back-button">
                     ← 뒤로
                 </button>
-                <h1>🎯 재미있는 퀴즈</h1>
+                <h1>🎯 질문대기실</h1>
             </header>
 
             <div className="quiz-content">

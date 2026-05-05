@@ -3,10 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 const menus = [
     { path: '/icebreaking', emoji: '🏅', label: '질문올림픽' },
-    { path: '/quiz', emoji: '🎪', label: '질문대기실' },
-    { path: '/questions', emoji: '🌿', label: '친구질문' },
-    { path: '/saved', emoji: '📋', label: '나의활동' },
-    { path: '/setting', emoji: '🌱', label: '나의공간' },
+    { path: '/quiz', emoji: '🎯', label: '질문대기실' },
+    { path: '/questions', emoji: '👥', label: '친구질문' },
+    { path: '/saved', emoji: '📝', label: '내 활동' },
+    { path: '/setting', emoji: '⚙️', label: '나의공간' },
 ];
 
 function BottomNav() {
