@@ -269,10 +269,8 @@ function Admin() {
                   </div>
                     <div style={styles.activityDate}>{formatDate(a.created_at)}</div>
                   </div>
-                  {(a.activity_type === 'question' || a.activity_type === 'related' || a.activity_type === 'opinion') && (
-                    <button style={styles.deleteBtn}
-                      onClick={() => handleDelete(a.activity_type, a.id)}>삭제</button>
-                  )}
+                  <button style={styles.deleteBtn}
+                    onClick={() => handleDelete(a.activity_type, a.id)}>삭제</button>
                 </div>
               ))}
             </div>

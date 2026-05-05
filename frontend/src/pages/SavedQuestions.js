@@ -287,7 +287,7 @@ function SavedQuestions() {
 
     return (
         <div className="saved-container">
-            <TopHeader icon="📚" title="내 활동" messages={[]} backTo="/main" />
+            <TopHeader icon="📋" title="내 활동" messages={[]} backTo="/main" />
 
             <div className="saved-content">
                 <div className="instruction instruction-animated">
