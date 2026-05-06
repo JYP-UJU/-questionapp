@@ -245,6 +245,7 @@ function QuizOlympics() {
     setRounds(prev => [...prev, nextPairs]);
     setCurrentRound(prev => prev + 1);
     setSelections({});
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleBack = () => {
