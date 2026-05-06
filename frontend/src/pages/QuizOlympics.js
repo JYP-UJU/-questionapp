@@ -311,19 +311,17 @@ function QuizOlympics() {
             const selId = selections[`${currentRound}-${pairIdx}`];
             return (
               <div key={pairIdx} className={`pair-row ${pairIdx % 2 === 0 ? 'pair-even' : 'pair-odd'}`}>
-                <div
-                  className={`q-card ${selId === pair[0].id ? 'selected' : ''}`}
-                  onClick={() => handleSelect(pairIdx, pair[0])}
-                >
-                  <div className="q-card-text">{pair[0].text}</div>
-                </div>
-                <div className="pair-num">{pairIdx + 1}</div>
-                <div
-                  className={`q-card ${selId === pair[1].id ? 'selected' : ''}`}
-                  onClick={() => handleSelect(pairIdx, pair[1])}
-                >
-                  <div className="q-card-text">{pair[1].text}</div>
-                </div>
+                {pair.map((q, qi) => (
+                  <React.Fragment key={q.id}>
+                    <div
+                      className={`q-card ${selId === q.id ? 'selected' : ''}`}
+                      onClick={() => handleSelect(pairIdx, q)}
+                    >
+                      <div className="q-card-text">{q.text}</div>
+                    </div>
+                    {qi === 0 && <div className="pair-num">{pairIdx + 1}</div>}
+                  </React.Fragment>
+                ))}
               </div>
             );
           })}
