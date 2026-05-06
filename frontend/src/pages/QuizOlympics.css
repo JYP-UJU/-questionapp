@@ -53,7 +53,7 @@
   background: #e8f5fa;
 }
 .pair-odd {
-  background: #edf7f2;
+  background: #fce8f0;
 }
 .pair-num {
   text-align: center;
@@ -153,12 +153,12 @@
 .winner-label {
   font-size: 18px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #e05c8a;
 }
 .winner-card {
   background: white;
   border-radius: 20px;
-  border: 3px solid #5bb8c4;
+  border: 2.5px solid #f0a0be;
   padding: 24px 20px;
   width: 100%;
   text-align: center;
