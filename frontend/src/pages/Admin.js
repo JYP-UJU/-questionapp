@@ -126,6 +126,7 @@ function Admin() {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, order, selectedUser]);
 
   const loadUsers = useCallback(async () => {
@@ -141,6 +142,7 @@ function Admin() {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -269,8 +271,10 @@ function Admin() {
                   </div>
                     <div style={styles.activityDate}>{formatDate(a.created_at)}</div>
                   </div>
-                  <button style={styles.deleteBtn}
-                    onClick={() => handleDelete(a.activity_type, a.id)}>삭제</button>
+                  {(a.activity_type === 'question' || a.activity_type === 'related' || a.activity_type === 'opinion') && (
+                    <button style={styles.deleteBtn}
+                      onClick={() => handleDelete(a.activity_type, a.id)}>삭제</button>
+                  )}
                 </div>
               ))}
             </div>

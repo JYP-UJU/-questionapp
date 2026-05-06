@@ -11,6 +11,7 @@ function SavedQuestions() {
     const [savedQuestions, setSavedQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const [totalSongi, setTotalSongi] = useState(0);
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
@@ -41,6 +42,7 @@ function SavedQuestions() {
             setCurrentMessageIndex((prev) => (prev + 1) % rotatingMessages.length);
         }, 3000);
         return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const loadSavedQuestions = async () => {
@@ -287,7 +289,7 @@ function SavedQuestions() {
 
     return (
         <div className="saved-container">
-            <TopHeader icon="📋" title="내 활동" messages={[]} backTo="/main" />
+            <TopHeader icon="📚" title="내 활동" messages={[]} backTo="/main" />
 
             <div className="saved-content">
                 <div className="instruction instruction-animated">

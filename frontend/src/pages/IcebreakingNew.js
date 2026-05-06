@@ -27,10 +27,12 @@ function IcebreakingNew() {
     const [dislikedQuestions, setDislikedQuestions] = useState(new Set());
 
     const [opinionModal, setOpinionModal] = useState(null);
+    // eslint-disable-next-line no-unused-vars
     const [opinionText, setOpinionText] = useState('');
     const [opinions, setOpinions] = useState({});
 
     const [relatedModal, setRelatedModal] = useState(null);
+    // eslint-disable-next-line no-unused-vars
     const [relatedTitle, setRelatedTitle] = useState('');
     const [relatedQuestions, setRelatedQuestions] = useState({});
 

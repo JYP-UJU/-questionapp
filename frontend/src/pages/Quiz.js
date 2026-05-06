@@ -24,8 +24,10 @@ function Quiz() {
     const [opinions, setOpinions] = useState({});
     const [showOpinionModal, setShowOpinionModal] = useState(false);
     const [currentOpinionQuestion, setCurrentOpinionQuestion] = useState(null);
+    // eslint-disable-next-line no-unused-vars
     const [opinionText, setOpinionText] = useState('');
     const [relatedModal, setRelatedModal] = useState(null);
+    // eslint-disable-next-line no-unused-vars
     const [relatedTitle, setRelatedTitle] = useState('');
     const [relatedMap, setRelatedMap] = useState({});
 
@@ -241,8 +243,8 @@ useEffect(() => {
             <div className="quiz-container">
                 <TopHeader
     icon="🎯"
-    title="질문대기실"
-    messages={["가장 그럴듯한 설명을 선택해주세요!", "질문대기실에서 5송이를 획득해요 🌸"]}
+    title="재미있는 퀴즈"
+    messages={["가장 그럴듯한 설명을 선택해주세요!", "퀴즈를 풀고 5송이를 획득해요 🌸"]}
     backTo="/main"
 />
 
@@ -420,7 +422,7 @@ useEffect(() => {
                 <button onClick={() => navigate('/main')} className="back-button">
                     ← 뒤로
                 </button>
-                <h1>🎯 질문대기실</h1>
+                <h1>🎯 재미있는 퀴즈</h1>
             </header>
 
             <div className="quiz-content">

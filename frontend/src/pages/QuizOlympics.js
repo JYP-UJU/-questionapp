@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './QuizOlympics.css';
@@ -207,15 +207,13 @@ const ROUND_LABELS = { 8: '8강', 4: '4강', 2: '결승' };
 function QuizOlympics() {
   const navigate = useNavigate();
 
-  const [questions16] = useState(() => pickQuestions());
-  const [rounds, setRounds] = useState([makeBracket(pickQuestions())]);
+  const [rounds, setRounds] = useState(() => [makeBracket(pickQuestions())]);
   // rounds[0] = 8강 8쌍, rounds[1] = 4강 4쌍, rounds[2] = 결승 1쌍
   const [currentRound, setCurrentRound] = useState(0);
   const [selections, setSelections] = useState({}); // pairIdx → selectedId
   const [starredIds, setStarredIds] = useState(new Set()); // 관심있음
   const [finished, setFinished] = useState(false);
   const [winner, setWinner] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const currentPairs = rounds[currentRound] || [];
   const roundSize = currentPairs.length * 2; // 16, 8, 2
@@ -226,14 +224,6 @@ function QuizOlympics() {
     setSelections(prev => ({ ...prev, [`${currentRound}-${pairIdx}`]: question.id }));
   };
 
-  const handleStar = (e, id) => {
-    e.stopPropagation();
-    setStarredIds(prev => {
-      const s = new Set(prev);
-      s.has(id) ? s.delete(id) : s.add(id);
-      return s;
-    });
-  };
 
   const handleNext = () => {
     const winners = currentPairs.map((pair, i) => {
@@ -266,7 +256,6 @@ function QuizOlympics() {
   };
 
   const handleFinish = async (winnerQ) => {
-    setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -283,7 +272,6 @@ function QuizOlympics() {
         starredIds: Array.from(starredIds),
       });
     } catch {}
-    setSubmitting(false);
   };
 
   if (finished && winner) {
