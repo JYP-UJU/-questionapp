@@ -25,6 +25,7 @@ function MonthlyReport() {
         setOpenToggles(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { loadReport(); }, [monthOffset]);
 
     const getMonthRange = (offset = 0) => {

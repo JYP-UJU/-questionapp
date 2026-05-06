@@ -31,6 +31,7 @@ function RelatedQuestion() {
             setLoading(true);
             const token = localStorage.getItem('token');
             
+            // eslint-disable-next-line no-unused-vars
             const response = await axios.post(
                 'http://localhost:5000/api/questions',
                 {

@@ -8,6 +8,8 @@ function WeeklyReport() {
     const navigate = useNavigate();
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
+    // eslint-disable-next-line no-unused-vars
+
     const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'reflection'
 
     // 돌아보기 폼

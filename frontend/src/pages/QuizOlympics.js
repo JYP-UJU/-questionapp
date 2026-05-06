@@ -210,8 +210,7 @@ function QuizOlympics() {
   const [rounds, setRounds] = useState(() => [makeBracket(pickQuestions())]);
   // rounds[0] = 8강 8쌍, rounds[1] = 4강 4쌍, rounds[2] = 결승 1쌍
   const [currentRound, setCurrentRound] = useState(0);
-  const [selections, setSelections] = useState({}); // pairIdx → selectedId
-  const [starredIds, setStarredIds] = useState(new Set()); // 관심있음
+  const [selections, setSelections] = useState({}); // pairIdx → selectedId // 관심있음
   const [finished, setFinished] = useState(false);
   const [winner, setWinner] = useState(null);
 
@@ -259,17 +258,10 @@ function QuizOlympics() {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      // 관심있음 기록
-      for (const id of starredIds) {
-        try {
-          await api.post(`/questions/${id}/reaction`, { reactionType: 'like', questionType: 'icebreaking' });
-        } catch {}
-      }
       // 올림픽 완주 기록 + 송이 지급
       await api.post('/olympic/complete', {
         winnerId: winnerQ.id,
         winnerText: winnerQ.text,
-        starredIds: Array.from(starredIds),
       });
     } catch {}
   };

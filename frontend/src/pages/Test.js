@@ -70,6 +70,7 @@ function Test() {
         return () => clearInterval(interval);
     }, []);
 
+    // eslint-disable-next-line no-unused-vars
     const refreshThumbnail = () => {
         if (thumbnails.length > 0) {
             const randomIndex = Math.floor(Math.random() * thumbnails.length);
