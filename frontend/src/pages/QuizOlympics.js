@@ -186,6 +186,22 @@ function makeBracket(questions) {
   return pairs; // 8쌍
 }
 
+
+const PROFILES = {
+  '물리-수렴': '자연의 원리를 파고드는 물리현상 탐구자예요!',
+  '물리-발산': '물리의 경계를 넘어 의미를 생각하는 탐구자예요!',
+  '화학-수렴': '자연의 원리를 파고드는 화학현상 탐구자예요!',
+  '화학-발산': '화학의 경계를 넘어 의미를 생각하는 탐구자예요!',
+  '생물-수렴': '자연의 원리를 파고드는 생명현상 탐구자예요!',
+  '생물-발산': '생명의 경계를 넘어 의미를 생각하는 탐구자예요!',
+  '지학-수렴': '자연의 원리를 파고드는 지구우주 탐구자예요!',
+  '지학-발산': '지구우주의 경계를 넘어 의미를 생각하는 탐구자예요!',
+};
+
+function getProfile(subject, type) {
+  return PROFILES[`${subject}-${type}`] || '과학의 신비를 탐구하는 탐구자예요!';
+}
+
 const ROUND_LABELS = { 8: '8강', 4: '4강', 2: '결승' };
 
 function QuizOlympics() {
@@ -279,7 +295,7 @@ function QuizOlympics() {
           <div className="winner-label">나의 최애 질문!</div>
           <div className="winner-card">
             <div className="winner-text">{winner.text}</div>
-            <div className="winner-badge">{winner.subject} · {winner.type}형</div>
+            <div className="winner-profile">{getProfile(winner.subject, winner.type)}</div>
           </div>
           <div className="winner-sub">올림픽 완주 보상이 지급되었어요 🌸</div>
           <button className="winner-again-btn" onClick={() => window.location.reload()}>
