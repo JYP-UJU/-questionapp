@@ -82,9 +82,9 @@
   border-color: #5bb8c4;
 }
 .q-card.selected {
-  border-color: #3bbf9e;
-  background: #e6f7f3;
-  box-shadow: 0 0 0 2px rgba(59,191,158,0.25);
+  border-color: #f5c400;
+  background: #fffbe6;
+  box-shadow: 0 0 0 2px rgba(245,196,0,0.25);
 }
 .q-card-text {
   font-size: 15px;
@@ -94,7 +94,7 @@
   flex: 1;
 }
 .q-card.selected .q-card-text {
-  color: #1a7a5e;
+  color: #7a5c00;
 }
 
 /* 관심있음 버튼 */
