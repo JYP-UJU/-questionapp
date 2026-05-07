@@ -41,7 +41,7 @@ initTables().catch(err => console.error('olympic 테이블 초기화 오류:', e
 // ── POST /api/olympic/complete ────────────────────────────────────
 // 올림픽 완주 기록 저장 + 송이 지급
 router.post('/complete', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.userId || req.user?.id;
   const { winnerId, winnerText, winnerSubject, winnerType, roundsData } = req.body;
   // roundsData: [
   //   { roundNumber: 0, roundLabel: '8강', questions: [{id, text, subject, type, selected}] },
@@ -149,7 +149,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
 // ── GET /api/olympic/my-history ───────────────────────────────────
 // 내 올림픽 기록 (프로필 성향 표시용)
 router.get('/my-history', authenticateToken, async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.userId || req.user?.id;
   try {
     const result = await db.query(`
       SELECT winner_subject, winner_type, COUNT(*) AS cnt
