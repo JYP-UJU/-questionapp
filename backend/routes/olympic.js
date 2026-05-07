@@ -80,7 +80,7 @@ router.post('/complete', authenticateToken, async (req, res) => {
 
     // 3. 송이 지급 (+5)
     await client.query(
-      `UPDATE users SET songi = COALESCE(songi, 0) + 5 WHERE id = $1`,
+      `UPDATE users SET songi_count = COALESCE(songi_count, 0) + 5 WHERE id = $1`,
       [userId]
     );
 
@@ -99,9 +99,9 @@ router.post('/complete', authenticateToken, async (req, res) => {
 
     // 5. 현재 송이 잔액 조회
     const userResult = await client.query(
-      `SELECT songi FROM users WHERE id = $1`, [userId]
+      `SELECT songi_count FROM users WHERE id = $1`, [userId]
     );
-    const currentSongi = userResult.rows[0]?.songi || 0;
+    const currentSongi = userResult.rows[0]?.songi_count || 0;
 
     res.json({
       success: true,
