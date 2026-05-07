@@ -3,29 +3,64 @@ const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../middleware/auth');
 
-// 랜덤 퀴즈 5문제 가져오기 (각 분야별 1개씩)
+// 랜덤 퀴즈 5문제 가져오기 (올림픽 top3 우선 + 나머지 랜덤)
 router.get('/random', authenticateToken, async (req, res) => {
     try {
-        const categories = ['물리', '화학', '생물', '지구과학', '일상생활'];
+        const userId = req.user?.userId || req.user?.id;
         const questions = [];
+        const usedIds = [];
 
-        for (const category of categories) {
-            const result = await pool.query(
-                `SELECT id, question, category, option_1, option_2, option_3, option_4, option_5
-                 FROM seed_questions 
-                 WHERE category = $1 
-                 ORDER BY RANDOM() 
-                 LIMIT 1`,
-                [category]
+        // 1. 올림픽 top3 — 해당 유저의 올림픽에서 선택률 높은 질문 중
+        //    seed_questions에 있고 보기가 있는 것 최대 3개
+        try {
+            const olympicTop = await pool.query(
+                `SELECT sq.id, sq.question, sq.category,
+                        sq.option_1, sq.option_2, sq.option_3, sq.option_4, sq.option_5
+                 FROM olympic_rounds or2
+                 JOIN olympic_sessions os ON or2.session_id = os.id
+                 JOIN seed_questions sq ON or2.question_id = sq.id
+                 WHERE os.user_id = $1
+                   AND sq.option_1 IS NOT NULL
+                 GROUP BY sq.id, sq.question, sq.category,
+                          sq.option_1, sq.option_2, sq.option_3, sq.option_4, sq.option_5
+                 ORDER BY SUM(CASE WHEN or2.selected THEN 1 ELSE 0 END)::float
+                        / NULLIF(COUNT(*), 0) DESC
+                 LIMIT 3`,
+                [userId]
             );
-            if (result.rows.length > 0) {
-                questions.push(result.rows[0]);
+            for (const row of olympicTop.rows) {
+                questions.push(row);
+                usedIds.push(row.id);
             }
+        } catch (e) {
+            // olympic 데이터 없으면 무시하고 랜덤으로만 채움
+        }
+
+        // 2. 나머지를 랜덤으로 채우기 (5개 목표)
+        const needed = 5 - questions.length;
+        if (needed > 0) {
+            const placeholders = usedIds.length > 0
+                ? `AND id NOT IN (${usedIds.map((_, i) => `$${i + 2}`).join(',')})`
+                : '';
+            const params = usedIds.length > 0 ? [needed, ...usedIds] : [needed];
+            const fill = await pool.query(
+                `SELECT id, question, category, option_1, option_2, option_3, option_4, option_5
+                 FROM seed_questions
+                 WHERE option_1 IS NOT NULL
+                 ${placeholders}
+                 ORDER BY RANDOM()
+                 LIMIT $1`,
+                params
+            );
+            questions.push(...fill.rows);
         }
 
         if (questions.length === 0) {
             return res.status(404).json({ message: '사용 가능한 퀴즈 문제가 없습니다' });
         }
+
+        // 순서 섞기
+        questions.sort(() => Math.random() - 0.5);
 
         res.json({ questions, total: questions.length });
 
