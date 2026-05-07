@@ -25,6 +25,7 @@ const quizRoutes = require('./routes/quiz');
 const savedRoutes = require('./routes/saved');
 const reportsRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
+const olympicRoutes = require('./routes/olympic');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/icebreaking', icebreakingRoutes);
@@ -37,6 +38,7 @@ app.use('/api/quiz', quizRoutes);
 app.use('/api/saved', savedRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/olympic', olympicRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {
@@ -52,7 +54,8 @@ app.get('/', (req, res) => {
       ranking: '/api/ranking',
       users: '/api/users',
       quiz: '/api/quiz',
-      saved: '/api/saved'
+      saved: '/api/saved',
+      olympic: '/api/olympic'
     }
   });
 });

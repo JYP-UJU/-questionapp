@@ -72,7 +72,6 @@ const ALL_QUESTIONS = [
   // 화학-발산
   { id:48, text:"세상에서 가장 강한 산이 있어요?",                                  subject:"화학", type:"발산" },
   { id:52, text:"100년도 못 사는 인간이 300년 걸려 썩는다는 걸 어떻게 알아요?",   subject:"화학", type:"발산" },
-  { id:48, text:"모든 걸 다 부식시킬 수 있는 세상에서 가장 강한 산이 있어요?",    subject:"화학", type:"발산" },
   // 생물-수렴
   { id:40, text:"숨쉴 때 이산화탄소와 질소도 몸으로 들어가나요?",                  subject:"생물", type:"수렴" },
   { id:56, text:"숫사자 갈기는 음식 먹을 때 불편하지 않을까요?",                   subject:"생물", type:"수렴" },
@@ -178,14 +177,12 @@ function pickQuestions() {
 
 // ── 토너먼트 브래킷 생성 ──────────────────────────────────────
 function makeBracket(questions) {
-  // 16개를 8쌍으로
   const pairs = [];
   for (let i = 0; i < 16; i += 2) {
     pairs.push([questions[i], questions[i + 1]]);
   }
-  return pairs; // 8쌍
+  return pairs;
 }
-
 
 const PROFILES = {
   '물리-수렴': '자연의 원리를 파고드는 물리현상 탐구자예요!',
@@ -208,14 +205,17 @@ function QuizOlympics() {
   const navigate = useNavigate();
 
   const [rounds, setRounds] = useState(() => [makeBracket(pickQuestions())]);
-  // rounds[0] = 8강 8쌍, rounds[1] = 4강 4쌍, rounds[2] = 결승 1쌍
   const [currentRound, setCurrentRound] = useState(0);
-  const [selections, setSelections] = useState({}); // pairIdx → selectedId // 관심있음
+  const [selections, setSelections] = useState({});
   const [finished, setFinished] = useState(false);
   const [winner, setWinner] = useState(null);
 
+  // ── 라운드별 노출/선택 기록 누적 ─────────────────────────────
+  // { roundNumber, roundLabel, questions: [{...q, selected}] } 배열
+  const [allRoundsData, setAllRoundsData] = useState([]);
+
   const currentPairs = rounds[currentRound] || [];
-  const roundSize = currentPairs.length * 2; // 16, 8, 2
+  const roundSize = currentPairs.length * 2;
   const roundLabel = ROUND_LABELS[roundSize] || `${roundSize}강`;
   const allSelected = currentPairs.every((_, i) => selections[`${currentRound}-${i}`] !== undefined);
 
@@ -223,18 +223,30 @@ function QuizOlympics() {
     setSelections(prev => ({ ...prev, [`${currentRound}-${pairIdx}`]: question.id }));
   };
 
-
   const handleNext = () => {
     const winners = currentPairs.map((pair, i) => {
       const selId = selections[`${currentRound}-${i}`];
       return pair.find(q => q.id === selId) || pair[0];
     });
 
+    // ── 현재 라운드 노출/선택 데이터 저장 ──
+    const roundQuestions = currentPairs.flatMap((pair, i) => {
+      const selId = selections[`${currentRound}-${i}`];
+      return pair.map(q => ({ ...q, selected: q.id === selId }));
+    });
+    const roundRecord = {
+      roundNumber: currentRound,
+      roundLabel,
+      questions: roundQuestions,
+    };
+    const updatedRoundsData = [...allRoundsData, roundRecord];
+    setAllRoundsData(updatedRoundsData);
+
     if (winners.length === 1) {
       // 결승 끝 → 최애 탄생
       setWinner(winners[0]);
       setFinished(true);
-      handleFinish(winners[0]);
+      handleFinish(winners[0], updatedRoundsData);
       return;
     }
 
@@ -250,21 +262,27 @@ function QuizOlympics() {
 
   const handleBack = () => {
     if (currentRound === 0) return;
+    // 뒤로 가면 마지막 라운드 기록도 취소
+    setAllRoundsData(prev => prev.slice(0, -1));
     setRounds(prev => prev.slice(0, -1));
     setCurrentRound(prev => prev - 1);
     setSelections({});
   };
 
-  const handleFinish = async (winnerQ) => {
+  const handleFinish = async (winnerQ, roundsData) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      // 올림픽 완주 기록 + 송이 지급
       await api.post('/olympic/complete', {
         winnerId: winnerQ.id,
         winnerText: winnerQ.text,
+        winnerSubject: winnerQ.subject,
+        winnerType: winnerQ.type,
+        roundsData,   // 전체 라운드 노출/선택 데이터
       });
-    } catch {}
+    } catch (err) {
+      console.error('올림픽 결과 저장 오류:', err);
+    }
   };
 
   if (finished && winner) {
