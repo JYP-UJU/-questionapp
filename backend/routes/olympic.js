@@ -49,12 +49,9 @@ router.post('/complete', authenticateToken, async (req, res) => {
   //   { roundNumber: 2, roundLabel: '결승', questions: [...] },
   // ]
 
-  const client = await db.connect();
   try {
-    await client.query('BEGIN');
-
     // 1. 세션 생성
-    const sessionResult = await client.query(
+    const sessionResult = await db.query(
       `INSERT INTO olympic_sessions
         (user_id, winner_question_id, winner_question_text, winner_subject, winner_type, songi_awarded)
        VALUES ($1, $2, $3, $4, $5, 5)
@@ -62,12 +59,13 @@ router.post('/complete', authenticateToken, async (req, res) => {
       [userId, winnerId, winnerText, winnerSubject || null, winnerType || null]
     );
     const sessionId = sessionResult.rows[0].id;
+    console.log('세션 저장 완료, sessionId:', sessionId);
 
     // 2. 라운드별 노출/선택 기록
     if (roundsData && Array.isArray(roundsData)) {
       for (const round of roundsData) {
         for (const q of round.questions) {
-          await client.query(
+          await db.query(
             `INSERT INTO olympic_rounds
               (session_id, round_number, round_label, question_id, question_text, subject, question_type, exposed, selected)
              VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, $8)`,
@@ -79,26 +77,13 @@ router.post('/complete', authenticateToken, async (req, res) => {
     }
 
     // 3. 송이 지급 (+5)
-    await client.query(
+    await db.query(
       `UPDATE users SET songi_count = COALESCE(songi_count, 0) + 5 WHERE id = $1`,
       [userId]
     );
 
-    // 4. 송이 히스토리 기록 (테이블 있는 경우)
-    try {
-      await client.query(
-        `INSERT INTO songi_history (user_id, amount, reason, created_at)
-         VALUES ($1, 5, '질문올림픽 완주', NOW())`,
-        [userId]
-      );
-    } catch (e) {
-      // songi_history 테이블 없으면 무시
-    }
-
-    await client.query('COMMIT');
-
-    // 5. 현재 송이 잔액 조회
-    const userResult = await client.query(
+    // 4. 현재 송이 잔액 조회
+    const userResult = await db.query(
       `SELECT songi_count FROM users WHERE id = $1`, [userId]
     );
     const currentSongi = userResult.rows[0]?.songi_count || 0;
@@ -112,11 +97,8 @@ router.post('/complete', authenticateToken, async (req, res) => {
     });
 
   } catch (err) {
-    await client.query('ROLLBACK');
     console.error('olympic/complete 오류:', err);
     res.status(500).json({ error: '저장 중 오류가 발생했습니다' });
-  } finally {
-    client.release();
   }
 });
 
