@@ -10,30 +10,56 @@ router.get('/random', authenticateToken, async (req, res) => {
         const questions = [];
         const usedIds = [];
 
-        // 1. 올림픽 top3 — 해당 유저의 올림픽에서 선택률 높은 질문 중
-        //    seed_questions에 있고 보기가 있는 것 최대 3개
+        // 1. 직전 올림픽에서 top3 뽑기
+        //    - 우승 질문 1개 (결승 선택)
+        //    - 4강에서 선택된 질문 중 2개
         try {
-            const olympicTop = await pool.query(
-                `SELECT sq.id, sq.question, sq.category,
-                        sq.option_1, sq.option_2, sq.option_3, sq.option_4, sq.option_5
-                 FROM olympic_rounds or2
-                 JOIN olympic_sessions os ON or2.session_id = os.id
-                 JOIN seed_questions sq ON or2.question_id = sq.id
-                 WHERE os.user_id = $1
-                   AND sq.option_1 IS NOT NULL
-                 GROUP BY sq.id, sq.question, sq.category,
-                          sq.option_1, sq.option_2, sq.option_3, sq.option_4, sq.option_5
-                 ORDER BY SUM(CASE WHEN or2.selected THEN 1 ELSE 0 END)::float
-                        / NULLIF(COUNT(*), 0) DESC
-                 LIMIT 3`,
+            // 직전 세션 id 조회
+            const lastSession = await pool.query(
+                `SELECT id, winner_question_id FROM olympic_sessions
+                 WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
                 [userId]
             );
-            for (const row of olympicTop.rows) {
-                questions.push(row);
-                usedIds.push(row.id);
+            if (lastSession.rows.length > 0) {
+                const sessionId = lastSession.rows[0].id;
+                const winnerId = lastSession.rows[0].winner_question_id;
+
+                // 우승 질문 (seed_questions에 있고 보기 있는 것)
+                const winnerQ = await pool.query(
+                    `SELECT id, question, category, option_1, option_2, option_3, option_4, option_5
+                     FROM seed_questions
+                     WHERE id = $1 AND option_1 IS NOT NULL`,
+                    [winnerId]
+                );
+                if (winnerQ.rows.length > 0) {
+                    questions.push(winnerQ.rows[0]);
+                    usedIds.push(winnerQ.rows[0].id);
+                }
+
+                // 4강(round_number=1)에서 선택된 질문 중 우승 제외 2개
+                const semifinalQ = await pool.query(
+                    `SELECT DISTINCT sq.id, sq.question, sq.category,
+                            sq.option_1, sq.option_2, sq.option_3, sq.option_4, sq.option_5
+                     FROM olympic_rounds or2
+                     JOIN seed_questions sq ON or2.question_id = sq.id
+                     WHERE or2.session_id = $1
+                       AND or2.round_number = 1
+                       AND or2.selected = TRUE
+                       AND sq.option_1 IS NOT NULL
+                       AND sq.id != $2
+                     LIMIT 2`,
+                    [sessionId, winnerId]
+                );
+                for (const row of semifinalQ.rows) {
+                    if (!usedIds.includes(row.id)) {
+                        questions.push(row);
+                        usedIds.push(row.id);
+                    }
+                }
             }
         } catch (e) {
             // olympic 데이터 없으면 무시하고 랜덤으로만 채움
+            console.error('olympic top3 조회 오류:', e.message);
         }
 
         // 2. 나머지를 랜덤으로 채우기 (5개 목표)
