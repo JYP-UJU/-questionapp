@@ -374,29 +374,52 @@ function calcRanking(allRoundsData) {
 // ── 결과 화면 컴포넌트 ────────────────────────────────────────
 function OlympicsResult({ winner, allRoundsData, navigate }) {
   const MESSAGE = "내가 고른 질문, 다른 친구들도 궁금해했을까요? 친구들이 남긴 의견과 관련 질문들을 보면서 더 깊이 생각해 보세요! 🔍";
-  const [displayedText, setDisplayedText] = useState('');
-  const [msgDone, setMsgDone] = useState(false);
-  const indexRef = useRef(0);
+  const [scores, setScores] = useState([]);
+  const [totalParticipants, setTotalParticipants] = useState(0);
+
+  // 내가 선택한 4개 질문 추출
+  // 결승 우승, 결승 준우승, 4강 선택 2개
+  const getMyTop4 = () => {
+    const result = [];
+    // 결승(roundNumber=3)
+    const finalRound = allRoundsData.find(r => r.roundNumber === 3);
+    if (finalRound) {
+      const won = finalRound.questions.find(q => q.selected);
+      const lost = finalRound.questions.find(q => !q.selected);
+      if (won) result.push({ ...won, label: '🥇 우승' });
+      if (lost) result.push({ ...lost, label: '🥈 준우승' });
+    }
+    // 4강(roundNumber=2) 선택된 것 중 결승 진출자 제외
+    const semifinal = allRoundsData.find(r => r.roundNumber === 2);
+    if (semifinal) {
+      const finalIds = result.map(q => q.id);
+      const picked = semifinal.questions.filter(q => q.selected && !finalIds.includes(q.id)).slice(0, 2);
+      picked.forEach((q, i) => result.push({ ...q, label: i === 0 ? '🥉 4강' : '4강' }));
+    }
+    return result;
+  };
+
+  const myTop4 = getMyTop4();
+  const myIds = myTop4.map(q => q.id);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const interval = setInterval(() => {
-        if (indexRef.current < MESSAGE.length) {
-          setDisplayedText(MESSAGE.slice(0, indexRef.current + 1));
-          indexRef.current++;
-        } else {
-          clearInterval(interval);
-          setMsgDone(true);
-        }
-      }, 40);
-      return () => clearInterval(interval);
-    }, 800);
-    return () => clearTimeout(timer);
+    if (myIds.length === 0) return;
+    const token = localStorage.getItem('token');
+    fetch(`/api/olympic/question-scores?ids=${myIds.join(',')}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => {
+        setScores(data.scores || []);
+        setTotalParticipants(data.totalParticipants || 0);
+      })
+      .catch(() => {});
   }, []);
 
   const profile = getProfile(winner.subject, winner.type);
-  const ranking = calcRanking(allRoundsData);
-  const MEDALS = ['🥇', '🥈', '🥉'];
+
+  // 내 질문별 점수 찾기
+  const getScore = (id) => scores.find(s => s.questionId === id);
 
   return (
     <div className="olympics-container">
@@ -417,30 +440,33 @@ function OlympicsResult({ winner, allRoundsData, navigate }) {
           {profile}
         </div>
 
-        {/* 점수 순위표 */}
+        {/* 내 선택 4개 + 순위 */}
         <div className="ranking-section">
-          <div className="ranking-title">이번 올림픽 질문 순위</div>
-          <div className="ranking-desc">라운드를 거칠수록 더 높은 점수! (16강 1점 → 8강 10점 → 4강 100점 → 결승 1000점)</div>
+          <div className="ranking-title">내가 선택한 질문들</div>
+          {totalParticipants > 0 && (
+            <div className="ranking-desc">총 {totalParticipants}명 참여 기준</div>
+          )}
           <div className="ranking-list">
-            {ranking.map((q, i) => (
-              <div
-                key={q.id}
-                className={`ranking-item ${q.id === winner.id ? 'ranking-mine' : ''}`}
-              >
-                <span className="ranking-pos">
-                  {i < 3 ? MEDALS[i] : `${i + 1}위`}
-                </span>
-                <span className="ranking-text">{q.text}</span>
-                <span className="ranking-score">{q.score.toLocaleString()}점</span>
-              </div>
-            ))}
+            {myTop4.map((q) => {
+              const s = getScore(q.id);
+              return (
+                <div key={q.id} className={`ranking-item ${q.id === winner.id ? 'ranking-mine' : ''}`}>
+                  <span className="ranking-pos">{q.label}</span>
+                  <span className="ranking-text">{q.text}</span>
+                  {s && (
+                    <span className="ranking-rank">{s.rank}위</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* 타이핑 애니메이션 문구 */}
-        <div className="typing-message-box">
-          <span className="typing-message">{displayedText}</span>
-          {!msgDone && <span className="typing-cursor">|</span>}
+        {/* 전광판 애니메이션 */}
+        <div className="marquee-box">
+          <div className="marquee-track">
+            <span className="marquee-text">{MESSAGE}&nbsp;&nbsp;&nbsp;&nbsp;{MESSAGE}</span>
+          </div>
         </div>
 
         {/* 송이 지급 */}
@@ -449,10 +475,10 @@ function OlympicsResult({ winner, allRoundsData, navigate }) {
         {/* 버튼 두 개 나란히 */}
         <div className="winner-btn-row">
           <button className="winner-again-btn" onClick={() => window.location.reload()}>
-            🔄<br/>다시 하기
+            🔄 다시 하기
           </button>
           <button className="winner-quiz-btn" onClick={() => navigate('/quiz')}>
-            🎯<br/>퀴즈로 가기
+            🎯 퀴즈로 가기
           </button>
         </div>
 

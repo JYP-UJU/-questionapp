@@ -124,6 +124,69 @@ router.post('/complete', authenticateToken, async (req, res) => {
   }
 });
 
+// ── GET /api/olympic/question-scores ─────────────────────────────
+// 특정 질문들의 가중치 기반 점수 및 전체 순위 조회
+// query: ?ids=1,2,3,4
+router.get('/question-scores', authenticateToken, async (req, res) => {
+  try {
+    const { ids } = req.query;
+    const questionIds = ids ? ids.split(',').map(Number).filter(Boolean) : [];
+
+    // 전체 질문 점수 집계 (가중치: 결승=1000, 4강=100, 8강=10, 16강=1)
+    const allScores = await db.query(`
+      SELECT
+        question_id,
+        question_text,
+        SUM(
+          CASE round_number
+            WHEN 3 THEN 1000
+            WHEN 2 THEN 100
+            WHEN 1 THEN 10
+            WHEN 0 THEN 1
+            ELSE 1
+          END
+        ) AS total_score,
+        COUNT(DISTINCT session_id) AS participant_count,
+        SUM(CASE WHEN selected THEN 1 ELSE 0 END) AS selected_count
+      FROM olympic_rounds
+      WHERE selected = TRUE
+      GROUP BY question_id, question_text
+      ORDER BY total_score DESC
+    `);
+
+    // 전체 순위 매기기
+    const ranked = allScores.rows.map((row, i) => ({
+      questionId: row.question_id,
+      questionText: row.question_text,
+      totalScore: parseInt(row.total_score),
+      participantCount: parseInt(row.participant_count),
+      selectedCount: parseInt(row.selected_count),
+      rank: i + 1,
+    }));
+
+    // 요청한 질문들만 필터
+    const requested = questionIds.length > 0
+      ? ranked.filter(r => questionIds.includes(r.questionId))
+      : ranked;
+
+    // 전체 참여자 수 (세션 수)
+    const totalSessions = await db.query(
+      `SELECT COUNT(DISTINCT session_id) AS cnt FROM olympic_rounds`
+    );
+    const totalParticipants = parseInt(totalSessions.rows[0]?.cnt || 0);
+
+    res.json({
+      scores: requested,
+      totalParticipants,
+      totalRanked: ranked.length,
+    });
+
+  } catch (err) {
+    console.error('olympic/question-scores 오류:', err);
+    res.status(500).json({ error: '점수 조회 오류' });
+  }
+});
+
 // ── GET /api/olympic/stats ────────────────────────────────────────
 // 질문별 노출/선택 통계 (관리자용)
 router.get('/stats', authenticateToken, async (req, res) => {

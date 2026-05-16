@@ -392,3 +392,77 @@
   color: #5bb8c4;
   flex-shrink: 0;
 }
+
+/* ── 전광판 애니메이션 ──────────────────────────────────── */
+.marquee-box {
+  width: 100%;
+  overflow: hidden;
+  background: #fff8f0;
+  border-radius: 14px;
+  border: 1.5px solid #f5c4a0;
+  padding: 14px 0;
+}
+.marquee-track {
+  display: flex;
+  white-space: nowrap;
+  animation: marquee 18s linear infinite;
+}
+.marquee-text {
+  font-size: 15px;
+  color: #555;
+  font-weight: 500;
+  padding: 0 20px;
+}
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── 순위 배지 ──────────────────────────────────────────── */
+.ranking-rank {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e05c8a;
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ── 버튼 수정 (한 줄, 높이 줄이기) ────────────────────── */
+.winner-btn-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.winner-again-btn {
+  flex: 1;
+  padding: 12px 10px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #5bb8c4, #52b788);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.winner-quiz-btn {
+  flex: 1;
+  padding: 12px 10px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f9a8d4, #e05c8a);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
