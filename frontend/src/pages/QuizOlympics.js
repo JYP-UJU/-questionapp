@@ -404,16 +404,14 @@ function OlympicsResult({ winner, allRoundsData, navigate }) {
 
   useEffect(() => {
     if (myIds.length === 0) return;
-    const token = localStorage.getItem('token');
-    fetch(`/api/olympic/question-scores?ids=${myIds.join(',')}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(r => r.json())
-      .then(data => {
-        setScores(data.scores || []);
-        setTotalParticipants(data.totalParticipants || 0);
-      })
-      .catch(() => {});
+    import('../services/api').then(({ default: api }) => {
+      api.get(`/olympic/question-scores?ids=${myIds.join(',')}`)
+        .then(res => {
+          setScores(res.data.scores || []);
+          setTotalParticipants(res.data.totalParticipants || 0);
+        })
+        .catch(() => {});
+    });
   }, []);
 
   const profile = getProfile(winner.subject, winner.type);
