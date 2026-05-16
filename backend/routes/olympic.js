@@ -76,7 +76,29 @@ router.post('/complete', authenticateToken, async (req, res) => {
       }
     }
 
-    // 3. 송이 지급 (+5)
+    // 3. 4강 선택 질문 → saved_questions 자동 저장
+    if (roundsData && Array.isArray(roundsData)) {
+      const semifinalRound = roundsData.find(r => r.roundNumber === 1); // 4강
+      if (semifinalRound) {
+        const selectedQs = semifinalRound.questions.filter(q => q.selected);
+        for (const q of selectedQs) {
+          // 중복 저장 방지
+          const exists = await db.query(
+            `SELECT id FROM saved_questions WHERE user_id = $1 AND question_id = $2 AND source_type = 'olympic'`,
+            [userId, q.id]
+          );
+          if (exists.rows.length === 0) {
+            await db.query(
+              `INSERT INTO saved_questions (user_id, question_id, question_type, source_type, source_id)
+               VALUES ($1, $2, 'olympic', 'olympic', $3)`,
+              [userId, q.id, sessionId]
+            );
+          }
+        }
+      }
+    }
+
+    // 4. 송이 지급 (+5)
     await db.query(
       `UPDATE users SET songi_count = COALESCE(songi_count, 0) + 5 WHERE id = $1`,
       [userId]
