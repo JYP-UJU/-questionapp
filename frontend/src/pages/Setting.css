@@ -100,11 +100,11 @@
 }
 
 .songi-btn {
-    background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+    background: linear-gradient(135deg, #fdf2f8, #fce7f3);
 }
 
 .songi-btn:hover {
-    background: linear-gradient(135deg, #fbcfe8, #f9a8d4);
+    background: linear-gradient(135deg, #fce7f3, #fbcfe8);
 }
 
 .account-btn {

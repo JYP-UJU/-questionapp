@@ -142,7 +142,7 @@ function Setting() {
                     </button>
 
                     {/* 2행: 내 활동 + 송이 내역 */}
-                    <button className="menu-btn account-btn" onClick={() => navigate('/saved')}>
+                    <button className="menu-btn songi-btn" onClick={() => navigate('/saved')}>
                         <span className="menu-icon">📝</span>
                         <span className="menu-label">내 활동</span>
                         <span className="menu-desc">저장한 질문 보기</span>
