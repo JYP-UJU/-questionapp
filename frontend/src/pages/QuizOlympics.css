@@ -221,3 +221,174 @@
   cursor: pointer;
   font-family: inherit;
 }
+
+/* ── 새 결과 화면 ─────────────────────────────────────── */
+.rank-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e05c8a;
+  margin-bottom: 6px;
+}
+
+/* 4강 질문 섹션 */
+.semifinal-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.semifinal-title {
+  font-size: 13px;
+  color: #888;
+  text-align: center;
+  font-weight: 500;
+}
+.semifinal-card {
+  background: white;
+  border-radius: 16px;
+  border: 2px solid #f9c6d8;
+  padding: 16px 18px;
+  width: 100%;
+  text-align: center;
+}
+.semifinal-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.5;
+}
+
+/* 성향 문구 */
+.winner-profile-box {
+  background: #e8f5fa;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c7a8a;
+  text-align: center;
+  line-height: 1.6;
+  width: 100%;
+}
+
+/* 타이핑 애니메이션 */
+.typing-message-box {
+  background: #fff8f0;
+  border-radius: 14px;
+  border: 1.5px solid #f5c4a0;
+  padding: 16px 18px;
+  width: 100%;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+}
+.typing-message {
+  font-size: 15px;
+  color: #555;
+  line-height: 1.7;
+  font-weight: 500;
+}
+.typing-cursor {
+  display: inline-block;
+  font-size: 16px;
+  color: #f5a060;
+  animation: blink 0.7s infinite;
+  margin-left: 1px;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* 버튼 두 개 나란히 */
+.winner-btn-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.winner-again-btn {
+  flex: 1;
+  padding: 16px 10px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #5bb8c4, #52b788);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.6;
+  text-align: center;
+}
+.winner-quiz-btn {
+  flex: 1;
+  padding: 16px 10px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f9a8d4, #e05c8a);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* ── 순위표 ──────────────────────────────────────────── */
+.ranking-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ranking-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+}
+.ranking-desc {
+  font-size: 11px;
+  color: #aaa;
+  text-align: center;
+  line-height: 1.5;
+}
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1.5px solid #eee;
+}
+.ranking-item.ranking-mine {
+  border-color: #f0a0be;
+  background: #fff5f8;
+}
+.ranking-pos {
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: center;
+  color: #555;
+  flex-shrink: 0;
+}
+.ranking-text {
+  flex: 1;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.4;
+}
+.ranking-score {
+  font-size: 13px;
+  font-weight: 700;
+  color: #5bb8c4;
+  flex-shrink: 0;
+}

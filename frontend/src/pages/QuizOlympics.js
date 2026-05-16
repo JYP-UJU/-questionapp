@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './QuizOlympics.css';
@@ -285,28 +285,19 @@ function QuizOlympics() {
     }
   };
 
+  // ── 결과 화면 컴포넌트 ───────────────────────────────────────
   if (finished && winner) {
-    return (
-      <div className="olympics-container">
-        <TopHeader icon="🏅" title="질문올림픽" messages={[]} backTo="/main" />
-        <div className="olympics-winner">
-          <div className="winner-crown">🏆</div>
-          <div className="winner-label">나의 최애 질문!</div>
-          <div className="winner-card">
-            <div className="winner-text">{winner.text}</div>
-            <div className="winner-profile">{getProfile(winner.subject, winner.type)}</div>
-          </div>
-          <div className="winner-sub">올림픽 완주 보상이 지급되었어요 🌸</div>
-          <button className="winner-again-btn" onClick={() => window.location.reload()}>
-            다시 하기 🔄
-          </button>
-          <button className="winner-home-btn" onClick={() => navigate('/main')}>
-            홈으로
-          </button>
-        </div>
-        <BottomNav />
-      </div>
-    );
+    // 4강 선택 질문 2개 추출 (roundNumber === 1)
+    const semifinalRound = allRoundsData.find(r => r.roundNumber === 1);
+    const semifinalSelected = semifinalRound
+      ? semifinalRound.questions.filter(q => q.selected && q.id !== winner.id).slice(0, 2)
+      : [];
+
+    return <OlympicsResult
+      winner={winner}
+      allRoundsData={allRoundsData}
+      navigate={navigate}
+    />;
   }
 
   return (
@@ -357,6 +348,115 @@ function QuizOlympics() {
         </div>
       </div>
 
+      <BottomNav />
+    </div>
+  );
+}
+
+// ── 라운드별 점수 가중치 ─────────────────────────────────────
+// roundNumber: 0=16강, 1=8강, 2=4강, 3=결승
+const ROUND_SCORES = { 0: 1, 1: 10, 2: 100, 3: 1000 };
+
+function calcRanking(allRoundsData) {
+  const scoreMap = {}; // id → { text, score }
+  for (const round of allRoundsData) {
+    const weight = ROUND_SCORES[round.roundNumber] ?? 1;
+    for (const q of round.questions) {
+      if (!scoreMap[q.id]) scoreMap[q.id] = { text: q.text, score: 0 };
+      if (q.selected) scoreMap[q.id].score += weight;
+    }
+  }
+  return Object.entries(scoreMap)
+    .map(([id, v]) => ({ id: Number(id), text: v.text, score: v.score }))
+    .sort((a, b) => b.score - a.score);
+}
+
+// ── 결과 화면 컴포넌트 ────────────────────────────────────────
+function OlympicsResult({ winner, allRoundsData, navigate }) {
+  const MESSAGE = "내가 고른 질문, 다른 친구들도 궁금해했을까요? 친구들이 남긴 의견과 관련 질문들을 보면서 더 깊이 생각해 보세요! 🔍";
+  const [displayedText, setDisplayedText] = useState('');
+  const [msgDone, setMsgDone] = useState(false);
+  const indexRef = useRef(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const interval = setInterval(() => {
+        if (indexRef.current < MESSAGE.length) {
+          setDisplayedText(MESSAGE.slice(0, indexRef.current + 1));
+          indexRef.current++;
+        } else {
+          clearInterval(interval);
+          setMsgDone(true);
+        }
+      }, 40);
+      return () => clearInterval(interval);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const profile = getProfile(winner.subject, winner.type);
+  const ranking = calcRanking(allRoundsData);
+  const MEDALS = ['🥇', '🥈', '🥉'];
+
+  return (
+    <div className="olympics-container">
+      <TopHeader icon="🏅" title="질문올림픽" messages={[]} backTo="/main" />
+      <div className="olympics-winner">
+
+        {/* 트로피 */}
+        <div className="winner-crown">🏆</div>
+        <div className="winner-label">나의 최애 질문!</div>
+
+        {/* 우승 질문 */}
+        <div className="winner-card">
+          <div className="winner-text">{winner.text}</div>
+        </div>
+
+        {/* 성향 문구 */}
+        <div className="winner-profile-box">
+          {profile}
+        </div>
+
+        {/* 점수 순위표 */}
+        <div className="ranking-section">
+          <div className="ranking-title">이번 올림픽 질문 순위</div>
+          <div className="ranking-desc">라운드를 거칠수록 더 높은 점수! (16강 1점 → 8강 10점 → 4강 100점 → 결승 1000점)</div>
+          <div className="ranking-list">
+            {ranking.map((q, i) => (
+              <div
+                key={q.id}
+                className={`ranking-item ${q.id === winner.id ? 'ranking-mine' : ''}`}
+              >
+                <span className="ranking-pos">
+                  {i < 3 ? MEDALS[i] : `${i + 1}위`}
+                </span>
+                <span className="ranking-text">{q.text}</span>
+                <span className="ranking-score">{q.score.toLocaleString()}점</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 타이핑 애니메이션 문구 */}
+        <div className="typing-message-box">
+          <span className="typing-message">{displayedText}</span>
+          {!msgDone && <span className="typing-cursor">|</span>}
+        </div>
+
+        {/* 송이 지급 */}
+        <div className="winner-sub">올림픽 완주 보상이 지급되었어요 🌸</div>
+
+        {/* 버튼 두 개 나란히 */}
+        <div className="winner-btn-row">
+          <button className="winner-again-btn" onClick={() => window.location.reload()}>
+            🔄<br/>다시 하기
+          </button>
+          <button className="winner-quiz-btn" onClick={() => navigate('/quiz')}>
+            🎯<br/>퀴즈로 가기
+          </button>
+        </div>
+
+      </div>
       <BottomNav />
     </div>
   );
