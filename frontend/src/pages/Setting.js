@@ -10,17 +10,14 @@ function Setting() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // 비밀번호 변경 모달
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    // 프로필 모달
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [newUsername, setNewUsername] = useState('');
 
-    // 회원탈퇴 모달
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
@@ -39,7 +36,6 @@ function Setting() {
         }
     };
 
-    // 로그아웃
     const handleLogout = () => {
         if (window.confirm('정말 로그아웃 하시겠어요?')) {
             localStorage.removeItem('token');
@@ -47,7 +43,6 @@ function Setting() {
         }
     };
 
-    // 비밀번호 변경
     const handlePasswordChange = async () => {
         if (!currentPassword || !newPassword || !confirmPassword) {
             alert('모든 필드를 입력해주세요');
@@ -66,7 +61,7 @@ function Setting() {
             await api.put('/users/me/password', {
                 currentPassword,
                 newPassword
-            }, );
+            });
             alert('비밀번호가 변경되었어요! 🎉');
             setShowPasswordModal(false);
             setCurrentPassword('');
@@ -81,7 +76,6 @@ function Setting() {
         }
     };
 
-    // 프로필(닉네임) 변경
     const handleProfileUpdate = async () => {
         if (!newUsername.trim()) {
             alert('닉네임을 입력해주세요');
@@ -91,7 +85,7 @@ function Setting() {
         try {
             await api.put('/users/me', {
                 username: newUsername
-            }, );
+            });
             alert('닉네임이 변경되었어요! 🎉');
             setShowProfileModal(false);
             setNewUsername('');
@@ -101,7 +95,6 @@ function Setting() {
         }
     };
 
-    // 회원탈퇴
     const handleDeleteAccount = async () => {
         if (deleteConfirmText !== '탈퇴합니다') {
             alert('"탈퇴합니다"를 정확히 입력해주세요');
@@ -109,7 +102,7 @@ function Setting() {
         }
 
         try {
-            await api.delete('/users/me', );
+            await api.delete('/users/me');
             alert('계정이 삭제되었습니다. 그동안 감사했어요 🌸');
             localStorage.removeItem('token');
             navigate('/login');
@@ -124,22 +117,19 @@ function Setting() {
 
     return (
         <div className="setting-container">
-            {/* 헤더 */}
             <header className="setting-header">
                 <h1>⚙️ 설정</h1>
             </header>
 
-            {/* 사용자 정보 바 */}
             <div className="setting-user-bar">
                 <span className="user-info-text">
                     👤 {user?.username || '사용자'} | 🌸 {user?.songi_count || 0}송이
                 </span>
             </div>
 
-            {/* 메뉴 그리드 (2x4) */}
             <div className="setting-content">
                 <div className="menu-grid">
-                    {/* 1행: 돌아보기 */}
+                    {/* 1행: 일지 */}
                     <button className="menu-btn report-btn" onClick={() => navigate('/weekly-report')}>
                         <span className="menu-icon">📊</span>
                         <span className="menu-label">주간 일지</span>
@@ -151,16 +141,16 @@ function Setting() {
                         <span className="menu-desc">이번 달 활동</span>
                     </button>
 
-                    {/* 2행: 송이 */}
-                    <button className="menu-btn songi-btn" onClick={() => navigate('/songi-status')}>
-                        <span className="menu-icon">🌸</span>
-                        <span className="menu-label">송이 현황</span>
-                        <span className="menu-desc">현재 {user?.songi_count || 0}송이</span>
+                    {/* 2행: 내 활동 + 송이 내역 */}
+                    <button className="menu-btn account-btn" onClick={() => navigate('/saved')}>
+                        <span className="menu-icon">📝</span>
+                        <span className="menu-label">내 활동</span>
+                        <span className="menu-desc">저장한 질문 보기</span>
                     </button>
                     <button className="menu-btn songi-btn" onClick={() => navigate('/songi-history')}>
-                        <span className="menu-icon">📋</span>
+                        <span className="menu-icon">🌸</span>
                         <span className="menu-label">송이 내역</span>
-                        <span className="menu-desc">송이 획득 기록</span>
+                        <span className="menu-desc">현재 {user?.songi_count || 0}송이</span>
                     </button>
 
                     {/* 3행: 계정 */}
@@ -198,15 +188,12 @@ function Setting() {
                     )}
                 </div>
 
-                {/* 카피라이트 */}
                 <div className="copyright">
                     <p>© 2026 물음송이 (Question Blossom)</p>
                     <p>과학적 호기심을 꽃피우는 질문 플랫폼 🌸</p>
                     <p className="made-by">made by Claude & PIO</p>
                 </div>
             </div>
-
-            {/* ===== 모달들 ===== */}
 
             {/* 비밀번호 변경 모달 */}
             {showPasswordModal && (
