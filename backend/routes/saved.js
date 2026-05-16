@@ -23,7 +23,7 @@ router.post('/', authenticateToken, async (req, res) => {
         }
 
         // 유효한 타입 체크
-        const validTypes = ['seed', 'user', 'quiz', 'icebreaking', 'user_question', 'friend_question', 'quiz_related', 'icebreaking_related', 'related_question'];
+        const validTypes = ['seed', 'user', 'quiz', 'icebreaking', 'user_question', 'friend_question', 'quiz_related', 'icebreaking_related', 'related_question', 'olympic'];
         if (!validTypes.includes(questionType)) {
             return res.status(400).json({ 
                 message: '올바른 질문 타입이 아닙니다',
@@ -185,12 +185,23 @@ router.get('/', authenticateToken, async (req, res) => {
                 uq.dislikes_count,
                 
                 -- 작성자 정보 (친구질문용)
-                u.username as author_username
+                u.username as author_username,
+
+                -- olympic 질문 텍스트
+                olq.question_text as olympic_question_text,
+                olq.subject as olympic_subject,
+                olq.question_type as olympic_type
                 
             FROM saved_questions sq
 LEFT JOIN seed_questions seed ON sq.question_id = seed.id AND COALESCE(sq.question_type, sq.source_type) IN ('quiz', 'icebreaking', 'seed')
 LEFT JOIN user_questions uq ON sq.question_id = uq.id AND COALESCE(sq.question_type, sq.source_type) IN ('user', 'user_question', 'friend_question', 'quiz_related', 'icebreaking_related', 'related_question')
 LEFT JOIN users u ON uq.user_id = u.id
+LEFT JOIN LATERAL (
+    SELECT DISTINCT ON (question_id) question_text, subject, question_type
+    FROM olympic_rounds
+    WHERE question_id = sq.question_id
+    ORDER BY question_id, id DESC
+) olq ON COALESCE(sq.question_type, sq.source_type) = 'olympic'
 
 WHERE sq.user_id = $1
             ORDER BY ${orderBy}
@@ -229,6 +240,15 @@ WHERE sq.user_id = $1
                         option_4: row.option_4,
                         option_5: row.option_5
                     } : null
+                };
+            } else if (qType === 'olympic') {
+                return {
+                    ...base,
+                    questionId: row.question_id,
+                    title: row.olympic_question_text,
+                    content: row.olympic_subject,
+                    likesCount: 0,
+                    dislikesCount: 0,
                 };
             } else if (qType === 'user' || qType === 'user_question' || qType === 'friend_question' || qType === 'quiz_related' || qType === 'icebreaking_related' || qType === 'related_question') {
                 return {
