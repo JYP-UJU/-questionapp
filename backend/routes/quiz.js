@@ -43,7 +43,7 @@ router.get('/random', authenticateToken, async (req, res) => {
                      FROM olympic_rounds or2
                      JOIN seed_questions sq ON or2.question_id = sq.id
                      WHERE or2.session_id = $1
-                       AND or2.round_number = 2
+                       AND or2.round_number = 1
                        AND or2.selected = TRUE
                        AND sq.option_1 IS NOT NULL
                        AND sq.id != $2
