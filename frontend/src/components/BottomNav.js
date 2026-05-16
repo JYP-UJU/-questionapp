@@ -15,7 +15,7 @@ const menus = [
     },
     {
         path: '/quiz',
-        label: '질문대기실',
+        label: '퀴즈',
         icon: (active) => (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="4" y="3" width="16" height="18" rx="2"/>
