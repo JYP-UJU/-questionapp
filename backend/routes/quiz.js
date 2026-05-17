@@ -3,40 +3,25 @@ const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../middleware/auth');
 
-// 랜덤 퀴즈 5문제 가져오기 (올림픽 top3 우선 + 나머지 랜덤)
+// 랜덤 퀴즈 5문제 가져오기 (올림픽 4강 진출 4문제 우선 + 랜덤 1개)
 router.get('/random', authenticateToken, async (req, res) => {
     try {
         const userId = req.user?.userId || req.user?.id;
         const questions = [];
         const usedIds = [];
 
-        // 1. 직전 올림픽에서 top3 뽑기
-        //    - 우승 질문 1개 (결승 선택)
-        //    - 4강에서 선택된 질문 중 2개
+        // 1. 직전 올림픽 세션에서 4강에 올라온 질문 4개 뽑기
+        //    (선택 여부 관계없이 round_number=1에 노출된 것 전부)
         try {
-            // 직전 세션 id 조회
             const lastSession = await pool.query(
-                `SELECT id, winner_question_id FROM olympic_sessions
+                `SELECT id FROM olympic_sessions
                  WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
                 [userId]
             );
             if (lastSession.rows.length > 0) {
                 const sessionId = lastSession.rows[0].id;
-                const winnerId = lastSession.rows[0].winner_question_id;
 
-                // 우승 질문 (seed_questions에 있고 보기 있는 것)
-                const winnerQ = await pool.query(
-                    `SELECT id, question, category, option_1, option_2, option_3, option_4, option_5
-                     FROM seed_questions
-                     WHERE id = $1 AND option_1 IS NOT NULL`,
-                    [winnerId]
-                );
-                if (winnerQ.rows.length > 0) {
-                    questions.push(winnerQ.rows[0]);
-                    usedIds.push(winnerQ.rows[0].id);
-                }
-
-                // 4강(round_number=1)에서 선택된 질문 중 우승 제외 2개
+                // 4강(round_number=1)에 노출된 질문 전부 (최대 4개)
                 const semifinalQ = await pool.query(
                     `SELECT DISTINCT sq.id, sq.question, sq.category,
                             sq.option_1, sq.option_2, sq.option_3, sq.option_4, sq.option_5
@@ -44,25 +29,20 @@ router.get('/random', authenticateToken, async (req, res) => {
                      JOIN seed_questions sq ON or2.question_id = sq.id
                      WHERE or2.session_id = $1
                        AND or2.round_number = 1
-                       AND or2.selected = TRUE
                        AND sq.option_1 IS NOT NULL
-                       AND sq.id != $2
-                     LIMIT 2`,
-                    [sessionId, winnerId]
+                     LIMIT 4`,
+                    [sessionId]
                 );
                 for (const row of semifinalQ.rows) {
-                    if (!usedIds.includes(row.id)) {
-                        questions.push(row);
-                        usedIds.push(row.id);
-                    }
+                    questions.push(row);
+                    usedIds.push(row.id);
                 }
             }
         } catch (e) {
-            // olympic 데이터 없으면 무시하고 랜덤으로만 채움
-            console.error('olympic top3 조회 오류:', e.message);
+            console.error('olympic 4강 조회 오류:', e.message);
         }
 
-        // 2. 나머지를 랜덤으로 채우기 (5개 목표)
+        // 2. 나머지를 랜덤으로 채우기 (5개 목표, 보통 랜덤 1개)
         const needed = 5 - questions.length;
         if (needed > 0) {
             const placeholders = usedIds.length > 0
@@ -178,7 +158,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
             }
         }
 
-        // 의견 저장 처리 - question_id + question_type 방식으로 통일
+        // 의견 저장 처리
         for (const opinion of opinions) {
             try {
                 const { questionId, opinionText } = opinion;
@@ -194,7 +174,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
             }
         }
 
-        // 송이 지급 (+5송이) - 5문제 세트 1회 기준
+        // 송이 지급 (+5송이)
         await client.query(
             'UPDATE users SET songi_count = songi_count + 5 WHERE id = $1',
             [userId]
@@ -261,7 +241,7 @@ router.get('/my-history', authenticateToken, async (req, res) => {
         res.json({
             history: result.rows,
             total: totalResponses,
-            totalSessions: Math.floor(totalResponses / 5) // 5문제=1회
+            totalSessions: Math.floor(totalResponses / 5)
         });
 
     } catch (error) {
