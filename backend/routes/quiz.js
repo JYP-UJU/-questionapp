@@ -4,6 +4,7 @@ const pool = require('../db');
 const authenticateToken = require('../middleware/auth');
 
 // 랜덤 퀴즈 5문제 가져오기 (올림픽 4강 진출 4문제 우선 + 랜덤 1개)
+// round_number: 0=16강, 1=8강, 2=4강, 3=결승
 router.get('/random', authenticateToken, async (req, res) => {
     try {
         const userId = req.user?.userId || req.user?.id;
@@ -28,7 +29,7 @@ router.get('/random', authenticateToken, async (req, res) => {
                      FROM olympic_rounds or2
                      JOIN seed_questions sq ON or2.question_id = sq.id
                      WHERE or2.session_id = $1
-                       AND or2.round_number = 1
+                       AND or2.round_number = 2
                        AND sq.option_1 IS NOT NULL
                      LIMIT 4`,
                     [sessionId]
