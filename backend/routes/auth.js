@@ -7,17 +7,21 @@ const pool = require('../db');
 // 회원가입
 router.post('/register', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, name, grade } = req.body;
 
     // 유효성 검사
     if (!username || !password) {
       return res.status(400).json({ error: '아이디와 비밀번호를 입력해주세요' });
     }
-
+    if (!name) {
+      return res.status(400).json({ error: '이름을 입력해주세요' });
+    }
+    if (!grade) {
+      return res.status(400).json({ error: '학년을 선택해주세요' });
+    }
     if (username.length < 3) {
       return res.status(400).json({ error: '아이디는 3글자 이상이어야 합니다' });
     }
-
     if (password.length < 4) {
       return res.status(400).json({ error: '비밀번호는 4글자 이상이어야 합니다' });
     }
@@ -27,7 +31,6 @@ router.post('/register', async (req, res) => {
       'SELECT id FROM users WHERE username = $1',
       [username]
     );
-
     if (existingUser.rows.length > 0) {
       return res.status(400).json({ error: '이미 사용 중인 아이디입니다' });
     }
@@ -35,10 +38,12 @@ router.post('/register', async (req, res) => {
     // 비밀번호 해싱
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 사용자 생성
+    // 사용자 생성 (name, grade 포함)
     const result = await pool.query(
-      'INSERT INTO users (username, password_hash, songi_count) VALUES ($1, $2, 0) RETURNING id, username, songi_count, created_at',
-      [username, hashedPassword]
+      `INSERT INTO users (username, password_hash, name, grade, research_agreed, songi_count)
+       VALUES ($1, $2, $3, $4, true, 0)
+       RETURNING id, username, songi_count, created_at`,
+      [username, hashedPassword, name, grade]
     );
 
     const user = result.rows[0];
@@ -71,12 +76,10 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // 유효성 검사
     if (!username || !password) {
       return res.status(400).json({ error: '아이디와 비밀번호를 입력해주세요' });
     }
 
-    // 사용자 찾기
     const result = await pool.query(
       'SELECT id, username, password_hash, songi_count FROM users WHERE username = $1',
       [username]
@@ -88,14 +91,11 @@ router.post('/login', async (req, res) => {
 
     const user = result.rows[0];
 
-    // 비밀번호 확인
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-
     if (!isValidPassword) {
       return res.status(401).json({ error: '아이디 또는 비밀번호가 잘못되었습니다' });
     }
 
-    // JWT 토큰 생성
     const token = jwt.sign(
       { userId: user.id, username: user.username },
       process.env.JWT_SECRET,

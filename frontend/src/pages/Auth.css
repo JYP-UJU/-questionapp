@@ -1,100 +1,56 @@
-.auth-container {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(135deg, #87CEEB 0%, #98D8C8 100%);
+
+/* 연구 참여 안내 */
+.auth-research-notice {
+    background: #f0f7f0;
+    border-left: 3px solid #4caf50;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #444;
+    line-height: 1.6;
 }
 
-.auth-box {
-    background: white;
-    padding: 40px;
-    border-radius: 20px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 400px;
+.auth-research-link {
+    display: inline-block;
+    margin-top: 6px;
+    color: #2e7d32;
+    font-weight: 500;
+    text-decoration: none;
+    font-size: 13px;
+}
+.auth-research-link:hover {
+    text-decoration: underline;
 }
 
-.auth-title {
-    font-size: 32px;
-    text-align: center;
-    margin-bottom: 8px;
+/* 학년 select */
+.auth-select {
     color: #333;
+    background: white;
+    cursor: pointer;
 }
+.auth-select option { color: #333; }
 
-.auth-subtitle {
-    text-align: center;
-    color: #666;
-    margin-bottom: 30px;
-    font-size: 14px;
-}
-
-.auth-tabs {
+/* 동의 체크박스 */
+.auth-agree-label {
     display: flex;
+    align-items: center;
     gap: 10px;
-    margin-bottom: 30px;
-}
-
-.auth-tab {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    background: #f0f0f0;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.3s;
-}
-
-.auth-tab.active {
-    background: #87CEEB;
-    color: white;
-    font-weight: bold;
-}
-
-.auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.auth-input {
-    padding: 15px;
-    border: 2px solid #e0e0e0;
-    border-radius: 10px;
-    font-size: 16px;
-    transition: border 0.3s;
-}
-
-.auth-input:focus {
-    outline: none;
-    border-color: #87CEEB;
-}
-
-.auth-button {
-    padding: 15px;
-    background: #87CEEB;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-.auth-button:hover {
-    background: #6BB8D9;
-}
-
-.auth-button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
-
-.auth-error {
-    color: #e74c3c;
     font-size: 14px;
-    text-align: center;
-    margin: 0;
+    color: #444;
+    cursor: pointer;
+    padding: 10px 14px;
+    background: #f0f7f0;
+    border-radius: 10px;
+    border: 1px solid #c8e6c8;
+}
+.auth-agree-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #2e7d32;
+    flex-shrink: 0;
+}
+.auth-required {
+    color: #e74c3c;
+    font-weight: bold;
 }
