@@ -61,6 +61,15 @@ app.get('/', (req, res) => {
     }
   });
 });
+const path = require('path');
+
+app.get('/consent/student', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'student_info.html'));
+});
+
+app.get('/consent/parent', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'parent_consent.html'));
+});
 
 // 404 에러 핸들링
 app.use((req, res) => {

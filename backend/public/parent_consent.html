@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부모 동의서 — 질문앱</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+  :root {
+    --ink:#0a0a0a;--ink-light:#1a1a1a;--ink-muted:#555;
+    --paper:#faf9f6;--paper-warm:#f4f1eb;--rule:#d8d4cc;
+    --accent:#2d5a8e;--accent-light:#e8f0f8;
+    --warn:#c0392b;--green:#27ae60;--green-light:#eafaf1;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Noto Sans KR',sans-serif;font-weight:500;line-height:1.8;min-height:100vh;}
+  .page-header{background:var(--ink);color:white;padding:32px 24px 28px;text-align:center;position:relative;overflow:hidden;}
+  .page-header::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,0.04) 39px,rgba(255,255,255,0.04) 40px);}
+  .header-label{font-size:11px;font-weight:500;letter-spacing:3px;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:10px;position:relative;}
+  .header-title{font-family:'Noto Serif KR',serif;font-size:22px;font-weight:700;line-height:1.4;position:relative;}
+  .header-subtitle{font-size:13px;color:rgba(255,255,255,0.6);margin-top:8px;position:relative;}
+  .guardian-notice{background:#fff8e1;border-left:3px solid #f9a825;padding:14px 18px;margin:20px 0 0;border-radius:0 4px 4px 0;font-size:14px;color:#5d4037;line-height:1.7;}
+  .guardian-notice strong{font-weight:600;color:#e65100;}
+  .container{max-width:720px;margin:0 auto;padding:0 20px 40px;}
+  .info-strip{background:var(--accent-light);border-left:3px solid var(--accent);padding:14px 18px;margin:20px 0 0;border-radius:0 4px 4px 0;font-size:15px;color:var(--accent);line-height:1.6;}
+  .section{margin-top:36px;}
+  .section-num{display:inline-block;background:var(--ink);color:white;font-size:10px;font-weight:500;letter-spacing:1px;padding:2px 8px;border-radius:2px;margin-bottom:8px;}
+  .section-title{font-family:'Noto Serif KR',serif;font-size:18px;font-weight:600;color:var(--ink);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--rule);}
+  .section-body{font-size:16px;color:var(--ink-light);line-height:1.9;}
+  .section-body ul{margin:8px 0 8px 4px;list-style:none;}
+  .section-body ul li{padding:3px 0 3px 16px;position:relative;}
+  .section-body ul li::before{content:'—';position:absolute;left:0;color:var(--ink-muted);font-size:12px;}
+  hr.divider{border:none;border-top:1px solid var(--rule);margin:40px 0;}
+  .contact-box{background:var(--paper-warm);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;margin-top:10px;font-size:15px;color:var(--ink-light);}
+  .contact-row{display:flex;gap:6px;align-items:flex-start;margin-bottom:6px;}
+  .contact-row:last-child{margin-bottom:0;}
+  .contact-label{font-weight:500;color:var(--ink);min-width:80px;flex-shrink:0;}
+  /* CONSENT */
+  .consent-gate{margin-top:44px;}
+  .consent-gate-title{font-family:'Noto Serif KR',serif;font-size:18px;font-weight:700;text-align:center;margin-bottom:6px;}
+  .consent-gate-sub{font-size:13px;color:var(--ink-muted);text-align:center;margin-bottom:28px;}
+  .required-note{font-size:12px;color:var(--warn);margin-bottom:20px;}
+  .field-group{display:flex;flex-direction:column;gap:16px;margin-bottom:28px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:14px;font-weight:500;letter-spacing:1px;color:var(--ink-muted);text-transform:uppercase;}
+  .field input{border:1px solid var(--rule);border-radius:4px;padding:11px 14px;font-size:15px;font-family:'Noto Sans KR',sans-serif;background:white;color:var(--ink);transition:border-color 0.2s;outline:none;}
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,90,142,0.1);}
+  .field-hint{font-size:12px;color:var(--ink-muted);margin-top:2px;}
+  /* consent toggle */
+  .consent-toggle-wrap{border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin-bottom:20px;}
+  .consent-toggle-label{display:flex;align-items:center;gap:14px;padding:16px 18px;cursor:pointer;background:var(--paper-warm);user-select:none;transition:background 0.2s;}
+  .consent-toggle-label:hover{background:#ede9df;}
+  .consent-checkbox{width:20px;height:20px;border:2px solid var(--rule);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s;background:white;}
+  .consent-checkbox.checked{background:var(--accent);border-color:var(--accent);}
+  .consent-checkbox.checked::after{content:'✓';color:white;font-size:12px;font-weight:700;}
+  .consent-toggle-text{font-size:14px;font-weight:500;color:var(--ink);flex:1;}
+  .consent-toggle-arrow{font-size:13px;color:var(--ink-muted);transition:transform 0.3s;}
+  .consent-toggle-arrow.open{transform:rotate(180deg);}
+  .consent-doc{display:none;padding:20px 18px;background:white;border-top:1px solid var(--rule);animation:slideDown 0.3s ease;}
+  .consent-doc.open{display:block;}
+  @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+  .consent-doc-title{font-family:'Noto Serif KR',serif;font-size:15px;font-weight:600;text-align:center;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--rule);}
+  .consent-items{list-style:none;display:flex;flex-direction:column;gap:10px;}
+  .consent-item{display:flex;gap:12px;font-size:15px;color:var(--ink-light);line-height:1.7;padding:12px 4px;border-bottom:1px solid #f0ede6;align-items:flex-start;cursor:pointer;transition:background 0.15s;border-radius:4px;}
+  .consent-item:last-child{border-bottom:none;}
+  .consent-item:hover{background:#f7f5f0;}
+  .consent-item.checked{background:#eafaf1;}
+  .consent-item-text{flex:1;}
+  .item-check{font-size:18px;flex-shrink:0;color:var(--ink-muted);cursor:pointer;transition:color 0.2s;line-height:1.7;}
+  .consent-item.checked .item-check{color:var(--green);}
+  .consent-item-num{font-weight:700;color:var(--accent);flex-shrink:0;min-width:20px;}
+  .all-agree-wrap{display:none;margin-top:16px;}
+  .all-agree-wrap.open{display:block;}
+  .btn-all-agree{width:100%;padding:14px;background:white;border:2px solid var(--accent);border-radius:6px;color:var(--accent);font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .btn-all-agree:hover{background:var(--accent-light);}
+  .btn-all-agree.agreed{background:var(--green);border-color:var(--green);color:white;}
+  /* 서명란 */
+  .signature-section{margin-top:32px;border:1px solid var(--rule);border-radius:6px;overflow:hidden;}
+  .signature-header{background:var(--paper-warm);padding:12px 18px;font-family:'Noto Serif KR',serif;font-size:15px;font-weight:600;color:var(--ink);border-bottom:1px solid var(--rule);}
+  .signature-body{padding:20px 18px;background:white;}
+  .signature-statement{font-size:14px;color:var(--ink-light);line-height:1.8;margin-bottom:20px;padding:12px 14px;background:var(--paper);border-radius:4px;border-left:3px solid var(--accent);}
+  .signature-row{display:flex;gap:20px;align-items:flex-end;flex-wrap:wrap;}
+  .signature-field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:140px;}
+  .signature-field label{font-size:12px;font-weight:500;letter-spacing:1px;color:var(--ink-muted);text-transform:uppercase;}
+  .signature-field input{border:none;border-bottom:1px solid var(--ink);padding:8px 4px;font-size:15px;font-family:'Noto Sans KR',sans-serif;background:transparent;color:var(--ink);outline:none;transition:border-color 0.2s;}
+  .signature-field input:focus{border-bottom-color:var(--accent);}
+  .signature-field input[readonly]{color:var(--ink-muted);cursor:default;}
+  /* submit */
+  .submit-wrap{margin-top:28px;}
+  .btn-submit{width:100%;padding:16px;background:var(--ink);color:white;border:none;border-radius:6px;font-family:'Noto Sans KR',sans-serif;font-size:16px;font-weight:500;cursor:pointer;transition:all 0.2s;opacity:0.3;pointer-events:none;}
+  .btn-submit.ready{opacity:1;pointer-events:auto;}
+  .btn-submit.ready:hover{background:var(--accent);transform:translateY(-1px);}
+  .btn-submit.ready:active{transform:translateY(0);}
+  .success-msg{display:none;text-align:center;padding:32px 20px;background:var(--green-light);border:1px solid #a9dfbf;border-radius:8px;margin-top:20px;}
+  .success-msg.show{display:block;}
+  .success-icon{font-size:36px;margin-bottom:12px;}
+  .success-title{font-family:'Noto Serif KR',serif;font-size:18px;font-weight:700;color:#1e8449;margin-bottom:8px;}
+  .success-sub{font-size:13px;color:#27ae60;}
+  /* footer */
+  .page-footer{text-align:center;padding:20px 20px 32px;font-size:10px;color:#ccc;line-height:1.7;border-top:1px solid #eee;margin-top:48px;}
+  @media(max-width:480px){.header-title{font-size:18px;}.section-title{font-size:15px;}.signature-row{flex-direction:column;}}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="header-label">연구 참여 동의</div>
+  <div class="header-title">질문앱 참여를 위한<br>부모 설명서 및 동의서</div>
+  <div class="header-subtitle">아동·청소년의 질문 생성 및 호기심 발달 특성 분석 연구</div>
+</div>
+
+<div class="container">
+
+  <div class="guardian-notice">
+    <strong>보호자 전용 페이지입니다.</strong> 이 페이지는 자녀의 연구 참여를 위한 보호자 동의 절차입니다. 앱 활동(질문 생성, 퀴즈 등)은 자녀만 참여합니다. 보호자께서는 앱을 별도로 설치하거나 가입하지 않으셔도 됩니다.
+  </div>
+
+  <div class="info-strip">
+    <strong>보호자님께</strong> — 자녀가 본 연구에 참여하기 전, 아래 설명서를 천천히 읽어 주시고 동의 여부를 결정해 주시기 바랍니다.<br><br>
+    저는 연구책임자인 박지영(목포대학교 문화와자연유산연구소)입니다. 이 연구는 연구재단의 지원으로 진행되는 연구의 일부입니다 (과제번호 NRF-2025S1A5A2A01010631). 궁금한 점이 있다면 언제든지 연락해 주십시오. (전화 010-9755-9655 / 이메일 on.jypark@gmail.com)
+  </div>
+
+  <div class="section">
+    <div class="section-num">01</div>
+    <div class="section-title">연구의 배경과 목적</div>
+    <div class="section-body">
+      <p>호기심은 과학 학습의 핵심 동기이며, 질문 생성은 호기심의 직접적 표현입니다. 일상 생활에서 자연스럽게 갖는 과학에 대한 질문에 대한 더 많은 연구를 필요로 합니다.</p><br>
+      <p>본 연구는 연구 목적으로 개발된 모바일 앱(질문앱)을 활용하여 다음을 분석하고, 개별화된 과학교육 전략을 개발하는 것을 목적으로 합니다.</p>
+      <ul>
+        <li>아동·청소년이 스스로 생성하는 질문의 유형과 특성</li>
+        <li>호기심 발달 과정</li>
+        <li>질문 생성 패턴과 학습 행동의 관계</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">02</div>
+    <div class="section-title">연구 참여 대상</div>
+    <div class="section-body">
+      <p>본 연구에는 만 11세 이상 초·중등학생 100명과 대학생 50명이 참여할 예정입니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">03</div>
+    <div class="section-title">연구 방법</div>
+    <div class="section-body">
+      <p>귀하가 연구 참여에 동의하시면, 네 달 동안 연구용 모바일 앱(질문앱)에서 다음 활동을 하게 됩니다.</p>
+      <ul>
+        <li>랜덤으로 제시되는 질문에 흥미도 표현</li>
+        <li>간단한 과학 퀴즈에 응답하고 흥미도 표현</li>
+        <li>자신의 질문 제출</li>
+        <li>다른 사용자의 질문에 관심있음/관심없음, 의견 남기기, 관련 질문 생성 등 간단한 반응 남기기</li>
+        <li>주간 일지 및 월간 일지 남기기</li>
+      </ul><br>
+      <p>모든 활동은 본인의 선택에 따르며 원하지 않으면 참여하지 않을 수 있습니다. 활동은 연구용 ID 기반 별명(닉네임)으로 이루어지며, 상품권 전달을 위한 연락처 외의 개인정보는 수집하지 않습니다.</p><br>
+      <p>앱 활동은 하루 약 5분 정도이며, 스마트폰 또는 태블릿에서 장소 제한 없이 자유롭게 참여할 수 있습니다.</p><br>
+      <p>활동 종료 이후, 참여 정도에 따라 연구자와 1:1 전화 인터뷰(약 30분)를 요청할 수 있습니다. 인터뷰는 선택 사항이며 거부하더라도 어떠한 불이익도 없습니다.</p><br>
+      <p>앱에 입력되는 질문 및 의견 중 의미 없는 반복 입력, 비속어, 타인을 비하하거나 불쾌감을 줄 수 있는 표현은 연구자가 예고 없이 삭제하거나 분석에서 제외할 수 있습니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">04</div>
+    <div class="section-title">연구 참여 기간</div>
+    <div class="section-body">
+      <p>연구 참여 기간은 네 달(2026년 9월 ~ 2026년 12월)이며, 일주일에 1회 이상 참여하도록 요청받을 것입니다. 참여 횟수나 기간은 강제되지 않습니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">05</div>
+    <div class="section-title">연구 참여 도중 중도탈락</div>
+    <div class="section-body">
+      <p>연구 참여 도중 언제든지 자유롭게 참여를 중단할 수 있습니다(앱을 사용하지 않으셔도 됩니다). 중단하더라도 어떠한 불이익도 없습니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">06</div>
+    <div class="section-title">부작용 또는 위험요소 및 위험 최소화</div>
+    <div class="section-body">
+      <p>본 연구에서 활용하는 질문앱은 교육적 활동(질문 생성, 퀴즈 응답 등)으로 구성되어 있으며, 신체적·정서적 위험이 없습니다. 다음과 같은 조치를 통해 잠재적 위험을 최소화합니다.</p>
+      <ul>
+        <li>불쾌한 표현은 연구자가 수시로 점검하며 삭제합니다</li>
+        <li>개인정보는 암호화된 서버에 저장되며 연구책임자만 접근할 수 있습니다</li>
+        <li>앱 활동 데이터는 실명이 아닌 연구용 ID로만 저장됩니다</li>
+        <li>앱 사용 중 불편함이 느껴질 경우 언제든지 활동을 중단할 수 있습니다</li>
+        <li>부적절한 콘텐츠(반복 입력, 비속어 등)는 연구자가 모니터링하여 예고 없이 삭제 처리합니다</li>
+      </ul><br>
+      <p>만일 연구 참여 도중 위험 요소에 대한 질문이 있으시면 연구책임자에게 즉시 문의하시기 바랍니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">07</div>
+    <div class="section-title">연구 참여에 따른 이익</div>
+    <div class="section-body">
+      <p>본 연구 참여를 통해 생활 주변에서 과학과 관련된 질문을 생성하려는 과학적 태도를 갖출 수 있습니다. 또한 참여자가 제공하는 질문과 활동 정보는 아동·청소년의 호기심 발달을 이해하고 개별화된 과학교육을 개발하는 데 중요한 기여를 하게 됩니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">08</div>
+    <div class="section-title">연구 참여에 따른 보상</div>
+    <div class="section-body">
+      <p>앱 활동으로 포인트(송이)가 적립되며, 200점 달성 시 1,000원 편의점 모바일 상품권이 제공됩니다. 상품권은 연구 기간 동안 누적적으로 지급됩니다. 보상은 과도한 참여를 유도하지 않도록 소액으로 설계되었으며, 특정 성과가 아닌 꾸준한 참여 자체에 대한 소정의 감사 표시입니다. 상품권 지급 기준(200포인트)은 일상적인 참여 수준(하루 약 5분)으로 약 2주에 달성 가능하며, 주간일지 작성 1회 이상을 포함해야 지급됩니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">09</div>
+    <div class="section-title">연구에 참여하지 않을 시 불이익</div>
+    <div class="section-body">
+      <p>귀하는 본 연구에 참여하지 않을 자유가 있습니다. 연구에 참여하지 않더라도 어떠한 불이익도 없습니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">10</div>
+    <div class="section-title">개인정보와 비밀보장</div>
+    <div class="section-body">
+      <ul>
+        <li>보호자 동의 확인을 위해 보호자 성명·연락처(이메일, 전화번호)와 자녀 성명을 수집합니다. 상품권 지급 시 수령인 실명과 연락처를 별도 수집합니다. 이 외 개인정보는 수집하지 않습니다.</li>
+        <li>앱 활동 데이터는 실명이 아닌 연구용 ID 기반으로 저장됩니다. 연구용 ID는 개인 식별이 불가능한 형태로 부여됩니다.</li>
+        <li>수집된 데이터는 연구 목적에 한해 사용되며, 개인 식별이 불가능한 형태로 분석됩니다.</li>
+        <li>연구 자료는 암호화된 서버에 보관되며, 연구책임자만 접근할 수 있습니다. 연구 종료 후 3년간 보관 후 안전하게 폐기됩니다.</li>
+        <li>연구 결과가 학회나 논문에 발표될 경우, 개인을 식별할 수 있는 정보는 포함되지 않습니다.</li>
+      </ul><br>
+      <p>관련 법령에 따라 모니터 요원, 점검 요원, 공용기관생명윤리위원회(IRB)는 연구 절차와 자료의 신뢰성을 검증하기 위해 연구 자료를 열람할 수 있습니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">11</div>
+    <div class="section-title">연구 참여 비용</div>
+    <div class="section-body">
+      <p>본 연구 참여에 따른 별도의 비용은 발생하지 않습니다. 앱 사용에 필요한 데이터 통신 요금 외에 연구대상자가 부담해야 할 비용은 없습니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">12</div>
+    <div class="section-title">연구 참여 중단 조건</div>
+    <div class="section-body">
+      <p>연구책임자는 연구대상자의 안전 또는 연구의 적절한 진행을 위해 필요한 경우, 연구대상자의 동의 없이 참여를 중단시킬 수 있습니다. 이 경우 연구대상자에게 그 사유를 알려드립니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">13</div>
+    <div class="section-title">새로운 정보 제공</div>
+    <div class="section-body">
+      <p>연구 진행 중 연구대상자의 참여 여부에 영향을 미칠 수 있는 새로운 정보가 확인될 경우, 이를 즉시 알려드립니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">14</div>
+    <div class="section-title">피해 발생 시 대처</div>
+    <div class="section-body">
+      <p>본 연구는 신체적·정서적 위험이 매우 낮은 연구이나, 연구 참여 중 예상치 못한 피해가 발생할 경우 연구책임자에게 즉시 연락하여 주시기 바랍니다. 연구와 직접 관련된 피해에 대해서는 연구책임자가 적절한 조치를 취할 것입니다.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-num">15</div>
+    <div class="section-title">연구 문의</div>
+    <div class="section-body">
+      <p>본 연구에 대해 질문이 있거나 연구 중간에 문제가 생길 시 연구책임자에게 언제든지 연락하십시오.</p>
+      <div class="contact-box" style="margin-top:12px;">
+        <div class="contact-row"><span class="contact-label">연구책임자</span><span>박지영 (목포대학교 문화와자연유산연구소)</span></div>
+        <div class="contact-row"><span class="contact-label">과제번호</span><span>NRF-2025S1A5A2A01010631</span></div>
+        <div class="contact-row"><span class="contact-label">전화</span><span>010-9755-9655</span></div>
+        <div class="contact-row"><span class="contact-label">이메일</span><span>on.jypark@gmail.com</span></div>
+      </div>
+      <div class="contact-box" style="margin-top:10px;">
+        <div class="contact-row"><span class="contact-label">IRB</span><span>목포대학교 생명윤리심의위원회</span></div>
+        <div class="contact-row"><span class="contact-label">전화</span><span>061-450-6023</span></div>
+        <div class="contact-row"><span class="contact-label">이메일</span><span>mnuirb@mokpo.ac.kr</span></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="consent-gate">
+    <div class="consent-gate-title">동의서 작성</div>
+    <div class="consent-gate-sub">아래 정보를 입력하신 후 동의 여부를 선택해 주세요.</div>
+    <p class="required-note">* 표시 항목은 필수 입력 사항입니다.</p>
+
+    <div class="field-group">
+      <div class="field">
+        <label>보호자 성명 *</label>
+        <input type="text" id="parentName" placeholder="보호자 성함을 입력해 주세요" oninput="updateSubmitState()">
+      </div>
+      <div class="field">
+        <label>보호자 전화번호 *</label>
+        <input type="tel" id="parentPhone" placeholder="010-0000-0000" oninput="updateSubmitState()">
+        <span class="field-hint">보호자 확인을 위해 사용됩니다.</span>
+      </div>
+      <div class="field">
+        <label>이메일 주소 *</label>
+        <input type="email" id="parentEmail" placeholder="동의서 사본을 받으실 이메일 주소를 입력해 주세요" oninput="updateSubmitState()">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div id="childrenWrap">
+        <div class="field child-field" data-index="0">
+          <label>자녀 성명 1 *</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" class="child-input" placeholder="자녀 성함을 입력해 주세요" oninput="updateSubmitState()" style="flex:1;">
+          </div>
+        </div>
+      </div>
+      <button type="button" onclick="addChild()" style="display:flex;align-items:center;gap:6px;background:none;border:1px dashed var(--rule);border-radius:6px;padding:10px 16px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:var(--ink-muted);cursor:pointer;transition:all 0.2s;width:100%;justify-content:center;margin-top:4px;"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+        onmouseout="this.style.borderColor='var(--rule)';this.style.color='var(--ink-muted)'">
+        + 자녀 추가
+      </button>
+    </div>
+
+    <div class="consent-toggle-wrap">
+      <div class="consent-toggle-label" onclick="toggleConsent()">
+        <div class="consent-checkbox" id="consentCheck"></div>
+        <span class="consent-toggle-text">위 설명서를 모두 읽었으며, 동의서 내용을 확인합니다.</span>
+        <span class="consent-toggle-arrow" id="consentArrow">▼</span>
+      </div>
+      <div class="consent-doc" id="consentDoc">
+        <div class="consent-doc-title">연구대상자 동의서<br><small style="font-weight:300;font-size:12px;">아동·청소년의 질문 생성 및 호기심 발달 특성 분석을 통한 과학교육 개별화 방안 탐색</small></div>
+        <ol class="consent-items">
+          <li class="consent-item" id="ci-1"><span class="consent-item-num">1.</span><span class="consent-item-text">나는 이 설명서를 읽었으며, 연구의 목적과 절차에 대해 충분히 이해하였습니다.</span><span class="item-check" onclick="toggleItem(1)" id="ic-1">☐</span></li>
+          <li class="consent-item" id="ci-2"><span class="consent-item-num">2.</span><span class="consent-item-text">나는 위험과 이득에 관하여 설명을 들었으며, 나의 질문에 만족할 만한 답변을 얻었습니다.</span><span class="item-check" onclick="toggleItem(2)" id="ic-2">☐</span></li>
+          <li class="consent-item" id="ci-3"><span class="consent-item-num">3.</span><span class="consent-item-text">나는 자녀의 연구 참여에 자발적으로 동의합니다.</span><span class="item-check" onclick="toggleItem(3)" id="ic-3">☐</span></li>
+          <li class="consent-item" id="ci-4"><span class="consent-item-num">4.</span><span class="consent-item-text">나는 연구 과정에서 수집된 자녀의 정보를 현행 법률과 목포대학교 생명윤리심의위원회 규정이 허용하는 범위 내에서 연구자가 수집하고 처리하는 데 동의합니다.</span><span class="item-check" onclick="toggleItem(4)" id="ic-4">☐</span></li>
+          <li class="consent-item" id="ci-5"><span class="consent-item-num">5.</span><span class="consent-item-text">나는 담당 연구자, 목포대학교 생명윤리심의위원회가 연구의 실태 조사를 위해 필요한 경우 연구 자료를 열람할 수 있음에 동의합니다.</span><span class="item-check" onclick="toggleItem(5)" id="ic-5">☐</span></li>
+          <li class="consent-item" id="ci-6"><span class="consent-item-num">6.</span><span class="consent-item-text">나는 언제라도 자녀의 연구 참여를 철회할 수 있고, 이러한 결정이 어떠한 불이익도 되지 않을 것임을 이해합니다.</span><span class="item-check" onclick="toggleItem(6)" id="ic-6">☐</span></li>
+          <li class="consent-item" id="ci-7"><span class="consent-item-num">7.</span><span class="consent-item-text">나는 연구 종료 후 3년간 자료가 보관된 후 안전하게 폐기될 것임을 알고 있습니다.</span><span class="item-check" onclick="toggleItem(7)" id="ic-7">☐</span></li>
+          <li class="consent-item" id="ci-8"><span class="consent-item-num">8.</span><span class="consent-item-text">나는 연구 참여 도중 발생할 수 있는 피해 및 분쟁 시 연구책임자(010-9755-9655)에게 연락할 수 있음을 알고 있습니다.</span><span class="item-check" onclick="toggleItem(8)" id="ic-8">☐</span></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="all-agree-wrap" id="allAgreeWrap">
+      <button class="btn-all-agree" id="allAgreeBtn" onclick="toggleAllAgree()">
+        <span id="allAgreeIcon">☐</span>
+        <span id="allAgreeTxt">위 동의서 내용에 모두 동의합니다</span>
+      </button>
+    </div>
+
+    <!-- 법정대리인 서명란 -->
+    <div class="signature-section" id="signatureSection" style="display:none;">
+      <div class="signature-header">※ 법정대리인(보호자) 서명</div>
+      <div class="signature-body">
+        <div class="signature-statement">
+          위 설명서를 읽고 내용을 충분히 이해하였으며, 자녀의 연구 참여에 자발적으로 동의합니다.<br>
+          아래에 성명을 입력하는 것으로 서명을 대신합니다.
+        </div>
+        <div class="signature-row">
+          <div class="signature-field">
+            <label>법정대리인(보호자) 성명</label>
+            <input type="text" id="sigName" readonly placeholder="위 보호자 성명이 자동 입력됩니다">
+          </div>
+          <div class="signature-field" style="max-width:160px;">
+            <label>날짜</label>
+            <input type="text" id="sigDate" readonly>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-wrap">
+      <button class="btn-submit" id="submitBtn" onclick="handleSubmit()">제출</button>
+    </div>
+
+    <div class="success-msg" id="successMsg">
+      <div class="success-icon">✅</div>
+      <div class="success-title">동의서가 제출되었습니다.</div>
+      <div class="success-sub">감사합니다. 연구책임자가 서명한 동의서 사본을 입력하신 이메일 주소로 보내드리겠습니다.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="page-footer">
+  Created by Claude &amp; PIO
+</div>
+
+<script>
+  let consentOpen = false;
+  let allAgreed = false;
+  let childCount = 1;
+  const TOTAL_ITEMS = 8;
+  const checkedItems = new Set();
+
+  // 오늘 날짜 자동 설정
+  const today = new Date();
+  const dateStr = today.getFullYear() + '년 ' + (today.getMonth()+1) + '월 ' + today.getDate() + '일';
+  document.getElementById('sigDate').value = dateStr;
+
+  function toggleItem(num) {
+    const li = document.getElementById('ci-' + num);
+    const ic = document.getElementById('ic-' + num);
+    if (checkedItems.has(num)) {
+      checkedItems.delete(num);
+      li.classList.remove('checked');
+      ic.textContent = '☐';
+    } else {
+      checkedItems.add(num);
+      li.classList.add('checked');
+      ic.textContent = '☑';
+    }
+    const allBtn = document.getElementById('allAgreeBtn');
+    const allIcon = document.getElementById('allAgreeIcon');
+    const allTxt = document.getElementById('allAgreeTxt');
+    if (checkedItems.size === TOTAL_ITEMS) {
+      allAgreed = true;
+      allBtn.classList.add('agreed');
+      allIcon.textContent = '☑';
+      allTxt.textContent = '모두 동의하였습니다';
+    } else {
+      allAgreed = false;
+      allBtn.classList.remove('agreed');
+      allIcon.textContent = '☐';
+      allTxt.textContent = '위 동의서 내용에 모두 동의합니다';
+    }
+    updateSubmitState();
+  }
+
+  function addChild() {
+    childCount++;
+    const wrap = document.getElementById('childrenWrap');
+    const div = document.createElement('div');
+    div.className = 'field child-field';
+    div.dataset.index = childCount - 1;
+    div.innerHTML = `
+      <label>자녀 성명 ${childCount}</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" class="child-input" placeholder="자녀 성함을 입력해 주세요" oninput="updateSubmitState()" style="flex:1;">
+        <button type="button" onclick="removeChild(this)" style="background:none;border:1px solid var(--rule);border-radius:4px;padding:10px 12px;cursor:pointer;color:var(--ink-muted);font-size:16px;line-height:1;transition:all 0.2s;flex-shrink:0;"
+          onmouseover="this.style.borderColor='var(--warn)';this.style.color='var(--warn)'"
+          onmouseout="this.style.borderColor='var(--rule)';this.style.color='var(--ink-muted)'">✕</button>
+      </div>`;
+    wrap.appendChild(div);
+    updateSubmitState();
+  }
+
+  function removeChild(btn) {
+    btn.closest('.child-field').remove();
+    const fields = document.querySelectorAll('.child-field');
+    fields.forEach((f, i) => {
+      f.querySelector('label').textContent = fields.length === 1 ? '자녀 성명 1 *' : `자녀 성명 ${i+1}${i===0?' *':''}`;
+    });
+    childCount = fields.length;
+    updateSubmitState();
+  }
+
+  function toggleConsent() {
+    consentOpen = !consentOpen;
+    document.getElementById('consentCheck').classList.toggle('checked', consentOpen);
+    document.getElementById('consentArrow').classList.toggle('open', consentOpen);
+    document.getElementById('consentDoc').classList.toggle('open', consentOpen);
+    document.getElementById('allAgreeWrap').classList.toggle('open', consentOpen);
+    updateSubmitState();
+  }
+
+  function toggleAllAgree() {
+    const shouldCheck = checkedItems.size < TOTAL_ITEMS;
+    for (let i = 1; i <= TOTAL_ITEMS; i++) {
+      const li = document.getElementById('ci-' + i);
+      const ic = document.getElementById('ic-' + i);
+      if (shouldCheck) { checkedItems.add(i); li.classList.add('checked'); ic.textContent = '☑'; }
+      else { checkedItems.delete(i); li.classList.remove('checked'); ic.textContent = '☐'; }
+    }
+    allAgreed = shouldCheck;
+    document.getElementById('allAgreeBtn').classList.toggle('agreed', allAgreed);
+    document.getElementById('allAgreeIcon').textContent = allAgreed ? '☑' : '☐';
+    document.getElementById('allAgreeTxt').textContent = allAgreed ? '모두 동의하였습니다' : '위 동의서 내용에 모두 동의합니다';
+    updateSubmitState();
+  }
+
+  function updateSubmitState() {
+    const parentName = document.getElementById('parentName').value.trim();
+    const parentPhone = document.getElementById('parentPhone').value.trim();
+    const parentEmail = document.getElementById('parentEmail').value.trim();
+    const childInputs = document.querySelectorAll('.child-input');
+    const allChildrenFilled = Array.from(childInputs).every(i => i.value.trim() !== '');
+    const ready = parentName && parentPhone && parentEmail && allChildrenFilled && consentOpen && checkedItems.size === TOTAL_ITEMS;
+    document.getElementById('submitBtn').classList.toggle('ready', ready);
+    // 서명란 자동 표시 및 성명 동기화
+    if (consentOpen && checkedItems.size === TOTAL_ITEMS) {
+      document.getElementById('signatureSection').style.display = 'block';
+      document.getElementById('sigName').value = parentName || '';
+    } else {
+      document.getElementById('signatureSection').style.display = 'none';
+    }
+  }
+
+  // 보호자 성명 변경 시 서명란 자동 동기화
+  document.getElementById('parentName').addEventListener('input', function() {
+    document.getElementById('sigName').value = this.value;
+    updateSubmitState();
+  });
+  document.getElementById('parentPhone').addEventListener('input', updateSubmitState);
+  document.getElementById('parentEmail').addEventListener('input', updateSubmitState);
+
+  function handleSubmit() {
+    const parentName = document.getElementById('parentName').value.trim();
+    const parentPhone = document.getElementById('parentPhone').value.trim();
+    const parentEmail = document.getElementById('parentEmail').value.trim();
+    const children = Array.from(document.querySelectorAll('.child-input')).map(i => i.value.trim());
+    if (!parentName || !parentPhone || !parentEmail || children.some(n=>!n) || !consentOpen || checkedItems.size !== TOTAL_ITEMS) return;
+    document.getElementById('submitBtn').style.display = 'none';
+    document.getElementById('successMsg').classList.add('show');
+    document.getElementById('successMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    console.log('Consent submitted:', { parentName, parentPhone, parentEmail, children, timestamp: new Date().toISOString() });
+  }
+</script>
+</body>
+</html>
