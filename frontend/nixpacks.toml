@@ -10,4 +10,4 @@ cmds = ["npm run build"]
 cacheDirectories = []
 
 [start]
-cmd = "npx serve -s build -l $PORT"
+cmd = "npx serve -s build -l $PORT"env

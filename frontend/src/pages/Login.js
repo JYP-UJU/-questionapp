@@ -80,7 +80,7 @@ function Login() {
                             <div className="auth-research-notice">
                                 <p>이 앱은 과학 질문 연구를 위해 개발되었습니다.</p>
                                 <a
-                                    href="/student_info.html"
+                                    href="https://meticulous-enchantment-production-f653.up.railway.app/consent/student"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="auth-research-link"
