@@ -1,3 +1,103 @@
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #87CEEB 0%, #98D8C8 100%);
+}
+
+.auth-box {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.auth-title {
+    font-size: 32px;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.auth-subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 14px;
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: #f0f0f0;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.auth-tab.active {
+    background: #87CEEB;
+    color: white;
+    font-weight: bold;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.auth-input {
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: border 0.3s;
+}
+
+.auth-input:focus {
+    outline: none;
+    border-color: #87CEEB;
+}
+
+.auth-button {
+    padding: 15px;
+    background: #87CEEB;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.auth-button:hover {
+    background: #6BB8D9;
+}
+
+.auth-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.auth-error {
+    color: #e74c3c;
+    font-size: 14px;
+    text-align: center;
+    margin: 0;
+}
 
 /* 연구 참여 안내 */
 .auth-research-notice {
