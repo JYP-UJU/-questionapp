@@ -60,7 +60,7 @@ function SongiHistory() {
   return (
     <div className="sh-container">
       <header className="sh-header">
-        <button className="sh-back-btn" onClick={() => navigate('/setting')}>&#8592;</button>
+        <button className="sh-back-btn" onClick={() => navigate(-1)}>&#8592;</button>
         <h1>&#127800; 송이 내역</h1>
         <div style={{ width: 32 }} />
       </header>

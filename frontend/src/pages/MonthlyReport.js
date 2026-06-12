@@ -102,7 +102,7 @@ function MonthlyReport() {
     return (
         <div className="wr-container">
             <header className="wr-header">
-                <button onClick={() => navigate('/setting')} className="wr-back">← 나의공간</button>
+                <button onClick={() => navigate(-1)} className="wr-back">← 나의공간</button>
                 <h1>📈 월간 리포트</h1>
                 <div className="wr-spacer"></div>
             </header>

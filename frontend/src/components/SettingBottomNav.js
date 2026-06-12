@@ -14,17 +14,17 @@ function SettingBottomNav() {
     const journalIcon = isMonthly ? '📊' : '📈';
 
     const navItems = [
-        { path: '/friends', icon: '🏠', label: '메인' },
+        { path: '/questions', icon: '🏠', label: '메인' },      // /friends → /questions
         { path: journalPath, icon: journalIcon, label: journalLabel },
         { path: '/saved', icon: '📝', label: '내활동' },
-        { path: '/songi-history', icon: '🌸', label: '송이내역' },
+        { path: '/setting', icon: '⚙️', label: '나의공간' },    // 송이내역 → 나의공간
     ];
 
     return (
         <nav className="setting-bottom-nav">
             {navItems.slice(0, 2).map((item) => (
                 <button
-                    key={item.path}
+                    key={item.label}
                     className={`setting-nav-btn ${currentPath === item.path ? 'active' : ''}`}
                     onClick={() => navigate(item.path)}
                 >
@@ -38,13 +38,13 @@ function SettingBottomNav() {
                 className="setting-nav-center-btn"
                 onClick={() => navigate('/create')}
             >
-                <span>+</span>
+                <span className="center-plus">✏️</span>
                 <span>질문쓰기</span>
             </button>
 
             {navItems.slice(2).map((item) => (
                 <button
-                    key={item.path}
+                    key={item.label}
                     className={`setting-nav-btn ${currentPath === item.path ? 'active' : ''}`}
                     onClick={() => navigate(item.path)}
                 >

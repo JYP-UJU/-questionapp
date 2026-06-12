@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import BottomNav from '../components/BottomNav';
+import SettingBottomNav from '../components/SettingBottomNav';
 import './Profile.css';
 
 function Profile() {
@@ -60,7 +60,7 @@ function Profile() {
         <div className="profile-container">
             {/* 헤더 */}
             <header className="profile-header">
-                <button className="back-btn" onClick={() => navigate('/setting')}>← 설정</button>
+                <button className="back-btn" onClick={() => navigate(-1)}>← 나의공간</button>
                 <h1>내 프로필</h1>
                 <div />
             </header>
@@ -157,7 +157,7 @@ function Profile() {
                 </div>
             )}
 
-            <BottomNav />
+            <SettingBottomNav />
         </div>
     );
 }
