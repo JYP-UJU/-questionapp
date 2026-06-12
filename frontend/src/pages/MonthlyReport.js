@@ -17,6 +17,7 @@ function MonthlyReport() {
     const [monthlyFeeling, setMonthlyFeeling] = useState('');
     const [reflectionSaved, setReflectionSaved] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [editMode, setEditMode] = useState(false);
 
     const toggleSection = (key) => {
         setOpenToggles(prev => ({ ...prev, [key]: !prev[key] }));
@@ -50,10 +51,13 @@ function MonthlyReport() {
                 setSelectedQuestions(r.research_topic ? r.research_topic.split('||').filter(Boolean) : []);
                 setMonthlyFeeling(r.monthly_feeling || '');
                 setReflectionSaved(true);
+                setEditMode(false);
             } else {
                 setMostCurious('');
                 setSelectedQuestions([]);
-                setMonthlyFeeling(''); setReflectionSaved(false);
+                setMonthlyFeeling('');
+                setReflectionSaved(false);
+                setEditMode(false);
             }
         } catch (err) {
             console.error('월간 리포트 로드 오류:', err);
@@ -75,12 +79,27 @@ function MonthlyReport() {
                 monthlyFeeling
             });
             setReflectionSaved(true);
+            setEditMode(false);
             loadReport();
         } catch (err) {
             alert('저장에 실패했어요');
         } finally {
             setSaving(false);
         }
+    };
+
+    const getAllItems = () => {
+        return [
+            ...(report?.lists?.questions || []).map(q => ({ title: q.title, type: '만든질문' })),
+            ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
+            ...(report?.lists?.saved || []).map(q => ({ title: q.question_title, type: '저장' })),
+        ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
+    };
+
+    const toggleQuestion = (title) => {
+        setSelectedQuestions(prev =>
+            prev.includes(title) ? prev.filter(t => t !== title) : [...prev, title]
+        );
     };
 
     const totalActivity = report ?
@@ -94,6 +113,8 @@ function MonthlyReport() {
     const { label } = getMonthRange(monthOffset);
 
     if (loading) return <div className="wr-loading">📈 월간 리포트 불러오는 중...</div>;
+
+    const isEditable = !reflectionSaved || editMode;
 
     return (
         <div className="wr-container">
@@ -123,46 +144,73 @@ function MonthlyReport() {
                         <textarea className="reflection-textarea" rows={3}
                             placeholder="가장 궁금했던 질문이나 주제를 적어주세요"
                             value={mostCurious} onChange={e => setMostCurious(e.target.value)}
-                            disabled={reflectionSaved} />
+                            disabled={!isEditable} />
                     </div>
 
                     <div className="reflection-group">
-                        <label>🔍 궁금한 것을 더 찾아본 적이 있나요? <span style={{fontSize:'11px', color:'#888'}}>이번 달에 활동한 질문들 중에서 선택해 보세요.</span></label>
-                        {(() => {
-                            const allItems = [
-                                ...(report?.lists?.questions || []).map(q => ({ title: q.title, type: '만든질문' })),
-                                ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
-                                ...(report?.lists?.saved || []).map(q => ({ title: q.question_title, type: '저장' })),
-                            ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
-                            if (allItems.length === 0) return <div style={{color:'#aaa', fontSize:'13px', padding:'8px 0'}}>이번 달 활동한 질문이 없어요</div>;
-                            return (
-                                <div style={{display:'flex', flexDirection:'column', gap:'6px', marginTop:'8px'}}>
-                                    {allItems.map((item, i) => {
-                                        const checked = selectedQuestions.includes(item.title);
-                                        return (
-                                            <label key={i} style={{display:'flex', alignItems:'flex-start', gap:'8px', cursor: reflectionSaved ? 'default' : 'pointer', opacity: reflectionSaved ? 0.7 : 1}}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    disabled={reflectionSaved}
-                                                    onChange={() => {
-                                                        if (reflectionSaved) return;
-                                                        setSelectedQuestions(prev =>
-                                                            checked ? prev.filter(t => t !== item.title) : [...prev, item.title]
-                                                        );
+                        <label>
+                            🔍 궁금한 것을 더 찾아본 적이 있나요?{' '}
+                            <span style={{fontSize:'11px', color:'#888'}}>이번 달에 활동한 질문들 중에서 선택해 보세요.</span>
+                        </label>
+
+                        {/* 저장 완료 상태: 선택된 항목만 표시 */}
+                        {reflectionSaved && !editMode ? (
+                            <div style={{marginTop:'8px'}}>
+                                {selectedQuestions.length === 0 ? (
+                                    <div style={{color:'#aaa', fontSize:'13px', padding:'6px 0'}}>선택한 질문이 없어요</div>
+                                ) : (
+                                    <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
+                                        {selectedQuestions.map((title, i) => (
+                                            <div key={i} style={{
+                                                display:'flex', alignItems:'center', gap:'6px',
+                                                background:'#eff6ff', borderRadius:'8px',
+                                                padding:'7px 10px', fontSize:'13px', color:'#1e40af'
+                                            }}>
+                                                <span>✅</span>
+                                                <span>{title}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            /* 편집 상태: 체크박스 목록 */
+                            (() => {
+                                const allItems = getAllItems();
+                                if (allItems.length === 0) return (
+                                    <div style={{color:'#aaa', fontSize:'13px', padding:'8px 0'}}>이번 달 활동한 질문이 없어요</div>
+                                );
+                                return (
+                                    <div style={{display:'flex', flexDirection:'column', gap:'6px', marginTop:'8px'}}>
+                                        {allItems.map((item, i) => {
+                                            const checked = selectedQuestions.includes(item.title);
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    onClick={() => toggleQuestion(item.title)}
+                                                    style={{
+                                                        display:'flex', alignItems:'flex-start', gap:'8px',
+                                                        cursor:'pointer', padding:'4px 2px'
                                                     }}
-                                                    style={{marginTop:'2px', accentColor:'#3b82f6'}}
-                                                />
-                                                <span style={{fontSize:'13px', color:'#333', lineHeight:'1.5'}}>
-                                                    {item.title}
-                                                    <span style={{marginLeft:'6px', fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'1px 6px', borderRadius:'8px'}}>{item.type}</span>
-                                                </span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            );
-                        })()}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        onChange={() => toggleQuestion(item.title)}
+                                                        onClick={e => e.stopPropagation()}
+                                                        style={{marginTop:'2px', accentColor:'#3b82f6', cursor:'pointer', width:'16px', height:'16px', flexShrink:0}}
+                                                    />
+                                                    <span style={{fontSize:'13px', color:'#333', lineHeight:'1.5', userSelect:'none'}}>
+                                                        {item.title}
+                                                        <span style={{marginLeft:'6px', fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'1px 6px', borderRadius:'8px'}}>{item.type}</span>
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()
+                        )}
                     </div>
 
                     <div className="reflection-group">
@@ -171,16 +219,17 @@ function MonthlyReport() {
                         </label>
                         <input className="reflection-input" placeholder="예: 호기심 가득한 달, 발견의 달..."
                             value={monthlyFeeling} onChange={e => setMonthlyFeeling(e.target.value)}
-                            disabled={reflectionSaved} />
+                            disabled={!isEditable} />
                     </div>
 
-                    {reflectionSaved && (
+                    {/* 저장 완료 상태 */}
+                    {reflectionSaved && !editMode && (
                         <div style={{marginBottom:'12px', background:'#f0fdf4', borderRadius:'12px', padding:'14px 16px', color:'#166534', fontWeight:700, fontSize:14, textAlign:'center'}}>
                             ✅ 이번 달 돌아보기 완료! 10송이 획득 🌸
                         </div>
                     )}
-                    {reflectionSaved && (
-                        <div style={{display:'flex', gap:'10px', marginBottom:'4px'}}>
+                    {reflectionSaved && !editMode && (
+                        <div style={{display:'flex', gap:'10px', marginBottom:'12px'}}>
                             <div style={{flex:1, background:'#3b82f6', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
                                 <div style={{fontSize:'22px', fontWeight:800}}>{totalActivity}</div>
                                 <div style={{fontSize:'12px', marginTop:'2px'}}>총 활동</div>
@@ -191,11 +240,41 @@ function MonthlyReport() {
                             </div>
                         </div>
                     )}
+
+                    {/* 버튼 영역 */}
                     {!reflectionSaved && (
                         <button className="save-reflection-btn" onClick={handleSaveReflection}
                             disabled={saving || !mostCurious.trim()}>
                             {saving ? '저장 중...' : '월간 돌아보기 저장하기 (+10🌸)'}
                         </button>
+                    )}
+                    {reflectionSaved && !editMode && (
+                        <button
+                            className="save-reflection-btn"
+                            style={{background:'#6b7280', marginTop:'4px'}}
+                            onClick={() => setEditMode(true)}
+                        >
+                            ✏️ 수정하기
+                        </button>
+                    )}
+                    {reflectionSaved && editMode && (
+                        <div style={{display:'flex', gap:'8px', marginTop:'4px'}}>
+                            <button
+                                className="save-reflection-btn"
+                                onClick={handleSaveReflection}
+                                disabled={saving || !mostCurious.trim()}
+                                style={{flex:2}}
+                            >
+                                {saving ? '저장 중...' : '💾 수정 저장'}
+                            </button>
+                            <button
+                                className="save-reflection-btn"
+                                style={{flex:1, background:'#9ca3af'}}
+                                onClick={() => { setEditMode(false); loadReport(); }}
+                            >
+                                취소
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -277,7 +356,7 @@ function MonthlyReport() {
                         </div>
                     )}
 
-                    {/* 5. 퀴즈 완료 - 횟수만 */}
+                    {/* 5. 퀴즈 완료 */}
                     <div className="stat-row">
                         <span className="stat-icon">🧩</span>
                         <span className="stat-name">퀴즈 완료</span>
