@@ -118,12 +118,12 @@ function Setting() {
     return (
         <div className="setting-container">
             <header className="setting-header">
-                <h1>🌸 나의공간</h1>
+                <h1>🪐 나의공간</h1>
             </header>
 
             <div className="setting-user-bar">
                 <span className="user-info-text">
-                    👤 {user?.username || '사용자'} | 🌸 {user?.songi_count || 0}송이
+                    💬 {user?.username || '사용자'} | 🌸 {user?.songi_count || 0}송이
                 </span>
             </div>
 
