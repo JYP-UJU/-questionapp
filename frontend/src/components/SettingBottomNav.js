@@ -7,11 +7,11 @@ function SettingBottomNav() {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    // 주간/월간 토글: 지금 월간이면 "주간일지", 나머지는 "월간일지"
-    const isMonthly = currentPath === '/monthly-report';
-    const journalLabel = isMonthly ? '주간일지' : '월간일지';
-    const journalPath = isMonthly ? '/weekly-report' : '/monthly-report';
-    const journalIcon = isMonthly ? '📊' : '📈';
+    // 주간/월간 토글: 지금 주간이면 "월간일지", 나머지는 "주간일지"
+    const isWeekly = currentPath === '/weekly-report';
+    const journalLabel = isWeekly ? '월간일지' : '주간일지';
+    const journalPath = isWeekly ? '/monthly-report' : '/weekly-report';
+    const journalIcon = isWeekly ? '📈' : '📊';
 
     const navItems = [
         { path: '/questions', icon: '🏠', label: '메인' },      // /friends → /questions

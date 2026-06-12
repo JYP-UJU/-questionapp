@@ -211,7 +211,7 @@ function Friends() {
 
     return (
         <div className="friends-container">
-            <TopHeader icon="👥" title="친구질문" messages={[]} backTo="/main" />
+            <TopHeader icon="💬" title="꼬리에 꼬리를 무는 질문들" messages={[]} backTo={null} />
 
             <div className="friends-content">
                 <div className="instruction instruction-animated">
