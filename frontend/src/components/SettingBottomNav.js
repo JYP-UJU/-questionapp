@@ -1,0 +1,59 @@
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import './SettingBottomNav.css';
+
+function SettingBottomNav() {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const currentPath = location.pathname;
+
+    // 주간/월간 토글: 지금 월간이면 "주간일지", 나머지는 "월간일지"
+    const isMonthly = currentPath === '/monthly-report';
+    const journalLabel = isMonthly ? '주간일지' : '월간일지';
+    const journalPath = isMonthly ? '/weekly-report' : '/monthly-report';
+    const journalIcon = isMonthly ? '📊' : '📈';
+
+    const navItems = [
+        { path: '/friends', icon: '🏠', label: '메인' },
+        { path: journalPath, icon: journalIcon, label: journalLabel },
+        { path: '/saved', icon: '📝', label: '내활동' },
+        { path: '/songi-history', icon: '🌸', label: '송이내역' },
+    ];
+
+    return (
+        <nav className="setting-bottom-nav">
+            {navItems.slice(0, 2).map((item) => (
+                <button
+                    key={item.path}
+                    className={`setting-nav-btn ${currentPath === item.path ? 'active' : ''}`}
+                    onClick={() => navigate(item.path)}
+                >
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                </button>
+            ))}
+
+            {/* 가운데 질문쓰기 버튼 */}
+            <button
+                className="setting-nav-center-btn"
+                onClick={() => navigate('/create')}
+            >
+                <span>+</span>
+                <span>질문쓰기</span>
+            </button>
+
+            {navItems.slice(2).map((item) => (
+                <button
+                    key={item.path}
+                    className={`setting-nav-btn ${currentPath === item.path ? 'active' : ''}`}
+                    onClick={() => navigate(item.path)}
+                >
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                </button>
+            ))}
+        </nav>
+    );
+}
+
+export default SettingBottomNav;

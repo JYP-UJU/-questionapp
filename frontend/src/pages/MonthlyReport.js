@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import './WeeklyReport.css';
-import BottomNav from '../components/BottomNav';
+import SettingBottomNav from '../components/SettingBottomNav';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function MonthlyReport() {
     const navigate = useNavigate();
@@ -44,12 +43,8 @@ function MonthlyReport() {
     const loadReport = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
             const { start, end } = getMonthRange(monthOffset);
-            const res = await axios.get(
-                `${API}/api/reports/monthly?start=${start}&end=${end}`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const res = await api.get(`/reports/monthly?start=${start}&end=${end}`);
             setReport(res.data);
             if (res.data.reflection) {
                 const r = res.data.reflection;
@@ -75,14 +70,13 @@ function MonthlyReport() {
         if (!mostCurious.trim()) { alert('이번 달 가장 궁금했던 것을 적어주세요!'); return; }
         try {
             setSaving(true);
-            const token = localStorage.getItem('token');
             const { start } = getMonthRange(monthOffset);
-            await axios.post(`${API}/api/reports/monthly/reflection`, {
+            await api.post('/reports/monthly/reflection', {
                 monthStart: start, mostCurious, didResearch,
                 researchTopic: didResearch ? researchTopic : '',
                 researchNote: didResearch ? researchNote : '',
                 monthlyFeeling
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            });
             alert('월간 돌아보기가 저장되었어요! 10송이 획득 🌸');
             setReflectionSaved(true);
             loadReport();
@@ -108,7 +102,7 @@ function MonthlyReport() {
     return (
         <div className="wr-container">
             <header className="wr-header">
-                <button onClick={() => navigate('/setting')} className="wr-back">← 설정</button>
+                <button onClick={() => navigate('/setting')} className="wr-back">← 나의공간</button>
                 <h1>📈 월간 리포트</h1>
                 <div className="wr-spacer"></div>
             </header>
@@ -327,7 +321,7 @@ function MonthlyReport() {
                 </div>
             </div>
 
-            <BottomNav />
+            <SettingBottomNav />
         </div>
     );
 }

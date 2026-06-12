@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import BottomNav from '../components/BottomNav';
+import SettingBottomNav from '../components/SettingBottomNav';
 import './SongiHistory.css';
 
 const ACTIVITY_LABELS = {
@@ -60,7 +60,7 @@ function SongiHistory() {
   return (
     <div className="sh-container">
       <header className="sh-header">
-        <button className="sh-back-btn" onClick={() => navigate('/settings')}>&#8592;</button>
+        <button className="sh-back-btn" onClick={() => navigate('/setting')}>&#8592;</button>
         <h1>&#127800; 송이 내역</h1>
         <div style={{ width: 32 }} />
       </header>
@@ -110,7 +110,7 @@ function SongiHistory() {
         )}
       </div>
 
-      <BottomNav />
+      <SettingBottomNav />
     </div>
   );
 }

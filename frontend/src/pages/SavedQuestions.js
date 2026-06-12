@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './SavedQuestions.css';
-import BottomNav from '../components/BottomNav';
+import SettingBottomNav from '../components/SettingBottomNav';
 import TopHeader from '../components/TopHeader';
 import OpinionModal from '../components/OpinionModal';
 import RelatedModal from '../components/RelatedModal';
@@ -463,7 +463,7 @@ function SavedQuestions() {
                 />
             )}
 
-            <BottomNav />
+            <SettingBottomNav />
         </div>
     );
 }

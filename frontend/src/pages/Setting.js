@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api'; 
 import './Setting.css';
-import BottomNav from '../components/BottomNav';
+import SettingBottomNav from '../components/SettingBottomNav';
 
 
 function Setting() {
@@ -118,7 +118,7 @@ function Setting() {
     return (
         <div className="setting-container">
             <header className="setting-header">
-                <h1>⚙️ 설정</h1>
+                <h1>🌸 나의공간</h1>
             </header>
 
             <div className="setting-user-bar">
@@ -279,7 +279,7 @@ function Setting() {
                 </div>
             )}
 
-            <BottomNav />
+            <SettingBottomNav />
         </div>
     );
 }

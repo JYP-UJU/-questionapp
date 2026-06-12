@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './WeeklyReport.css';
-import BottomNav from '../components/BottomNav';
+import SettingBottomNav from '../components/SettingBottomNav';
 
 function WeeklyReport() {
     const navigate = useNavigate();
@@ -123,7 +123,7 @@ function WeeklyReport() {
     return (
         <div className="wr-container">
             <header className="wr-header">
-                <button onClick={() => navigate('/setting')} className="wr-back">← 설정</button>
+                <button onClick={() => navigate('/setting')} className="wr-back">← 나의공간</button>
                 <h1>📊 주간 리포트</h1>
                 <div className="wr-spacer"></div>
             </header>
@@ -393,7 +393,7 @@ function WeeklyReport() {
                 </div>
             </div>
 
-            <BottomNav />
+            <SettingBottomNav />
         </div>
     );
 }
