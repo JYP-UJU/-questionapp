@@ -121,7 +121,7 @@ function MonthlyReport() {
 
             <div className="wr-content">
 
-                {/* ===== 돌아보기 (맨 위) ===== */}
+                {/* ===== 돌아보기 ===== */}
                 <div className="reflection-card">
                     <h3>💭 이번 달 돌아보기</h3>
                     <p className="reflection-intro">
@@ -184,7 +184,7 @@ function MonthlyReport() {
                     )}
                 </div>
 
-                {/* ===== 활동 통계 (아래) ===== */}
+                {/* ===== 활동 통계 ===== */}
                 <div className="summary-card">
                     <div className="summary-item">
                         <span className="summary-number">{totalActivity}</span>
@@ -200,7 +200,7 @@ function MonthlyReport() {
                 <div className="stats-card">
                     <h3>📝 이번 달 활동</h3>
 
-                    {/* 만든 질문 */}
+                    {/* 1. 만든 질문 */}
                     <div className="stat-row stat-row-toggle" onClick={() => toggleSection('questions')}>
                         <span className="stat-icon">✏️</span>
                         <span className="stat-name">만든 질문</span>
@@ -212,12 +212,13 @@ function MonthlyReport() {
                             {report?.lists?.questions?.length > 0 ? report.lists.questions.map((q, i) => (
                                 <div key={i} className="toggle-item">
                                     <span className="toggle-item-text">"{q.title}"</span>
+                                    <span className="toggle-item-meta">👍 {q.likes ?? 0} &nbsp; 💬 {q.opinion_count ?? 0}</span>
                                 </div>
                             )) : <div className="toggle-empty">이번 달 만든 질문이 없어요</div>}
                         </div>
                     )}
 
-                    {/* 관련질문 */}
+                    {/* 2. 관련질문 */}
                     <div className="stat-row stat-row-toggle" onClick={() => toggleSection('related')}>
                         <span className="stat-icon">❓</span>
                         <span className="stat-name">관련질문</span>
@@ -230,12 +231,13 @@ function MonthlyReport() {
                                 <div key={i} className="toggle-item">
                                     {q.parent_title && <div className="toggle-item-question">💬 {q.parent_title}</div>}
                                     <span className="toggle-item-text">"{q.title}"</span>
+                                    <span className="toggle-item-meta">👍 {q.likes ?? 0} &nbsp; 💬 {q.opinion_count ?? 0}</span>
                                 </div>
                             )) : <div className="toggle-empty">이번 달 관련질문이 없어요</div>}
                         </div>
                     )}
 
-                    {/* 남긴 의견 */}
+                    {/* 3. 남긴 의견 */}
                     <div className="stat-row stat-row-toggle" onClick={() => toggleSection('opinions')}>
                         <span className="stat-icon">💬</span>
                         <span className="stat-name">남긴 의견</span>
@@ -253,7 +255,7 @@ function MonthlyReport() {
                         </div>
                     )}
 
-                    {/* 관심 표시 - 토글 + 원본질문 */}
+                    {/* 4. 관심 표시 */}
                     <div className="stat-row stat-row-toggle" onClick={() => toggleSection('reactions')}>
                         <span className="stat-icon">👍</span>
                         <span className="stat-name">관심 표시</span>
@@ -271,19 +273,29 @@ function MonthlyReport() {
                         </div>
                     )}
 
-                    {/* 퀴즈 - 횟수만 */}
+                    {/* 5. 퀴즈 완료 - 횟수만 */}
                     <div className="stat-row">
                         <span className="stat-icon">🧩</span>
                         <span className="stat-name">퀴즈 완료</span>
                         <span className="stat-value">{report?.stats?.quizCompleted || 0}회</span>
                     </div>
 
-                    {/* 저장한 질문 */}
-                    <div className="stat-row">
+                    {/* 6. 저장한 질문 */}
+                    <div className="stat-row stat-row-toggle" onClick={() => toggleSection('saved')}>
                         <span className="stat-icon">🏷️</span>
                         <span className="stat-name">저장한 질문</span>
                         <span className="stat-value">{report?.stats?.questionsSaved || 0}개</span>
+                        <span className="toggle-arrow">{openToggles['saved'] ? '▲' : '▼'}</span>
                     </div>
+                    {openToggles['saved'] && (
+                        <div className="toggle-list">
+                            {report?.lists?.saved?.length > 0 ? report.lists.saved.map((s, i) => (
+                                <div key={i} className="toggle-item">
+                                    <span className="toggle-item-text">"{s.question_title}"</span>
+                                </div>
+                            )) : <div className="toggle-empty">이번 달 저장한 질문이 없어요</div>}
+                        </div>
+                    )}
                 </div>
 
                 {/* TOP 질문 */}
