@@ -13,9 +13,7 @@ function MonthlyReport() {
     const [openToggles, setOpenToggles] = useState({});
 
     const [mostCurious, setMostCurious] = useState('');
-    const [didResearch, setDidResearch] = useState(false);
-    const [researchTopic, setResearchTopic] = useState('');
-    const [researchNote, setResearchNote] = useState('');
+    const [selectedQuestions, setSelectedQuestions] = useState([]);
     const [monthlyFeeling, setMonthlyFeeling] = useState('');
     const [reflectionSaved, setReflectionSaved] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -49,14 +47,12 @@ function MonthlyReport() {
             if (res.data.reflection) {
                 const r = res.data.reflection;
                 setMostCurious(r.most_curious || '');
-                setDidResearch(r.did_research || false);
-                setResearchTopic(r.research_topic || '');
-                setResearchNote(r.research_note || '');
+                setSelectedQuestions(r.research_topic ? r.research_topic.split('||').filter(Boolean) : []);
                 setMonthlyFeeling(r.monthly_feeling || '');
                 setReflectionSaved(true);
             } else {
-                setMostCurious(''); setDidResearch(false);
-                setResearchTopic(''); setResearchNote('');
+                setMostCurious('');
+                setSelectedQuestions([]);
                 setMonthlyFeeling(''); setReflectionSaved(false);
             }
         } catch (err) {
@@ -72,12 +68,12 @@ function MonthlyReport() {
             setSaving(true);
             const { start } = getMonthRange(monthOffset);
             await api.post('/reports/monthly/reflection', {
-                monthStart: start, mostCurious, didResearch,
-                researchTopic: didResearch ? researchTopic : '',
-                researchNote: didResearch ? researchNote : '',
+                monthStart: start, mostCurious,
+                didResearch: selectedQuestions.length > 0,
+                researchTopic: selectedQuestions.join('||'),
+                researchNote: '',
                 monthlyFeeling
             });
-            alert('월간 돌아보기가 저장되었어요! 10송이 획득 🌸');
             setReflectionSaved(true);
             loadReport();
         } catch (err) {
@@ -131,30 +127,42 @@ function MonthlyReport() {
                     </div>
 
                     <div className="reflection-group">
-                        <label>🔍 궁금한 것을 찾아본 적 있나요?</label>
-                        <div className="research-toggle">
-                            <button className={`toggle-btn ${didResearch ? 'active' : ''}`}
-                                onClick={() => !reflectionSaved && setDidResearch(true)}
-                                disabled={reflectionSaved}>✅ 네, 찾아봤어요</button>
-                            <button className={`toggle-btn ${!didResearch ? 'active' : ''}`}
-                                onClick={() => !reflectionSaved && setDidResearch(false)}
-                                disabled={reflectionSaved}>❌ 아직 못 찾아봤어요</button>
-                        </div>
-                        {didResearch && (
-                            <div className="sub-group" style={{marginTop: 10}}>
-                                <label>무엇을 찾아봤나요?</label>
-                                <input className="reflection-input" placeholder="찾아본 주제나 내용"
-                                    value={researchTopic} onChange={e => setResearchTopic(e.target.value)}
-                                    disabled={reflectionSaved} />
-                                <label style={{marginTop: 8, display: 'block'}}>알게 된 것을 짧게 적어볼까요?
-                                    <span style={{fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'2px 7px', borderRadius:'10px', marginLeft:'4px'}}>선택</span>
-                                </label>
-                                <textarea className="reflection-textarea" rows={2}
-                                    placeholder="알게 된 것을 간단히 적어주세요"
-                                    value={researchNote} onChange={e => setResearchNote(e.target.value)}
-                                    disabled={reflectionSaved} />
-                            </div>
-                        )}
+                        <label>🔍 궁금한 것을 더 찾아본 적이 있나요? <span style={{fontSize:'11px', color:'#888'}}>이번 달에 활동한 질문들 중에서 선택해 보세요.</span></label>
+                        {(() => {
+                            const allItems = [
+                                ...(report?.lists?.questions || []).map(q => ({ title: q.title, type: '만든질문' })),
+                                ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
+                                ...(report?.lists?.saved || []).map(q => ({ title: q.question_title, type: '저장' })),
+                            ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
+                            if (allItems.length === 0) return <div style={{color:'#aaa', fontSize:'13px', padding:'8px 0'}}>이번 달 활동한 질문이 없어요</div>;
+                            return (
+                                <div style={{display:'flex', flexDirection:'column', gap:'6px', marginTop:'8px'}}>
+                                    {allItems.map((item, i) => {
+                                        const checked = selectedQuestions.includes(item.title);
+                                        return (
+                                            <label key={i} style={{display:'flex', alignItems:'flex-start', gap:'8px', cursor: reflectionSaved ? 'default' : 'pointer', opacity: reflectionSaved ? 0.7 : 1}}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    disabled={reflectionSaved}
+                                                    onChange={() => {
+                                                        if (reflectionSaved) return;
+                                                        setSelectedQuestions(prev =>
+                                                            checked ? prev.filter(t => t !== item.title) : [...prev, item.title]
+                                                        );
+                                                    }}
+                                                    style={{marginTop:'2px', accentColor:'#3b82f6'}}
+                                                />
+                                                <span style={{fontSize:'13px', color:'#333', lineHeight:'1.5'}}>
+                                                    {item.title}
+                                                    <span style={{marginLeft:'6px', fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'1px 6px', borderRadius:'8px'}}>{item.type}</span>
+                                                </span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     <div className="reflection-group">
@@ -166,30 +174,32 @@ function MonthlyReport() {
                             disabled={reflectionSaved} />
                     </div>
 
-                    {!reflectionSaved ? (
+                    {reflectionSaved && (
+                        <div style={{marginBottom:'12px', background:'#f0fdf4', borderRadius:'12px', padding:'14px 16px', color:'#166534', fontWeight:700, fontSize:14, textAlign:'center'}}>
+                            ✅ 이번 달 돌아보기 완료! 10송이 획득 🌸
+                        </div>
+                    )}
+                    {reflectionSaved && (
+                        <div style={{display:'flex', gap:'10px', marginBottom:'4px'}}>
+                            <div style={{flex:1, background:'#3b82f6', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
+                                <div style={{fontSize:'22px', fontWeight:800}}>{totalActivity}</div>
+                                <div style={{fontSize:'12px', marginTop:'2px'}}>총 활동</div>
+                            </div>
+                            <div style={{flex:1, background:'#6366f1', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
+                                <div style={{fontSize:'22px', fontWeight:800}}>~{estimatedSongi}🌸</div>
+                                <div style={{fontSize:'12px', marginTop:'2px'}}>예상 송이</div>
+                            </div>
+                        </div>
+                    )}
+                    {!reflectionSaved && (
                         <button className="save-reflection-btn" onClick={handleSaveReflection}
                             disabled={saving || !mostCurious.trim()}>
                             {saving ? '저장 중...' : '월간 돌아보기 저장하기 (+10🌸)'}
                         </button>
-                    ) : (
-                        <div style={{textAlign:'center', padding:'16px', background:'#f0fdf4', borderRadius:'12px', color:'#166534', fontWeight:600, fontSize:14}}>
-                            ✅ 이번 달 돌아보기 완료! 10송이 획득 🌸
-                        </div>
                     )}
                 </div>
 
-                {/* ===== 활동 통계 ===== */}
-                <div className="summary-card">
-                    <div className="summary-item">
-                        <span className="summary-number">{totalActivity}</span>
-                        <span className="summary-label">총 활동</span>
-                    </div>
-                    <div className="summary-divider"></div>
-                    <div className="summary-item">
-                        <span className="summary-number">~{estimatedSongi}🌸</span>
-                        <span className="summary-label">예상 송이</span>
-                    </div>
-                </div>
+
 
                 <div className="stats-card">
                     <h3>📝 이번 달 활동</h3>

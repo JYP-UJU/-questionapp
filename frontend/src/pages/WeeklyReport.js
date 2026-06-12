@@ -13,9 +13,7 @@ function WeeklyReport() {
 
     // 돌아보기 폼
     const [mostCurious, setMostCurious] = useState('');
-    const [didResearch, setDidResearch] = useState(false);
-    const [researchTopic, setResearchTopic] = useState('');
-    const [researchNote, setResearchNote] = useState('');
+    const [selectedQuestions, setSelectedQuestions] = useState([]);
     const [funFriendQuestion, setFunFriendQuestion] = useState('');
     const [weeklyFeeling, setWeeklyFeeling] = useState('');
     const [reflectionSaved, setReflectionSaved] = useState(false);
@@ -58,17 +56,13 @@ function WeeklyReport() {
             if (response.data.reflection) {
                 const r = response.data.reflection;
                 setMostCurious(r.most_curious || '');
-                setDidResearch(r.did_research || false);
-                setResearchTopic(r.research_topic || '');
-                setResearchNote(r.research_note || '');
+                setSelectedQuestions(r.research_topic ? r.research_topic.split('||').filter(Boolean) : []);
                 setFunFriendQuestion(r.fun_friend_question || '');
                 setWeeklyFeeling(r.weekly_feeling || '');
                 setReflectionSaved(true);
             } else {
                 setMostCurious('');
-                setDidResearch(false);
-                setResearchTopic('');
-                setResearchNote('');
+                setSelectedQuestions([]);
                 setFunFriendQuestion('');
                 setWeeklyFeeling('');
                 setReflectionSaved(false);
@@ -91,13 +85,12 @@ function WeeklyReport() {
             await api.post('/reports/weekly/reflection', {
                 weekStart: start,
                 mostCurious,
-                didResearch,
-                researchTopic: didResearch ? researchTopic : '',
-                researchNote: didResearch ? researchNote : '',
+                didResearch: selectedQuestions.length > 0,
+                researchTopic: selectedQuestions.join('||'),
+                researchNote: '',
                 funFriendQuestion,
                 weeklyFeeling
             });
-            alert('돌아보기가 저장되었어요! 8송이 획득 🌸');
             setReflectionSaved(true);
             loadReport();
         } catch (err) {
@@ -163,49 +156,43 @@ function WeeklyReport() {
                     </div>
 
                     <div className="reflection-group">
-                        <label>🔍 궁금한 것을 찾아본 적이 있나요?</label>
-                        <div className="research-toggle">
-                            <button
-                                className={`toggle-btn ${didResearch ? 'active' : ''}`}
-                                onClick={() => !reflectionSaved && setDidResearch(true)}
-                                disabled={reflectionSaved}
-                            >✅ 찾아봤어요!</button>
-                            <button
-                                className={`toggle-btn ${!didResearch ? 'active' : ''}`}
-                                onClick={() => !reflectionSaved && setDidResearch(false)}
-                                disabled={reflectionSaved}
-                            >🤷 아직 못 찾아봤어요</button>
-                        </div>
+                        <label>🔍 궁금한 것을 더 찾아본 적이 있나요? <span style={{fontSize:'11px', color:'#888'}}>이번 주에 활동한 질문들 중에서 선택해 보세요.</span></label>
+                        {(() => {
+                            const allItems = [
+                                ...(report?.lists?.questions || []).map(q => ({ title: q.title, type: '만든질문' })),
+                                ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
+                                ...(report?.lists?.saved || []).map(q => ({ title: q.question_title, type: '저장' })),
+                            ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
+                            if (allItems.length === 0) return <div style={{color:'#aaa', fontSize:'13px', padding:'8px 0'}}>이번 주 활동한 질문이 없어요</div>;
+                            return (
+                                <div style={{display:'flex', flexDirection:'column', gap:'6px', marginTop:'8px'}}>
+                                    {allItems.map((item, i) => {
+                                        const checked = selectedQuestions.includes(item.title);
+                                        return (
+                                            <label key={i} style={{display:'flex', alignItems:'flex-start', gap:'8px', cursor: reflectionSaved ? 'default' : 'pointer', opacity: reflectionSaved ? 0.7 : 1}}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    disabled={reflectionSaved}
+                                                    onChange={() => {
+                                                        if (reflectionSaved) return;
+                                                        setSelectedQuestions(prev =>
+                                                            checked ? prev.filter(t => t !== item.title) : [...prev, item.title]
+                                                        );
+                                                    }}
+                                                    style={{marginTop:'2px', accentColor:'#3b82f6'}}
+                                                />
+                                                <span style={{fontSize:'13px', color:'#333', lineHeight:'1.5'}}>
+                                                    {item.title}
+                                                    <span style={{marginLeft:'6px', fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'1px 6px', borderRadius:'8px'}}>{item.type}</span>
+                                                </span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
                     </div>
-
-                    {didResearch && (
-                        <>
-                            <div className="reflection-group sub-group">
-                                <label>📌 무엇을 찾아봤어요?</label>
-                                <input
-                                    type="text"
-                                    value={researchTopic}
-                                    onChange={e => setResearchTopic(e.target.value)}
-                                    placeholder="예: 열기구가 뜨는 원리"
-                                    maxLength={100}
-                                    className="reflection-input"
-                                    disabled={reflectionSaved}
-                                />
-                            </div>
-                            <div className="reflection-group sub-group">
-                                <label>📝 알게 된 것을 짧게 적어볼까요? <span style={{fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'2px 7px', borderRadius:'10px', marginLeft:'4px'}}>선택</span></label>
-                                <textarea
-                                    value={researchNote}
-                                    onChange={e => setResearchNote(e.target.value)}
-                                    placeholder="찾아보고 알게 된 것을 적어보세요"
-                                    rows={3}
-                                    maxLength={500}
-                                    className="reflection-textarea"
-                                    disabled={reflectionSaved}
-                                />
-                            </div>
-                        </>
-                    )}
 
                     <div className="reflection-group">
                         <label>👥 친구 질문 중 재미있던 것은? <span style={{fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'2px 7px', borderRadius:'10px', marginLeft:'4px'}}>선택</span></label>
@@ -233,7 +220,24 @@ function WeeklyReport() {
                         />
                     </div>
 
-                    {!reflectionSaved ? (
+                    {reflectionSaved && (
+                        <div style={{marginBottom:'12px', background:'#f0fdf4', borderRadius:'12px', padding:'14px 16px', color:'#166534', fontWeight:700, fontSize:14, textAlign:'center'}}>
+                            ✅ 이번 주 돌아보기 완료! 8송이 획득 🌸
+                        </div>
+                    )}
+                    {reflectionSaved && (
+                        <div style={{display:'flex', gap:'10px', marginBottom:'4px'}}>
+                            <div style={{flex:1, background:'#3b82f6', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
+                                <div style={{fontSize:'22px', fontWeight:800}}>{totalActivity}</div>
+                                <div style={{fontSize:'12px', marginTop:'2px'}}>총 활동</div>
+                            </div>
+                            <div style={{flex:1, background:'#6366f1', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
+                                <div style={{fontSize:'22px', fontWeight:800}}>~{estimatedSongi}🌸</div>
+                                <div style={{fontSize:'12px', marginTop:'2px'}}>예상 송이</div>
+                            </div>
+                        </div>
+                    )}
+                    {!reflectionSaved && (
                         <button
                             className="save-reflection-btn"
                             onClick={handleSaveReflection}
@@ -241,25 +245,10 @@ function WeeklyReport() {
                         >
                             {saving ? '저장 중...' : '돌아보기 완료 (+8🌸)'}
                         </button>
-                    ) : (
-                        <div style={{textAlign:'center', padding:'16px', background:'#f0fdf4', borderRadius:'12px', color:'#166534', fontWeight:600, fontSize:14}}>
-                            ✅ 이번 주 돌아보기 완료! 8송이 획득 🌸
-                        </div>
                     )}
                 </div>
 
-                {/* ===== 활동 통계 ===== */}
-                <div className="summary-card">
-                    <div className="summary-item">
-                        <span className="summary-number">{totalActivity}</span>
-                        <span className="summary-label">총 활동</span>
-                    </div>
-                    <div className="summary-divider"></div>
-                    <div className="summary-item">
-                        <span className="summary-number">~{estimatedSongi}🌸</span>
-                        <span className="summary-label">예상 송이</span>
-                    </div>
-                </div>
+
 
                 <div className="stats-card">
                     <h3>📝 이번 주 활동</h3>

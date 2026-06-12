@@ -366,6 +366,20 @@ router.get('/monthly', authenticateToken, async (req, res) => {
       [userId, monthStart, monthEnd]
     );
 
+    const savedListMonthResult = await pool.query(
+      `SELECT sq.created_at,
+        CASE 
+          WHEN sq.question_type = 'user_question' THEN uq.title
+          ELSE seed.question
+        END as question_title
+       FROM saved_questions sq
+       LEFT JOIN user_questions uq ON sq.question_id = uq.id AND sq.question_type = 'user_question'
+       LEFT JOIN seed_questions seed ON sq.question_id = seed.id AND sq.question_type != 'user_question'
+       WHERE sq.user_id = $1 AND sq.created_at >= $2 AND sq.created_at <= $3
+       ORDER BY sq.created_at DESC`,
+      [userId, monthStart, monthEnd]
+    );
+
     let quizCount = 0;
     try {
       const qr = await pool.query(`SELECT COUNT(*) as cnt FROM quiz_responses WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3`, [userId, monthStart, monthEnd]);
@@ -388,6 +402,7 @@ router.get('/monthly', authenticateToken, async (req, res) => {
         opinions: opinionsListResult.rows.map(r => ({ content: r.content, question_title: r.question_title })),
         related: relatedListResult.rows,
         reactions: reactionsListResult.rows,
+        saved: savedListMonthResult.rows,
       },
       highlights: { topQuestions: topQuestionsResult.rows },
       reflection: reflectionResult.rows.length > 0 ? reflectionResult.rows[0] : null
