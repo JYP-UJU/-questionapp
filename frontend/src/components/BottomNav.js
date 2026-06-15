@@ -7,9 +7,7 @@ const menus = [
         label: '질문올림픽',
         icon: (active) => (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="8" r="5"/>
-                <path d="M7 13l-2 6h14l-2-6"/>
-                <path d="M9 13v3m6-3v3"/>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
         )
     },
@@ -33,12 +31,7 @@ const menus = [
         label: '질문들',
         icon: (active) => (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
-                <circle cx="6" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
-                <path d="M10 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
-                <circle cx="12" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
-                <path d="M16 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
-                <circle cx="18" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
         )
     },
@@ -70,7 +63,7 @@ function BottomNav() {
             display: 'flex',
             justifyContent: 'space-around',
             alignItems: 'flex-end',
-            padding: '3px 0 5px',
+            padding: '2px 0 4px',
             boxShadow: '0 -2px 12px rgba(0,0,0,0.1)',
             zIndex: 100,
             borderTop: '1px solid #e5e7eb',

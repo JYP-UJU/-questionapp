@@ -210,7 +210,7 @@ function Friends() {
 
     return (
         <div className="friends-container">
-            <TopHeader icon="💬" title="꼬리에 꼬리를 무는 질문들" messages={friendsMessages} />
+            <TopHeader icon="💬" title="꼬리에 꼬리를 무는 질문들" messages={[]} />
 
             <div className="friends-content">
                 <div className="instruction instruction-animated">
