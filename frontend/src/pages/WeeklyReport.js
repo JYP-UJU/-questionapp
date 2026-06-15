@@ -11,7 +11,6 @@ function WeeklyReport() {
 
     const [activeTab, setActiveTab] = useState('stats');
 
-    // 돌아보기 폼
     const [mostCurious, setMostCurious] = useState('');
     const [selectedQuestions, setSelectedQuestions] = useState([]);
     const [funFriendQuestion, setFunFriendQuestion] = useState('');
@@ -19,7 +18,6 @@ function WeeklyReport() {
     const [reflectionSaved, setReflectionSaved] = useState(false);
     const [saving, setSaving] = useState(false);
     const [openToggles, setOpenToggles] = useState({});
-    // 저장 후 수정 모드
     const [editMode, setEditMode] = useState(false);
 
     const toggleSection = (key) => {
@@ -106,13 +104,21 @@ function WeeklyReport() {
         }
     };
 
-    // 편집 모드에서 쓸 질문 목록
+    // ✅ 퀴즈 완료 횟수도 항목으로 포함
     const getAllItems = () => {
-        return [
+        const items = [
             ...(report?.lists?.questions || []).map(q => ({ title: q.title, type: '만든질문' })),
             ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
             ...(report?.lists?.saved || []).map(q => ({ title: q.question_title, type: '저장' })),
         ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
+
+        // 퀴즈 완료 횟수 추가
+        const quizCount = report?.stats?.quizCompleted || 0;
+        if (quizCount > 0) {
+            items.push({ title: `퀴즈 ${quizCount}회 완료`, type: '퀴즈' });
+        }
+
+        return items;
     };
 
     const toggleQuestion = (title) => {
@@ -133,7 +139,6 @@ function WeeklyReport() {
         return <div className="wr-loading">📊 리포트 불러오는 중...</div>;
     }
 
-    // 편집 가능 여부: 저장 안 됐거나, 수정 모드일 때
     const isEditable = !reflectionSaved || editMode;
 
     return (
@@ -181,14 +186,14 @@ function WeeklyReport() {
                     <div className="reflection-group">
                         <label>
                             🔍 궁금한 것을 더 찾아본 적이 있나요?{' '}
-                            <span style={{fontSize:'11px', color:'#888'}}>이번 주에 활동한 질문들 중에서 선택해 보세요.</span>
+                            <span style={{fontSize:'11px', color:'#888'}}>이번 주에 활동한 것들 중에서 선택해 보세요.</span>
                         </label>
 
                         {/* 저장 완료 상태: 선택된 항목만 표시 */}
                         {reflectionSaved && !editMode ? (
                             <div style={{marginTop:'8px'}}>
                                 {selectedQuestions.length === 0 ? (
-                                    <div style={{color:'#aaa', fontSize:'13px', padding:'6px 0'}}>선택한 질문이 없어요</div>
+                                    <div style={{color:'#aaa', fontSize:'13px', padding:'6px 0'}}>선택한 항목이 없어요</div>
                                 ) : (
                                     <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
                                         {selectedQuestions.map((title, i) => (
@@ -209,7 +214,7 @@ function WeeklyReport() {
                             (() => {
                                 const allItems = getAllItems();
                                 if (allItems.length === 0) return (
-                                    <div style={{color:'#aaa', fontSize:'13px', padding:'8px 0'}}>이번 주 활동한 질문이 없어요</div>
+                                    <div style={{color:'#aaa', fontSize:'13px', padding:'8px 0'}}>이번 주 활동한 내용이 없어요</div>
                                 );
                                 return (
                                     <div style={{display:'flex', flexDirection:'column', gap:'6px', marginTop:'8px'}}>
@@ -233,7 +238,8 @@ function WeeklyReport() {
                                                     />
                                                     <span style={{fontSize:'13px', color:'#333', lineHeight:'1.5', userSelect:'none'}}>
                                                         {item.title}
-                                                        <span style={{marginLeft:'6px', fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'1px 6px', borderRadius:'8px'}}>{item.type}</span>
+                                                        {/* ✅ 출처 표시: 바탕색 없이 흐린 검은 글씨 */}
+                                                        <span style={{marginLeft:'6px', fontSize:'11px', color:'#aaa'}}>{item.type}</span>
                                                     </span>
                                                 </div>
                                             );
@@ -279,6 +285,7 @@ function WeeklyReport() {
                     {reflectionSaved && !editMode && (
                         <div style={{display:'flex', gap:'10px', marginBottom:'12px'}}>
                             <div style={{flex:1, background:'#3b82f6', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
+                                {/* ✅ 숫자 옆 녹색 작은 글씨 제거 - 숫자만 표시 */}
                                 <div style={{fontSize:'22px', fontWeight:800}}>{totalActivity}</div>
                                 <div style={{fontSize:'12px', marginTop:'2px'}}>총 활동</div>
                             </div>

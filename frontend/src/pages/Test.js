@@ -89,7 +89,7 @@ function Test() {
         try {
             await questionsAPI.create(title, content, thumbnail);
             alert('질문 등록! 5송이 획득!');
-            navigate('/saved');
+            navigate('/questions'); // ✅ /saved → /questions 로 변경
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to post question');
         } finally {

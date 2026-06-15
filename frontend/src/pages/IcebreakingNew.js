@@ -126,16 +126,13 @@ function IcebreakingNew() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            // 부모 씨앗질문도 자동으로 담기에 저장
             try {
                 await axios.post(`${API_BASE}/api/icebreaking/save`,
                     { questionId: relatedModal, sourceType: 'icebreaking' },
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 setSavedQuestions(prev => new Set([...prev, relatedModal]));
-            } catch (err) {
-                // 이미 저장된 경우 무시
-            }
+            } catch (err) {}
 
             setRelatedQuestions(prev => ({
                 ...prev,
@@ -185,7 +182,7 @@ function IcebreakingNew() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             alert('선택 완료! +5송이 획득!');
-            navigate('/saved');
+            navigate('/questions'); // ✅ /saved → /questions 로 변경
         } catch (err) {
             setError(err.response?.data?.message || '제출에 실패했습니다');
         } finally {
@@ -220,7 +217,7 @@ function IcebreakingNew() {
                         <div key={q.id} className="question-card">
                             <div className="question-title">{q.question}</div>
 
-                            {/* ✅ 5버튼 액션바 */}
+                            {/* 5버튼 액션바 */}
                             <div className="action-bar">
                                 <button
                                     className={`action-btn required-btn ${likedQuestions.has(q.id) ? 'active-like' : ''}`}

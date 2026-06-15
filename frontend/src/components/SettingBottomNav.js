@@ -7,17 +7,60 @@ function SettingBottomNav() {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    // 주간/월간 토글: 지금 주간이면 "월간일지", 나머지는 "주간일지"
     const isWeekly = currentPath === '/weekly-report';
     const journalLabel = isWeekly ? '월간일지' : '주간일지';
     const journalPath = isWeekly ? '/monthly-report' : '/weekly-report';
-    const journalIcon = isWeekly ? '📈' : '📊';
 
     const navItems = [
-        { path: '/questions', emoji: '💬', label: '메인' },
-        { path: journalPath, emoji: journalIcon, label: journalLabel },
-        { path: '/saved', emoji: '📝', label: '내활동' },
-        { path: '/setting', emoji: '🪐', label: '나의공간' },
+        {
+            path: '/questions',
+            label: '메인',
+            icon: (active) => (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+            )
+        },
+        {
+            path: journalPath,
+            label: journalLabel,
+            icon: (active) => (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+            )
+        },
+        {
+            path: '/saved',
+            label: '내활동',
+            icon: (active) => (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+            )
+        },
+        {
+            path: '/setting',
+            label: '나의공간',
+            icon: (active) => (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="3.5"/>
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                </svg>
+            )
+        },
     ];
 
     return (
@@ -30,7 +73,7 @@ function SettingBottomNav() {
                         className={`setting-nav-btn ${isActive ? 'active' : ''}`}
                         onClick={() => navigate(item.path)}
                     >
-                        <span style={{fontSize:'22px'}}>{item.emoji}</span>
+                        {item.icon(isActive)}
                         <span style={{fontSize:'11px', fontWeight: isActive ? '700' : '400', color: isActive ? '#3b82f6' : '#aaa'}}>{item.label}</span>
                     </button>
                 );
@@ -59,7 +102,7 @@ function SettingBottomNav() {
                         className={`setting-nav-btn ${isActive ? 'active' : ''}`}
                         onClick={() => navigate(item.path)}
                     >
-                        <span style={{fontSize:'22px'}}>{item.emoji}</span>
+                        {item.icon(isActive)}
                         <span style={{fontSize:'11px', fontWeight: isActive ? '700' : '400', color: isActive ? '#3b82f6' : '#aaa'}}>{item.label}</span>
                     </button>
                 );

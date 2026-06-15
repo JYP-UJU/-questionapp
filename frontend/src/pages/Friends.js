@@ -23,7 +23,7 @@ function Friends() {
     const navigate = useNavigate();
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
     const friendsMessages = [
-        "친구들은 어떤 궁금증이 있을까요?",
+        "우리 모두의 질문이 모여있어요!",
         "친구 질문에 의견을 남겨보세요!"
     ];
 
@@ -44,8 +44,8 @@ function Friends() {
 
             const response = await api.get('/questions/with-status');
 
+            // ✅ filter 제거 - 본인 질문 포함 전체 표시
             const sortedQuestions = response.data.questions
-                .filter(q => !q.is_mine)
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             const questionsWithPreview = await Promise.all(
@@ -163,55 +163,53 @@ function Friends() {
         }
     };
 
-    // 의견 토글 (펼치기/접기)
     const handleToggleOpinions = async (questionId) => {
         if (expandedOpinions[questionId]) {
             setExpandedOpinions(prev => ({ ...prev, [questionId]: false }));
-            return;
-        }
-        try {
-            const res = await api.get(`/questions/${questionId}/opinions`);
-            
-            setAllOpinions(prev => ({ ...prev, [questionId]: res.data.opinions || [] }));
+        } else {
+            if (!allOpinions[questionId]) {
+                try {
+                    const opRes = await api.get(`/questions/${questionId}/opinions`);
+                    setAllOpinions(prev => ({ ...prev, [questionId]: opRes.data.opinions }));
+                } catch (err) {}
+            }
             setExpandedOpinions(prev => ({ ...prev, [questionId]: true }));
-        } catch (err) {}
+        }
     };
 
-    // 관련질문 토글 (펼치기/접기)
     const handleToggleRelated = async (questionId) => {
         if (expandedRelated[questionId]) {
             setExpandedRelated(prev => ({ ...prev, [questionId]: false }));
-            return;
-        }
-        try {
-            const res = await api.get(`/questions/${questionId}/related`);
-            setAllRelated(prev => ({ ...prev, [questionId]: res.data.relatedQuestions || [] }));
+        } else {
+            if (!allRelated[questionId]) {
+                try {
+                    const relRes = await api.get(`/questions/${questionId}/related`);
+                    setAllRelated(prev => ({ ...prev, [questionId]: relRes.data.relatedQuestions }));
+                } catch (err) {}
+            }
             setExpandedRelated(prev => ({ ...prev, [questionId]: true }));
-        } catch (err) {}
+        }
     };
 
-    const formatTime = (timestamp) => {
-        const date = new Date(timestamp);
+    const formatTime = (dateStr) => {
+        const date = new Date(dateStr);
         const now = new Date();
-        const diff = now - date;
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const days = Math.floor(hours / 24);
-        if (days > 0) return `${date.getMonth() + 1}. ${date.getDate()}.`;
-        if (hours > 0) return `${hours}시간 전`;
-        return '방금 전';
+        const diff = Math.floor((now - date) / 1000);
+        if (diff < 60) return '방금 전';
+        if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+        return `${Math.floor(diff / 86400)}일 전`;
     };
 
-    if (loading) {
-        return (
-            <div className="friends-container">
-                <div className="loading">질문을 불러오는 중...</div>
-            </div>
-        );
-    }
+    if (loading) return (
+        <div className="friends-container">
+            <div className="loading">질문을 불러오는 중...</div>
+        </div>
+    );
 
     return (
         <div className="friends-container">
-            <TopHeader icon="💬" title="꼬리에 꼬리를 무는 질문들" messages={[]} backTo={null} />
+            <TopHeader icon="💬" title="질문들" messages={friendsMessages} />
 
             <div className="friends-content">
                 <div className="instruction instruction-animated">
@@ -247,7 +245,7 @@ function Friends() {
                                     <div className="question-content">{q.content}</div>
                                 )}
 
-                                {/* 의견 미리보기 B방식: 최신 1개 + 토글 */}
+                                {/* 의견 미리보기 */}
                                 {q.latestOpinion && (
                                     <div className="preview-section">
                                         <div className="preview-row">
@@ -273,7 +271,7 @@ function Friends() {
                                     </div>
                                 )}
 
-                                {/* 관련질문 미리보기 B방식: 최신 1개 + 토글 */}
+                                {/* 관련질문 미리보기 */}
                                 {q.latestRelated && (
                                     <div className="preview-section preview-related-section">
                                         <div className="preview-row">
@@ -301,7 +299,7 @@ function Friends() {
                                     </div>
                                 )}
 
-                                {/* ✅ 5버튼 액션바 — IcebreakingNew 스타일, 숫자 포함 */}
+                                {/* 5버튼 액션바 */}
                                 <div className="action-bar">
                                     <button
                                         className={`action-btn required-btn ${q.user_reaction === 'like' ? 'active-like' : ''}`}
