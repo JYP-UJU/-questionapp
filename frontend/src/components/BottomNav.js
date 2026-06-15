@@ -33,9 +33,10 @@ const menus = [
         label: '질문들',
         icon: (active) => (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="9" cy="7" r="3"/>
-                <circle cx="15" cy="7" r="3"/>
-                <path d="M3 19c0-3 2.7-5 6-5m6 0c3.3 0 6 2 6 5"/>
+                <path d="M6 8a3 3 0 0 1 6 0c0 2-3 2-3 5"/>
+                <circle cx="9" cy="16.5" r="0.5" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
+                <path d="M14 8a3 3 0 0 1 6 0c0 2-3 2-3 5"/>
+                <circle cx="17" cy="16.5" r="0.5" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
             </svg>
         )
     },

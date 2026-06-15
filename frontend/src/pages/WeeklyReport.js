@@ -109,7 +109,6 @@ function WeeklyReport() {
         const items = [
             ...(report?.lists?.questions || []).map(q => ({ title: q.title, type: '만든질문' })),
             ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
-            ...(report?.lists?.saved || []).map(q => ({ title: q.question_title, type: '저장' })),
         ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
 
         // 퀴즈 완료 횟수 추가
@@ -276,26 +275,6 @@ function WeeklyReport() {
                         />
                     </div>
 
-                    {/* 저장 완료 상태 */}
-                    {reflectionSaved && !editMode && (
-                        <div style={{marginBottom:'12px', background:'#f0fdf4', borderRadius:'12px', padding:'14px 16px', color:'#166534', fontWeight:700, fontSize:14, textAlign:'center'}}>
-                            ✅ 이번 주 돌아보기 완료! 8송이 획득 🌸
-                        </div>
-                    )}
-                    {reflectionSaved && !editMode && (
-                        <div style={{display:'flex', gap:'10px', marginBottom:'12px'}}>
-                            <div style={{flex:1, background:'#3b82f6', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
-                                {/* ✅ 숫자 옆 녹색 작은 글씨 제거 - 숫자만 표시 */}
-                                <div style={{fontSize:'22px', fontWeight:800}}>{totalActivity}</div>
-                                <div style={{fontSize:'12px', marginTop:'2px'}}>총 활동</div>
-                            </div>
-                            <div style={{flex:1, background:'#6366f1', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
-                                <div style={{fontSize:'22px', fontWeight:800}}>~{estimatedSongi}🌸</div>
-                                <div style={{fontSize:'12px', marginTop:'2px'}}>예상 송이</div>
-                            </div>
-                        </div>
-                    )}
-
                     {/* 버튼 영역 */}
                     {!reflectionSaved && (
                         <button
@@ -306,14 +285,34 @@ function WeeklyReport() {
                             {saving ? '저장 중...' : '돌아보기 완료 (+8🌸)'}
                         </button>
                     )}
+                    {/* ✅ 수정하기 버튼 - 녹색 상자 위로 이동 */}
                     {reflectionSaved && !editMode && (
                         <button
                             className="save-reflection-btn"
-                            style={{background:'#6b7280', marginTop:'4px'}}
+                            style={{background:'linear-gradient(135deg, #fbbf24, #f97316)', color:'#4b3a1f', marginBottom:'12px'}}
                             onClick={() => setEditMode(true)}
                         >
                             ✏️ 수정하기
                         </button>
+                    )}
+
+                    {/* 저장 완료 상태 */}
+                    {reflectionSaved && !editMode && (
+                        <div style={{marginBottom:'12px', background:'#f0fdf4', borderRadius:'12px', padding:'14px 16px', color:'#166534', fontWeight:700, fontSize:14, textAlign:'center'}}>
+                            ✅ 이번 주 돌아보기 완료! 8송이 획득 🌸
+                        </div>
+                    )}
+                    {reflectionSaved && !editMode && (
+                        <div style={{display:'flex', gap:'10px', marginBottom:'12px'}}>
+                            <div style={{flex:1, background:'#93c5fd', borderRadius:'12px', padding:'14px', textAlign:'center', color:'#1e3a5f'}}>
+                                <div style={{fontSize:'22px', fontWeight:800}}>{totalActivity}</div>
+                                <div style={{fontSize:'12px', marginTop:'2px'}}>총 활동</div>
+                            </div>
+                            <div style={{flex:1, background:'#c4b5fd', borderRadius:'12px', padding:'14px', textAlign:'center', color:'#2e1a5f'}}>
+                                <div style={{fontSize:'22px', fontWeight:800}}>~{estimatedSongi}🌸</div>
+                                <div style={{fontSize:'12px', marginTop:'2px'}}>예상 송이</div>
+                            </div>
+                        </div>
                     )}
                     {reflectionSaved && editMode && (
                         <div style={{display:'flex', gap:'8px', marginTop:'4px'}}>
@@ -344,7 +343,6 @@ function WeeklyReport() {
                         <span className="stat-icon">✏️</span>
                         <span className="stat-name">만든 질문</span>
                         <span className="stat-value">{report?.stats.questionsCreated || 0}개</span>
-                        <span className="stat-change">{getChangeText(report?.stats.questionsCreated, report?.comparison.prevQuestions)}</span>
                         <span className="toggle-arrow">{openToggles.questions ? '▲' : '▼'}</span>
                     </div>
                     {openToggles.questions && (
@@ -382,7 +380,6 @@ function WeeklyReport() {
                         <span className="stat-icon">💬</span>
                         <span className="stat-name">남긴 의견</span>
                         <span className="stat-value">{report?.stats.opinionsGiven || 0}개</span>
-                        <span className="stat-change">{getChangeText(report?.stats.opinionsGiven, report?.comparison.prevOpinions)}</span>
                         <span className="toggle-arrow">{openToggles.opinions ? '▲' : '▼'}</span>
                     </div>
                     {openToggles.opinions && (
@@ -421,22 +418,7 @@ function WeeklyReport() {
                         <span className="stat-value">{report?.stats.quizCompleted || 0}회</span>
                     </div>
 
-                    {/* 6. 저장한 질문 */}
-                    <div className="stat-row stat-row-toggle" onClick={() => toggleSection('saved')}>
-                        <span className="stat-icon">🏷️</span>
-                        <span className="stat-name">저장한 질문</span>
-                        <span className="stat-value">{report?.stats.questionsSaved || 0}개</span>
-                        <span className="toggle-arrow">{openToggles.saved ? '▲' : '▼'}</span>
-                    </div>
-                    {openToggles.saved && (
-                        <div className="toggle-list">
-                            {report?.lists?.saved?.length > 0 ? report.lists.saved.map((s, i) => (
-                                <div key={i} className="toggle-item">
-                                    <span className="toggle-item-text">"{s.question_title}"</span>
-                                </div>
-                            )) : <div className="toggle-empty">이번 주 저장한 질문이 없어요</div>}
-                        </div>
-                    )}
+
                 </div>
 
                 {/* 하이라이트 */}

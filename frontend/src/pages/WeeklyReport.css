@@ -188,15 +188,14 @@
     margin-right: 8px;
 }
 
+/* ✅ stat-change 녹색 글씨 제거 */
 .stat-change {
+    display: none;
     font-size: 12px;
     font-weight: 600;
     min-width: 30px;
     text-align: right;
-}
-
-.stat-change:not(:empty) {
-    color: #22c55e;
+    color: #aaa;
 }
 
 /* 하이라이트 */

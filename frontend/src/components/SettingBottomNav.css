@@ -3,13 +3,14 @@
     bottom: 0;
     left: 0;
     right: 0;
-    background: #dce8f0;
+    background: white;
     display: flex;
     justify-content: space-around;
-    align-items: center;
-    padding: 8px 0 10px;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+    align-items: flex-end;
+    padding: 5px 0 8px;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.1);
     z-index: 100;
+    border-top: 1px solid #e5e7eb;
 }
 
 .setting-nav-btn {
@@ -20,53 +21,35 @@
     align-items: center;
     gap: 3px;
     cursor: pointer;
-    padding: 4px 10px;
-    color: #5a7a8a;
-    font-size: 11px;
-    font-weight: 600;
-    transition: color 0.2s;
+    padding: 4px 8px;
+    border-radius: 10px;
+    transition: all 0.2s;
     flex: 1;
 }
 
-.setting-nav-btn span:first-child {
-    font-size: 22px;
-}
-
 .setting-nav-btn.active {
-    color: #1e5f7a;
+    color: #3b82f6;
 }
 
 .setting-nav-btn:hover {
-    color: #1e5f7a;
+    color: #3b82f6;
 }
 
-/* 가운데 질문쓰기 버튼 */
+/* 가운데 질문쓰기 버튼 - BottomNav와 동일 */
 .setting-nav-center-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    background: #4a90a4;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 56px;
-    height: 56px;
-    cursor: pointer;
-    font-size: 10px;
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(74, 144, 164, 0.4);
-    transition: all 0.2s;
-    margin-bottom: 8px;
+    position: relative;
+    top: -14px;
     flex-shrink: 0;
-}
-
-.setting-nav-center-btn span:first-child {
-    font-size: 20px;
-    line-height: 1;
+    padding: 0;
 }
 
 .setting-nav-center-btn:hover {
-    background: #3a7a8e;
-    transform: scale(1.05);
+    transform: none;
 }

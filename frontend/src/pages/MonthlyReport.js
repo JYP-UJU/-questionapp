@@ -92,7 +92,6 @@ function MonthlyReport() {
         return [
             ...(report?.lists?.questions || []).map(q => ({ title: q.title, type: '만든질문' })),
             ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
-            ...(report?.lists?.saved || []).map(q => ({ title: q.question_title, type: '저장' })),
         ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
     };
 
@@ -363,22 +362,7 @@ function MonthlyReport() {
                         <span className="stat-value">{report?.stats?.quizCompleted || 0}회</span>
                     </div>
 
-                    {/* 6. 저장한 질문 */}
-                    <div className="stat-row stat-row-toggle" onClick={() => toggleSection('saved')}>
-                        <span className="stat-icon">🏷️</span>
-                        <span className="stat-name">저장한 질문</span>
-                        <span className="stat-value">{report?.stats?.questionsSaved || 0}개</span>
-                        <span className="toggle-arrow">{openToggles['saved'] ? '▲' : '▼'}</span>
-                    </div>
-                    {openToggles['saved'] && (
-                        <div className="toggle-list">
-                            {report?.lists?.saved?.length > 0 ? report.lists.saved.map((s, i) => (
-                                <div key={i} className="toggle-item">
-                                    <span className="toggle-item-text">"{s.question_title}"</span>
-                                </div>
-                            )) : <div className="toggle-empty">이번 달 저장한 질문이 없어요</div>}
-                        </div>
-                    )}
+
                 </div>
 
                 {/* TOP 질문 */}

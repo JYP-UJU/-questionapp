@@ -102,20 +102,7 @@ const opinionsListResult = await pool.query(
       [userId, weekStart, weekEnd]
     );
 
-    // 3-5. 저장한 질문 목록
-    const savedListResult = await pool.query(
-      `SELECT sq.created_at,
-        CASE 
-          WHEN sq.question_type = 'user_question' THEN uq.title
-          ELSE seed.question
-        END as question_title
-       FROM saved_questions sq
-       LEFT JOIN user_questions uq ON sq.question_id = uq.id AND sq.question_type = 'user_question'
-       LEFT JOIN seed_questions seed ON sq.question_id = seed.id AND sq.question_type != 'user_question'
-       WHERE sq.user_id = $1 AND sq.created_at >= $2 AND sq.created_at <= $3
-       ORDER BY sq.created_at DESC`,
-      [userId, weekStart, weekEnd]
-    );
+    // 저장한 질문 항목 제거됨
 
     // 3-6. 퀴즈 완료 목록
     const quizListResult = await pool.query(
@@ -127,12 +114,7 @@ const opinionsListResult = await pool.query(
       [userId, weekStart, weekEnd]
     );
 
-    // 4. 저장한 질문 수
-    const savedResult = await pool.query(
-      `SELECT COUNT(*) as cnt FROM saved_questions 
-       WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3`,
-      [userId, weekStart, weekEnd]
-    );
+    // 저장한 질문 수 제거됨
 
     // 5. 퀴즈 완료 수 (5문제 = 1회)
     let quizCount = 0;
@@ -232,7 +214,6 @@ const opinionsListResult = await pool.query(
         questionsCreated: parseInt(questionsResult.rows[0].cnt),
         opinionsGiven: parseInt(opinionsResult.rows[0].cnt),
         reactionsGiven: parseInt(reactionsResult.rows[0].cnt),
-        questionsSaved: parseInt(savedResult.rows[0].cnt),
         quizCompleted: quizCount,
         relatedQuestions: parseInt(relatedResult.rows[0].cnt),
       },
@@ -241,7 +222,6 @@ const opinionsListResult = await pool.query(
         opinions: opinionsListResult.rows,
         reactions: reactionsListResult.rows,
         related: relatedListResult.rows,
-        saved: savedListResult.rows,
         quiz: quizListResult.rows,
       },
       comparison: {
@@ -366,19 +346,7 @@ router.get('/monthly', authenticateToken, async (req, res) => {
       [userId, monthStart, monthEnd]
     );
 
-    const savedListMonthResult = await pool.query(
-      `SELECT sq.created_at,
-        CASE 
-          WHEN sq.question_type = 'user_question' THEN uq.title
-          ELSE seed.question
-        END as question_title
-       FROM saved_questions sq
-       LEFT JOIN user_questions uq ON sq.question_id = uq.id AND sq.question_type = 'user_question'
-       LEFT JOIN seed_questions seed ON sq.question_id = seed.id AND sq.question_type != 'user_question'
-       WHERE sq.user_id = $1 AND sq.created_at >= $2 AND sq.created_at <= $3
-       ORDER BY sq.created_at DESC`,
-      [userId, monthStart, monthEnd]
-    );
+    // 저장한 질문 목록 제거됨
 
     let quizCount = 0;
     try {
@@ -393,7 +361,6 @@ router.get('/monthly', authenticateToken, async (req, res) => {
         questionsCreated: parseInt(questionsResult.rows[0].cnt),
         opinionsGiven: parseInt(opinionsResult.rows[0].cnt),
         reactionsGiven: parseInt(reactionsResult.rows[0].cnt),
-        questionsSaved: parseInt(savedResult.rows[0].cnt),
         quizCompleted: quizCount,
         relatedQuestions: parseInt(relatedResult.rows[0].cnt),
       },
@@ -402,7 +369,6 @@ router.get('/monthly', authenticateToken, async (req, res) => {
         opinions: opinionsListResult.rows.map(r => ({ content: r.content, question_title: r.question_title })),
         related: relatedListResult.rows,
         reactions: reactionsListResult.rows,
-        saved: savedListMonthResult.rows,
       },
       highlights: { topQuestions: topQuestionsResult.rows },
       reflection: reflectionResult.rows.length > 0 ? reflectionResult.rows[0] : null
