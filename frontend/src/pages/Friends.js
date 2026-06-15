@@ -23,8 +23,8 @@ function Friends() {
     const navigate = useNavigate();
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
     const friendsMessages = [
-        "우리 모두의 질문이 모여있어요!",
-        "친구 질문에 의견을 남겨보세요!"
+        "모두의 질문을 볼 수 있어요!",
+        "친구의 질문에 의견을 남기거나 관련 질문을 제시해 보세요."
     ];
 
     useEffect(() => {
@@ -213,6 +213,9 @@ function Friends() {
             <TopHeader icon="💬" title="꼬리에 꼬리를 무는 질문들" messages={friendsMessages} />
 
             <div className="friends-content">
+                <div className="instruction instruction-animated">
+                    {friendsMessages[currentMessageIndex]}
+                </div>
                 {error && <div className="error-message">{error}</div>}
 
                 <div className="questions-list">

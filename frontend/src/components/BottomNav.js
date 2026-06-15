@@ -33,10 +33,12 @@ const menus = [
         label: '질문들',
         icon: (active) => (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 8a3 3 0 0 1 6 0c0 2-3 2-3 5"/>
-                <circle cx="9" cy="16.5" r="0.5" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
-                <path d="M14 8a3 3 0 0 1 6 0c0 2-3 2-3 5"/>
-                <circle cx="17" cy="16.5" r="0.5" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
+                <path d="M4 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
+                <circle cx="6" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
+                <path d="M10 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
+                <circle cx="12" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
+                <path d="M16 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
+                <circle cx="18" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
             </svg>
         )
     },
@@ -68,7 +70,7 @@ function BottomNav() {
             display: 'flex',
             justifyContent: 'space-around',
             alignItems: 'flex-end',
-            padding: '5px 0 8px',
+            padding: '3px 0 5px',
             boxShadow: '0 -2px 12px rgba(0,0,0,0.1)',
             zIndex: 100,
             borderTop: '1px solid #e5e7eb',

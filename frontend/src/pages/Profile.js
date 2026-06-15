@@ -60,7 +60,7 @@ function Profile() {
         <div className="profile-container">
             {/* 헤더 */}
             <header className="profile-header">
-                <button className="back-btn" onClick={() => navigate(-1)}>← 나의공간</button>
+                <button className="back-btn" onClick={() => navigate(-1)}>←</button>
                 <h1>내 프로필</h1>
                 <div />
             </header>
@@ -86,6 +86,12 @@ function Profile() {
                     <h2 className="section-title">📊 나의 활동</h2>
                     <div className="stats-grid">
                         <div className="stat-item">
+                            <div className="stat-value">
+                                {(stats?.myQuestions || 0) + (stats?.relatedQuestions || 0)}
+                            </div>
+                            <div className="stat-label">총 질문</div>
+                        </div>
+                        <div className="stat-item">
                             <div className="stat-value">{stats?.myQuestions || 0}</div>
                             <div className="stat-label">만든 질문</div>
                         </div>
@@ -94,22 +100,16 @@ function Profile() {
                             <div className="stat-label">관련질문</div>
                         </div>
                         <div className="stat-item">
-                            <div className="stat-value">{stats?.opinions || 0}</div>
-                            <div className="stat-label">남긴 의견</div>
+                            <div className="stat-value">{stats?.quizCount || 0}</div>
+                            <div className="stat-label">퀴즈 완료</div>
                         </div>
                         <div className="stat-item">
                             <div className="stat-value">{stats?.reactions || 0}</div>
                             <div className="stat-label">관심표시</div>
                         </div>
                         <div className="stat-item">
-                            <div className="stat-value">{stats?.quizCount || 0}</div>
-                            <div className="stat-label">퀴즈 완료</div>
-                        </div>
-                        <div className="stat-item">
-                            <div className="stat-value">
-                                {(stats?.myQuestions || 0) + (stats?.relatedQuestions || 0)}
-                            </div>
-                            <div className="stat-label">총 질문</div>
+                            <div className="stat-value">{stats?.opinions || 0}</div>
+                            <div className="stat-label">남긴 의견</div>
                         </div>
                     </div>
                 </div>

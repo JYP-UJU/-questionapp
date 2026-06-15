@@ -289,7 +289,7 @@ function WeeklyReport() {
                     {reflectionSaved && !editMode && (
                         <button
                             className="save-reflection-btn"
-                            style={{background:'linear-gradient(135deg, #fbbf24, #f97316)', color:'#4b3a1f', marginBottom:'12px'}}
+                            style={{background:'#9ca3af', marginBottom:'12px'}}
                             onClick={() => setEditMode(true)}
                         >
                             ✏️ 수정하기
@@ -302,18 +302,7 @@ function WeeklyReport() {
                             ✅ 이번 주 돌아보기 완료! 8송이 획득 🌸
                         </div>
                     )}
-                    {reflectionSaved && !editMode && (
-                        <div style={{display:'flex', gap:'10px', marginBottom:'12px'}}>
-                            <div style={{flex:1, background:'#93c5fd', borderRadius:'12px', padding:'14px', textAlign:'center', color:'#1e3a5f'}}>
-                                <div style={{fontSize:'22px', fontWeight:800}}>{totalActivity}</div>
-                                <div style={{fontSize:'12px', marginTop:'2px'}}>총 활동</div>
-                            </div>
-                            <div style={{flex:1, background:'#c4b5fd', borderRadius:'12px', padding:'14px', textAlign:'center', color:'#2e1a5f'}}>
-                                <div style={{fontSize:'22px', fontWeight:800}}>~{estimatedSongi}🌸</div>
-                                <div style={{fontSize:'12px', marginTop:'2px'}}>예상 송이</div>
-                            </div>
-                        </div>
-                    )}
+
                     {reflectionSaved && editMode && (
                         <div style={{display:'flex', gap:'8px', marginTop:'4px'}}>
                             <button

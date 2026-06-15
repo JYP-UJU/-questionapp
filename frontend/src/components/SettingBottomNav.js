@@ -13,14 +13,30 @@ function SettingBottomNav() {
 
     const navItems = [
         {
-            path: '/questions',
-            label: '메인',
+            path: '/setting',
+            label: '나의공간',
             icon: (active) => (
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
                     stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8"
                     strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline points="9 22 9 12 15 12 15 22"/>
+                    <circle cx="12" cy="8" r="3.5"/>
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                </svg>
+            )
+        },
+        {
+            path: '/questions',
+            label: '질문들',
+            icon: (active) => (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
+                    <circle cx="5" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
+                    <path d="M10 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
+                    <circle cx="12" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
+                    <path d="M17 7a2 2 0 0 1 4 0c0 1.5-2 1.5-2 3.5"/>
+                    <circle cx="19" cy="13" r="0.6" fill={active ? '#3b82f6' : '#aaa'} stroke="none"/>
                 </svg>
             )
         },
@@ -46,18 +62,6 @@ function SettingBottomNav() {
                     stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8"
                     strokeLinecap="round" strokeLinejoin="round">
                     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-                </svg>
-            )
-        },
-        {
-            path: '/setting',
-            label: '나의공간',
-            icon: (active) => (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                    stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8"
-                    strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="8" r="3.5"/>
-                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
                 </svg>
             )
         },

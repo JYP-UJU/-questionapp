@@ -69,6 +69,10 @@ function SongiHistory() {
         <span>누적 {totalSongi}송이</span>
       </div>
 
+      <div style={{textAlign:'center', fontSize:'12px', color:'#aaa', padding:'8px 0 2px'}}>
+        내 프로필 페이지에서도 확인할 수 있어요
+      </div>
+
       <div className="sh-content">
         {Object.keys(grouped).length === 0 ? (
           <div className="sh-empty">아직 활동 내역이 없어요.</div>

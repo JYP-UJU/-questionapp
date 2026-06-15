@@ -227,18 +227,7 @@ function MonthlyReport() {
                             ✅ 이번 달 돌아보기 완료! 10송이 획득 🌸
                         </div>
                     )}
-                    {reflectionSaved && !editMode && (
-                        <div style={{display:'flex', gap:'10px', marginBottom:'12px'}}>
-                            <div style={{flex:1, background:'#3b82f6', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
-                                <div style={{fontSize:'22px', fontWeight:800}}>{totalActivity}</div>
-                                <div style={{fontSize:'12px', marginTop:'2px'}}>총 활동</div>
-                            </div>
-                            <div style={{flex:1, background:'#6366f1', borderRadius:'12px', padding:'14px', textAlign:'center', color:'white'}}>
-                                <div style={{fontSize:'22px', fontWeight:800}}>~{estimatedSongi}🌸</div>
-                                <div style={{fontSize:'12px', marginTop:'2px'}}>예상 송이</div>
-                            </div>
-                        </div>
-                    )}
+
 
                     {/* 버튼 영역 */}
                     {!reflectionSaved && (
@@ -250,7 +239,7 @@ function MonthlyReport() {
                     {reflectionSaved && !editMode && (
                         <button
                             className="save-reflection-btn"
-                            style={{background:'#6b7280', marginTop:'4px'}}
+                            style={{background:'#9ca3af', marginTop:'4px'}}
                             onClick={() => setEditMode(true)}
                         >
                             ✏️ 수정하기
