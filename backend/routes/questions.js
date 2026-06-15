@@ -207,14 +207,14 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            NULL as thumbnail_url,
            COALESCE(sq.likes_count, 0) as likes_count,
            COALESCE(sq.dislikes_count, 0) as dislikes_count,
-           sq.created_at,
+           NOW() as created_at,
            'quiz' as question_source,
            NULL as user_id,
            '씨드질문' as username,
            GREATEST(
-             COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), sq.created_at),
-             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE related_seed_question_id = sq.id), sq.created_at),
-             COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), sq.created_at)
+             COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), NOW()),
+             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE related_seed_question_id = sq.id), NOW()),
+             COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), NOW())
            ) as latest_activity
          FROM seed_questions sq
          WHERE
