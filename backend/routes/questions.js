@@ -114,43 +114,127 @@ router.post('/thumbnail', authenticateToken, async (req, res) => {
   }
 });
 
-// ⭐ 질문 목록 조회 (사용자 상태 포함)
+// ⭐ 질문 목록 조회 (사용자 질문 + 반응 있는 퀴즈 통합, 최신 활동 기준 정렬)
 router.get('/with-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
-    const { sort = 'latest' } = req.query;
-
-    let orderBy = 'uq.created_at DESC';
-    if (sort === 'popular') {
-      orderBy = 'uq.likes_count DESC, uq.created_at DESC';
-    }
 
     const result = await pool.query(
-      `SELECT 
-        uq.id, 
-        uq.title, 
-        uq.content, 
-        uq.thumbnail_url,
-        uq.likes_count,
-        uq.dislikes_count,
-        uq.created_at,
-        uq.user_id,
-        u.username,
-        (uq.user_id = $1) as is_mine,
-        (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id) as opinion_count,
-        (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = uq.id) as related_count,
-        EXISTS(SELECT 1 FROM saved_questions WHERE question_type = 'user_question' AND question_id = uq.id AND user_id = $2) as is_saved,
-        EXISTS(SELECT 1 FROM question_reactions WHERE question_id = uq.id AND user_id = $3 AND reaction_type = 'like') as user_liked,
-        EXISTS(SELECT 1 FROM question_reactions WHERE question_id = uq.id AND user_id = $4 AND reaction_type = 'dislike') as user_disliked
-       FROM user_questions uq
-       JOIN users u ON uq.user_id = u.id
-       WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
-       ORDER BY ${orderBy}
-       LIMIT 100`,
+      `SELECT
+        q.id,
+        q.title,
+        q.content,
+        q.thumbnail_url,
+        q.likes_count,
+        q.dislikes_count,
+        q.created_at,
+        q.question_source,
+        q.user_id,
+        q.username,
+        q.latest_activity,
+        (q.user_id = $1) as is_mine,
+        -- 의견 수
+        (SELECT COUNT(*) FROM question_opinions
+         WHERE question_id = q.id AND question_type = q.question_source) as opinion_count,
+        -- 관련질문 수
+        CASE
+          WHEN q.question_source = 'user_question' THEN
+            (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = q.id)
+          ELSE
+            COALESCE((SELECT related_count FROM seed_questions WHERE id = q.id), 0)
+        END as related_count,
+        -- 저장 여부
+        EXISTS(SELECT 1 FROM saved_questions
+          WHERE question_type = q.question_source AND question_id = q.id AND user_id = $2) as is_saved,
+        -- 반응
+        EXISTS(SELECT 1 FROM question_reactions
+          WHERE question_id = q.id AND user_id = $3 AND reaction_type = 'like'
+          AND question_type = q.question_source) as user_liked,
+        EXISTS(SELECT 1 FROM question_reactions
+          WHERE question_id = q.id AND user_id = $4 AND reaction_type = 'dislike'
+          AND question_type = q.question_source) as user_disliked,
+        -- 최신 의견 미리보기
+        (SELECT json_build_object('username', u2.username, 'opinion', op.opinion)
+         FROM question_opinions op
+         JOIN users u2 ON op.user_id = u2.id
+         WHERE op.question_id = q.id AND op.question_type = q.question_source
+         ORDER BY op.created_at DESC LIMIT 1) as latest_opinion,
+        -- 최신 관련질문 미리보기
+        CASE
+          WHEN q.question_source = 'user_question' THEN
+            (SELECT json_build_object('username', u3.username, 'title', rq.title)
+             FROM user_questions rq
+             JOIN users u3 ON rq.user_id = u3.id
+             WHERE rq.parent_question_id = q.id
+             ORDER BY rq.created_at DESC LIMIT 1)
+          ELSE
+            (SELECT json_build_object('username', u3.username, 'title', rq.title)
+             FROM user_questions rq
+             JOIN users u3 ON rq.user_id = u3.id
+             WHERE rq.related_seed_question_id = q.id
+             ORDER BY rq.created_at DESC LIMIT 1)
+        END as latest_related
+       FROM (
+         -- 사용자 질문
+         SELECT
+           uq.id,
+           uq.title,
+           uq.content,
+           uq.thumbnail_url,
+           uq.likes_count,
+           uq.dislikes_count,
+           uq.created_at,
+           'user_question' as question_source,
+           uq.user_id,
+           u.username,
+           GREATEST(
+             uq.created_at,
+             COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = uq.id AND question_type = 'user_question'), uq.created_at),
+             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE parent_question_id = uq.id), uq.created_at),
+             COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = uq.id AND question_type = 'user_question'), uq.created_at)
+           ) as latest_activity
+         FROM user_questions uq
+         JOIN users u ON uq.user_id = u.id
+         WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
+
+         UNION ALL
+
+         -- 퀴즈/씨드 질문 (의견 또는 관련질문이 있는 것만)
+         SELECT
+           sq.id,
+           sq.question as title,
+           sq.category as content,
+           NULL as thumbnail_url,
+           COALESCE(sq.likes_count, 0) as likes_count,
+           COALESCE(sq.dislikes_count, 0) as dislikes_count,
+           sq.created_at,
+           'quiz' as question_source,
+           NULL as user_id,
+           '씨드질문' as username,
+           GREATEST(
+             COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), sq.created_at),
+             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE related_seed_question_id = sq.id), sq.created_at),
+             COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), sq.created_at)
+           ) as latest_activity
+         FROM seed_questions sq
+         WHERE
+           EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
+           OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id)
+           OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
+       ) q
+       ORDER BY q.latest_activity DESC
+       LIMIT 25`,
       [userId, userId, userId, userId]
     );
 
-    res.json({ questions: result.rows });
+    // user_reaction 필드 통일
+    const questions = result.rows.map(q => ({
+      ...q,
+      user_reaction: q.user_liked ? 'like' : q.user_disliked ? 'dislike' : null,
+      is_quiz: q.question_source === 'quiz',
+    }));
+
+    res.json({ questions });
 
   } catch (error) {
     console.error('질문 목록 조회 오류:', error);

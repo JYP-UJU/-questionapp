@@ -42,37 +42,14 @@ function Friends() {
     const loadQuestions = async () => {
         try {
             setLoading(true);
-
             const response = await api.get('/questions/with-status');
-
-            // ✅ filter 제거 - 본인 질문 포함 전체 표시
-            const sortedQuestions = response.data.questions
-                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-            const questionsWithPreview = await Promise.all(
-                sortedQuestions.map(async (q) => {
-                    let latestOpinion = null;
-                    let latestRelated = null;
-
-                    if (q.opinion_count > 0) {
-                        try {
-                            const opRes = await api.get(`/questions/${q.id}/opinions`);
-                            latestOpinion = opRes.data.opinions[0] || null;
-                        } catch (err) {}
-                    }
-
-                    if (q.related_count > 0) {
-                        try {
-                            const relRes = await api.get(`/questions/${q.id}/related`);
-                            latestRelated = relRes.data.relatedQuestions[0] || null;
-                        } catch (err) {}
-                    }
-
-                    return { ...q, latestOpinion, latestRelated };
-                })
-            );
-
-            setQuestions(questionsWithPreview);
+            // ✅ 백엔드에서 미리보기까지 같이 줌 - 개별 API 호출 불필요
+            const questions = response.data.questions.map(q => ({
+                ...q,
+                latestOpinion: q.latest_opinion || null,
+                latestRelated: q.latest_related || null,
+            }));
+            setQuestions(questions);
             setError('');
         } catch (err) {
             setError('질문을 불러오는데 실패했습니다');
@@ -233,11 +210,14 @@ function Friends() {
 
                                 {/* 작성자 + 시간 */}
                                 <div className="question-header">
-                                    {q.is_mine && <span className="my-badge">✏️</span>}
+                                    {q.is_quiz
+                                        ? <span className="my-badge">🧩</span>
+                                        : q.is_mine && <span className="my-badge">✏️</span>
+                                    }
                                     <span className="question-author">
-                                        {q.is_mine ? '나' : q.username}
+                                        {q.is_quiz ? '씨드질문' : q.is_mine ? '나' : q.username}
                                     </span>
-                                    <span className="question-time">{formatTime(q.created_at)}</span>
+                                    <span className="question-time">{formatTime(q.latest_activity || q.created_at)}</span>
                                 </div>
 
                                 {/* 질문 제목 + 내용 */}
