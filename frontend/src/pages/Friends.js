@@ -215,14 +215,14 @@ function Friends() {
                                         : q.is_mine && <span className="my-badge">✏️</span>
                                     }
                                     <span className="question-author">
-                                        {q.is_quiz ? '씨드질문' : q.is_mine ? '나' : q.username}
+                                        {q.is_quiz ? '퀴즈' : q.is_mine ? '나' : q.username}
                                     </span>
                                     <span className="question-time">{formatTime(q.latest_activity || q.created_at)}</span>
                                 </div>
 
                                 {/* 질문 제목 + 내용 */}
                                 <div className="question-title">{q.title}</div>
-                                {q.content && (
+                                {q.content && !q.is_quiz && (
                                     <div className="question-content">{q.content}</div>
                                 )}
 
