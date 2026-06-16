@@ -451,6 +451,28 @@ function WeeklyReport() {
         내 프로필에서 확인하기 →
     </button>
 </div>
+<div style={{
+    margin:'12px 8px 80px',
+    background:'#eff6ff',
+    borderRadius:'14px',
+    padding:'16px 20px',
+    textAlign:'center'
+}}>
+    <div style={{fontSize:'15px', color:'#1e40af', fontWeight:'600', marginBottom:'8px'}}>
+        🌸 송이를 확인해 보세요!
+    </div>
+    <button
+        onClick={() => navigate('/profile')}
+        style={{
+            background:'#3b82f6', border:'none',
+            color:'white', fontWeight:'700',
+            fontSize:'14px', cursor:'pointer',
+            padding:'8px 20px', borderRadius:'20px'
+        }}
+    >
+        내 프로필에서 확인하기 →
+    </button>
+</div>
             <SettingBottomNav />
         </div>
     );
