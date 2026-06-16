@@ -119,7 +119,7 @@ function MonthlyReport() {
         <div className="wr-container">
             <header className="wr-header">
                 <button onClick={() => navigate(-1)} className="wr-back">← 나의공간</button>
-                <h1>📈 월간 리포트</h1>
+                <h1 style={{fontSize:"22px", fontWeight:"800", margin:0}}>📈 월간 리포트</h1>
                 <div className="wr-spacer"></div>
             </header>
 
