@@ -100,9 +100,15 @@
 
 /* 콘텐츠 */
 .wr-content {
-    max-width: 500px;
+    max-width: 600px;
     margin: 0 auto;
-    padding: 10px 8px;
+    padding: 8px 20px;
+}
+
+@media (max-width: 768px) {
+    .wr-content {
+        padding: 12px;
+    }
 }
 
 /* 요약 카드 */
@@ -145,8 +151,8 @@
 /* 통계 카드 */
 .stats-card, .growth-card, .reflection-card {
     background: white;
-    border-radius: 14px;
-    padding: 14px 12px;
+    border-radius: 16px;
+    padding: 16px;
     margin-bottom: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }

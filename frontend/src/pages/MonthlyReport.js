@@ -60,7 +60,7 @@ function MonthlyReport() {
                 setEditMode(false);
             }
         } catch (err) {
-            console.error('월간 리포트 로드 오류:', err);
+            console.error('이번 달의 활동 로드 오류:', err);
         } finally {
             setLoading(false);
         }
@@ -111,7 +111,7 @@ function MonthlyReport() {
 
     const { label } = getMonthRange(monthOffset);
 
-    if (loading) return <div className="wr-loading">📈 월간 리포트 불러오는 중...</div>;
+    if (loading) return <div className="wr-loading">📈  이번 달의 활동 불러오는 중...</div>;
 
     const isEditable = !reflectionSaved || editMode;
 
@@ -119,7 +119,7 @@ function MonthlyReport() {
         <div className="wr-container">
             <header className="wr-header">
                 <button onClick={() => navigate(-1)} className="wr-back">← 나의공간</button>
-                <h1 style={{fontSize:"22px", fontWeight:"800", margin:0}}>📈 월간 리포트</h1>
+                <h1 style={{fontSize:"22px", fontWeight:"800", margin:0}}>📈 이번 달의 활동</h1>
                 <div className="wr-spacer"></div>
             </header>
 
@@ -233,7 +233,7 @@ function MonthlyReport() {
                     {!reflectionSaved && (
                         <button className="save-reflection-btn" onClick={handleSaveReflection}
                             disabled={saving || !mostCurious.trim()}>
-                            {saving ? '저장 중...' : '월간 돌아보기 저장하기 (+10🌸)'}
+                            {saving ? '저장 중...' : '이번 달의 활동 저장하기 (+10🌸)'}
                         </button>
                     )}
                     {reflectionSaved && !editMode && (
