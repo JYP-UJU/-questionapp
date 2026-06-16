@@ -118,7 +118,12 @@ function SavedQuestions() {
                 })
             );
 
-            setSavedQuestions(questionsWithData);
+            // 상호작용(의견/관련질문) 있는 것 상단으로
+            const sorted = [
+                ...questionsWithData.filter(q => q.latestOpinion || q.latestRelated),
+                ...questionsWithData.filter(q => !q.latestOpinion && !q.latestRelated)
+            ];
+            setSavedQuestions(sorted);
 
             try {
                 const songiRes = await api.get('/users/me');
@@ -314,7 +319,14 @@ function SavedQuestions() {
                                 const sourceInfo = getSourceInfo(saved.questionType);
 
                                 return (
-                                    <div key={saved.savedId} className="question-card">
+                                    <div key={saved.savedId} className="question-card" style={{
+                                    background: (saved.latestOpinion || saved.latestRelated)
+                                        ? 'rgba(239, 246, 255, 0.98)'
+                                        : 'rgba(255, 255, 255, 0.92)',
+                                    borderLeft: (saved.latestOpinion || saved.latestRelated)
+                                        ? '4px solid #3b82f6'
+                                        : 'none'
+                                }}>
 
                                         {/* 출처 + 시간 */}
                                         <div className="question-source">

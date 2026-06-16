@@ -369,20 +369,44 @@ function MonthlyReport() {
                 )}
 
                 {/* 성장 메시지 */}
-                <div className="growth-card">
-                    <h3>🌱 이번 달 성장</h3>
-                    <p className="growth-msg">
-                        {totalActivity === 0
-                            ? '이번 달 아직 활동이 없어요. 질문을 시작해볼까요? 🌸'
-                            : totalActivity < 10
-                            ? `이번 달 ${totalActivity}번 활동했어요. 꾸준히 하면 더 많은 것을 발견할 수 있어요! 💪`
-                            : totalActivity < 30
-                            ? `이번 달 ${totalActivity}번 활동했어요. 과학적 호기심이 쑥쑥 자라고 있어요! 🌿`
-                            : `이번 달 무려 ${totalActivity}번 활동했어요! 정말 대단한 탐구자예요! 🔥`}
-                    </p>
-                </div>
+<div className="growth-card">
+    <h3>🌱 이번 달 성장</h3>
+    {totalActivity === 0
+        ? <p className="growth-msg">이번 달은 좀 쉬었나봐요. 다음 달에 질문해볼까요? 🌱</p>
+        : <>
+            {(report?.stats?.questionsCreated || 0) > 0 && (
+                <p className="growth-msg">이번 달 {report.stats.questionsCreated}개의 질문을 만들었어요! ✏️</p>
+            )}
+            {(report?.stats?.relatedQuestions || 0) > 0 && (
+                <p className="growth-msg">관련질문 {report.stats.relatedQuestions}개로 탐구를 넓혔어요! ❓</p>
+            )}
+            {(report?.stats?.opinionsGiven || 0) > 0 && (
+                <p className="growth-msg">의견 {report.stats.opinionsGiven}개로 생각을 나눴어요! 💬</p>
+            )}
+            {(report?.stats?.reactionsGiven || 0) > 0 && (
+                <p className="growth-msg">{report.stats.reactionsGiven}번 관심을 표시했어요! 👍</p>
+            )}
+        </>
+    }
+</div>
             </div>
-
+<div style={{
+    textAlign:'center', padding:'16px 20px 80px',
+    fontSize:'14px', color:'#666'
+}}>
+    <span>🌸 송이를 확인해 보세요! </span>
+    <button
+        onClick={() => navigate('/profile')}
+        style={{
+            background:'none', border:'none',
+            color:'#3b82f6', fontWeight:'700',
+            fontSize:'14px', cursor:'pointer',
+            textDecoration:'underline'
+        }}
+    >
+        내 프로필에서 확인하기 →
+    </button>
+</div>
             <SettingBottomNav />
         </div>
     );
