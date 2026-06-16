@@ -111,11 +111,7 @@ function WeeklyReport() {
             ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
         ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
 
-        // 퀴즈 완료 횟수 추가
-        const quizCount = report?.stats?.quizCompleted || 0;
-        if (quizCount > 0) {
-            items.push({ title: `퀴즈 ${quizCount}회 완료`, type: '퀴즈' });
-        }
+        // 퀴즈는 선택 목록에서 제외
 
         return items;
     };
@@ -185,7 +181,7 @@ function WeeklyReport() {
                     <div className="reflection-group">
                         <label>
                             🔍 궁금한 것을 더 찾아본 적이 있나요?{' '}
-                            <span style={{fontSize:'11px', color:'#888'}}>이번 주에 활동한 것들 중에서 선택해 보세요.</span>
+                            <span style={{fontSize:'13px', color:'#888'}}>이번 주에 활동한 것들 중에서 선택해 보세요.</span>
                         </label>
 
                         {/* 저장 완료 상태: 선택된 항목만 표시 */}
@@ -199,7 +195,7 @@ function WeeklyReport() {
                                             <div key={i} style={{
                                                 display:'flex', alignItems:'center', gap:'6px',
                                                 background:'#eff6ff', borderRadius:'8px',
-                                                padding:'7px 10px', fontSize:'13px', color:'#1e40af'
+                                                padding:'7px 10px', fontSize:'15px', color:'#1e40af'
                                             }}>
                                                 <span>✅</span>
                                                 <span>{title}</span>
@@ -235,10 +231,10 @@ function WeeklyReport() {
                                                         onClick={e => e.stopPropagation()}
                                                         style={{marginTop:'2px', accentColor:'#3b82f6', cursor:'pointer', width:'16px', height:'16px', flexShrink:0}}
                                                     />
-                                                    <span style={{fontSize:'13px', color:'#333', lineHeight:'1.5', userSelect:'none'}}>
+                                                    <span style={{fontSize:'15px', color:'#333', lineHeight:'1.6', userSelect:'none'}}>
                                                         {item.title}
                                                         {/* ✅ 출처 표시: 바탕색 없이 흐린 검은 글씨 */}
-                                                        <span style={{marginLeft:'6px', fontSize:'11px', color:'#aaa'}}>{item.type}</span>
+                                                        <span style={{marginLeft:'6px', fontSize:'13px', color:'#aaa'}}>{item.type}</span>
                                                     </span>
                                                 </div>
                                             );
