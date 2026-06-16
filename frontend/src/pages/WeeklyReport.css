@@ -35,7 +35,7 @@
 
 .wr-header h1 {
     margin: 0;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
 }
 
@@ -68,7 +68,7 @@
 }
 
 .week-label {
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 600;
     color: #333;
 }
@@ -102,7 +102,7 @@
 .wr-content {
     max-width: 500px;
     margin: 0 auto;
-    padding: 14px 12px;
+    padding: 10px 8px;
 }
 
 /* 요약 카드 */
@@ -146,14 +146,14 @@
 .stats-card, .growth-card, .reflection-card {
     background: white;
     border-radius: 14px;
-    padding: 18px;
+    padding: 14px 12px;
     margin-bottom: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .stats-card h3, .growth-card h3, .reflection-card h3 {
     margin: 0 0 14px;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     color: #333;
 }
@@ -177,12 +177,12 @@
 
 .stat-name {
     flex: 1;
-    font-size: 15px;
+    font-size: 16px;
     color: #555;
 }
 
 .stat-value {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     color: #333;
     margin-right: 8px;
@@ -261,7 +261,7 @@
 
 /* ===== 돌아보기 탭 ===== */
 .reflection-intro {
-    font-size: 15px;
+    font-size: 16px;
     color: #666;
     margin: 0 0 16px;
     line-height: 1.5;
@@ -273,7 +273,7 @@
 
 .reflection-group label {
     display: block;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     color: #333;
     margin-bottom: 8px;
@@ -290,7 +290,7 @@
     padding: 12px;
     border: 2px solid #e5e7eb;
     border-radius: 10px;
-    font-size: 16px;
+    font-size: 17px;
     font-family: inherit;
     resize: vertical;
     box-sizing: border-box;
