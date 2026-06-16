@@ -114,6 +114,64 @@ function Profile() {
                     </div>
                 </div>
 
+                {/* 송이 진행도 건전지 바 */}
+                <div className="profile-section">
+                    <h2 className="section-title">🌸 상품권 교환 진행도</h2>
+                    {(() => {
+                        const total = user?.songi_count || 0;
+                        const progress = total % 100;
+                        const earned = Math.floor(total / 100);
+                        const pct = Math.min((progress / 100) * 100, 100);
+                        return (
+                            <div>
+                                <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px', fontSize:'14px', color:'#555'}}>
+                                    <span>현재 <strong style={{color:'#3b82f6'}}>{progress}송이</strong> / 100송이</span>
+                                    <span>총 {earned}번 교환 가능했어요</span>
+                                </div>
+                                <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
+                                    <div style={{
+                                        flex:1, height:'28px',
+                                        background:'#e5e7eb', borderRadius:'6px',
+                                        overflow:'hidden', position:'relative'
+                                    }}>
+                                        <div style={{
+                                            width:`${pct}%`, height:'100%',
+                                            background: pct >= 100
+                                                ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                                                : pct >= 60
+                                                ? 'linear-gradient(90deg, #60a5fa, #3b82f6)'
+                                                : pct >= 30
+                                                ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                                                : 'linear-gradient(90deg, #f87171, #ef4444)',
+                                            borderRadius:'6px',
+                                            transition:'width 0.5s ease'
+                                        }}/>
+                                        <span style={{
+                                            position:'absolute', top:'50%', left:'50%',
+                                            transform:'translate(-50%,-50%)',
+                                            fontSize:'12px', fontWeight:'700', color:'#333'
+                                        }}>{Math.round(pct)}%</span>
+                                    </div>
+                                    <div style={{
+                                        width:'10px', height:'16px',
+                                        background:'#9ca3af', borderRadius:'0 3px 3px 0',
+                                        flexShrink:0
+                                    }}/>
+                                </div>
+                                <div style={{marginTop:'8px', fontSize:'13px', color:'#888', textAlign:'center'}}>
+                                    {pct >= 100
+                                        ? '🎉 100송이 달성! 선생님께 상품권 교환을 요청하세요!'
+                                        : `앞으로 ${100 - progress}송이 더 모으면 1,000원 상품권! 💪`
+                                    }
+                                </div>
+                                <div style={{marginTop:'6px', fontSize:'12px', color:'#aaa', textAlign:'center'}}>
+                                    ⚠️ 매주 주간일지 작성 필수 · 주당 최대 100송이
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </div>
+
                 {/* 상품권 수령 내역 */}
                 <div className="profile-section">
                     <h2 className="section-title">🎫 상품권 내역</h2>
