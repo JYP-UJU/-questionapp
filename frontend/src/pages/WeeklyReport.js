@@ -456,7 +456,7 @@ function getGrowthMessages(report) {
         if (stats.questionsCreated > comparison.prevQuestions) {
             messages.push(`질문을 지난 주보다 ${stats.questionsCreated - comparison.prevQuestions}개 더 만들었어요! 👏`);
         } else {
-            messages.push(`이번 주 ${stats.questionsCreated}개의 질문을 만들었어요! ✨`);
+            messages.push(`이번 주 ${stats.questionsCreated}개의 질문을 만들었어요! ✏️`);
         }
     }
     if (stats.opinionsGiven > comparison.prevOpinions) {
