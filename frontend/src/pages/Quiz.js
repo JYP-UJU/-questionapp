@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useNavigationType } from 'react-router-dom';
 import { quizAPI, savedAPI } from '../services/api';
 import axios from 'axios';
 import './Quiz.css';
@@ -35,6 +35,7 @@ function Quiz() {
 
     const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
     const navigate = useNavigate();
+    const navigationType = useNavigationType(); // 'POP' = 브라우저 뒤로/앞으로가기, 'PUSH' = 메뉴 등에서 새로 이동
      const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 const quizMessages = [
     "가장 그럴듯한 설명을 선택해주세요!",
@@ -49,26 +50,31 @@ useEffect(() => {
 }, []);
 
     useEffect(() => {
-        const saved = sessionStorage.getItem(QUIZ_SESSION_KEY);
-        if (saved) {
-            try {
-                const data = JSON.parse(saved);
-                if (data.showResults && data.results) {
-                    setQuestions(data.questions || []);
-                    setResults(data.results);
-                    setShowResults(true);
-                    setBookmarkedQuestions(new Set(data.bookmarkedQuestions || []));
-                    setLikedQuestions(new Set(data.likedQuestions || []));
-                    setDislikedQuestions(new Set(data.dislikedQuestions || []));
-                    setOpinions(data.opinions || {});
-                    setRelatedMap(data.relatedMap || {});
-                    setLoading(false);
-                    return;
+        // 뒤로가기(POP)일 때만 저장된 결과 화면을 복원.
+        // 메뉴 클릭 등으로 새로 들어온 경우(PUSH)에는 항상 새 퀴즈를 시작한다.
+        if (navigationType === 'POP') {
+            const saved = sessionStorage.getItem(QUIZ_SESSION_KEY);
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.showResults && data.results) {
+                        setQuestions(data.questions || []);
+                        setResults(data.results);
+                        setShowResults(true);
+                        setBookmarkedQuestions(new Set(data.bookmarkedQuestions || []));
+                        setLikedQuestions(new Set(data.likedQuestions || []));
+                        setDislikedQuestions(new Set(data.dislikedQuestions || []));
+                        setOpinions(data.opinions || {});
+                        setRelatedMap(data.relatedMap || {});
+                        setLoading(false);
+                        return;
+                    }
+                } catch (e) {
+                    console.error('퀴즈 세션 복원 실패:', e);
                 }
-            } catch (e) {
-                console.error('퀴즈 세션 복원 실패:', e);
             }
         }
+        sessionStorage.removeItem(QUIZ_SESSION_KEY);
         loadQuestions();
     }, []);
 
