@@ -43,9 +43,10 @@ initTables().catch(err => console.error('olympic 테이블 초기화 오류:', e
 router.get('/questions', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT id, question AS text, category AS subject
+      SELECT id, question AS text, category AS subject, hook_line AS "hookLine"
       FROM seed_questions
-      WHERE review_stage = 'final_reviewed'
+      -- ⚠️ 검토 기간 동안 임시로 전체 노출 (final_reviewed + draft_reviewed).
+      -- 9월 실제 참여자 모집 전에 WHERE review_stage = 'final_reviewed' 를 다시 걸어야 함!
       ORDER BY RANDOM()
       LIMIT 16
     `);

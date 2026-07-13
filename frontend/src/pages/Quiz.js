@@ -9,6 +9,8 @@ import OpinionModal from '../components/OpinionModal';
 import RelatedModal from '../components/RelatedModal'; 
 
 function Quiz() {
+    const QUIZ_SESSION_KEY = 'muleumsongi_quiz_session';
+
     const [questions, setQuestions] = useState([]);
     const [answers, setAnswers] = useState({});
     const [loading, setLoading] = useState(true);
@@ -47,8 +49,46 @@ useEffect(() => {
 }, []);
 
     useEffect(() => {
+        const saved = sessionStorage.getItem(QUIZ_SESSION_KEY);
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                if (data.showResults && data.results) {
+                    setQuestions(data.questions || []);
+                    setResults(data.results);
+                    setShowResults(true);
+                    setBookmarkedQuestions(new Set(data.bookmarkedQuestions || []));
+                    setLikedQuestions(new Set(data.likedQuestions || []));
+                    setDislikedQuestions(new Set(data.dislikedQuestions || []));
+                    setOpinions(data.opinions || {});
+                    setRelatedMap(data.relatedMap || {});
+                    setLoading(false);
+                    return;
+                }
+            } catch (e) {
+                console.error('퀴즈 세션 복원 실패:', e);
+            }
+        }
         loadQuestions();
     }, []);
+
+    // 결과 화면 상태가 바뀔 때마다 sessionStorage에 동기화
+    // (뒤로가기로 다시 들어와도 결과 화면이 유지되도록)
+    useEffect(() => {
+        if (showResults && results) {
+            const sessionData = {
+                questions,
+                results,
+                showResults: true,
+                bookmarkedQuestions: Array.from(bookmarkedQuestions),
+                likedQuestions: Array.from(likedQuestions),
+                dislikedQuestions: Array.from(dislikedQuestions),
+                opinions,
+                relatedMap,
+            };
+            sessionStorage.setItem(QUIZ_SESSION_KEY, JSON.stringify(sessionData));
+        }
+    }, [showResults, results, bookmarkedQuestions, likedQuestions, dislikedQuestions, opinions, relatedMap]);
 
     const loadQuestions = async () => {
         try {
@@ -297,6 +337,11 @@ useEffect(() => {
                                         <div className="result-explanation">
                                             💡 {result.explanation}
                                         </div>
+                                        {result.hookLine && (
+                                            <div className="result-hookline">
+                                                🤔 {result.hookLine}
+                                            </div>
+                                        )}
                                         {hasOpinion && (
                                             <div className="user-opinion-box">
                                                 📝 내 생각: {opinions[result.questionId]}
@@ -385,6 +430,7 @@ useEffect(() => {
                                 // 에러가 나도 메인으로 이동
                             }
                             
+                            sessionStorage.removeItem(QUIZ_SESSION_KEY);
                             navigate('/saved');
                         }}
                     >

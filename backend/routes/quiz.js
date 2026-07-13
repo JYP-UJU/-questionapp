@@ -31,7 +31,6 @@ router.get('/random', authenticateToken, async (req, res) => {
                      WHERE or2.session_id = $1
                        AND or2.round_number = 2
                        AND sq.option_1 IS NOT NULL
-                       AND sq.review_stage = 'final_reviewed'
                      LIMIT 4`,
                     [sessionId]
                 );
@@ -55,7 +54,7 @@ router.get('/random', authenticateToken, async (req, res) => {
                 `SELECT id, question, category, option_1, option_2, option_3, option_4, option_5
                  FROM seed_questions
                  WHERE option_1 IS NOT NULL
-                 AND review_stage = 'final_reviewed'
+                 -- ⚠️ 검토 기간 동안 임시로 전체 노출. 9월 전 review_stage='final_reviewed' 필터 재적용 필요!
                  ${placeholders}
                  ORDER BY RANDOM()
                  LIMIT $1`,
@@ -105,7 +104,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
             const { questionId, selectedOption } = response;
 
             const questionResult = await client.query(
-                `SELECT id, question, correct_option, explanation, 
+                `SELECT id, question, correct_option, explanation, hook_line,
                         option_1, option_2, option_3, option_4, option_5
                  FROM seed_questions WHERE id = $1`,
                 [questionId]
@@ -130,6 +129,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
                 correctOption: question.correct_option,
                 isCorrect,
                 explanation: question.explanation,
+                hookLine: question.hook_line,
                 options: {
                     option_1: question.option_1,
                     option_2: question.option_2,

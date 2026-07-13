@@ -10,7 +10,8 @@ router.get('/random', authenticateToken, async (req, res) => {
         const result = await pool.query(`
             SELECT id, question, category
             FROM seed_questions
-            WHERE review_stage = 'final_reviewed'
+            -- ⚠️ 검토 기간 동안 임시로 전체 노출 (final_reviewed + draft_reviewed).
+            -- 9월 실제 참여자 모집 전에 review_stage = 'final_reviewed' 필터를 다시 걸어야 함!
             ORDER BY RANDOM()
             LIMIT 5
         `);

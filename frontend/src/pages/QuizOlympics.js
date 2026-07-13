@@ -301,6 +301,9 @@ function OlympicsResult({ winner, allRoundsData, navigate }) {
         {/* 우승 질문 */}
         <div className="winner-card">
           <div className="winner-text">{winner.text}</div>
+          {winner.hookLine && (
+            <div className="winner-hookline">🤔 {winner.hookLine}</div>
+          )}
         </div>
 
         {/* 성향 문구 */}
