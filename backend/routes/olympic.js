@@ -38,6 +38,32 @@ async function initTables() {
 
 initTables().catch(err => console.error('olympic 테이블 초기화 오류:', err));
 
+// ── GET /api/olympic/questions ───────────────────────────────────
+// 16강용 질문 16개를 검토 완료(final_reviewed)된 것 중에서 랜덤으로 가져오기
+router.get('/questions', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT id, question AS text, category AS subject
+      FROM seed_questions
+      WHERE review_stage = 'final_reviewed'
+      ORDER BY RANDOM()
+      LIMIT 16
+    `);
+
+    if (result.rows.length < 16) {
+      return res.status(404).json({
+        message: '검토 완료된 질문이 16개 미만이라 올림픽을 시작할 수 없습니다',
+        available: result.rows.length,
+      });
+    }
+
+    res.json({ questions: result.rows });
+  } catch (error) {
+    console.error('올림픽 질문 조회 오류:', error);
+    res.status(500).json({ message: '서버 오류가 발생했습니다' });
+  }
+});
+
 // ── POST /api/olympic/complete ────────────────────────────────────
 // 올림픽 완주 기록 저장 + 송이 지급
 router.post('/complete', authenticateToken, async (req, res) => {

@@ -10,6 +10,7 @@ router.get('/random', authenticateToken, async (req, res) => {
         const result = await pool.query(`
             SELECT id, question, category
             FROM seed_questions
+            WHERE review_stage = 'final_reviewed'
             ORDER BY RANDOM()
             LIMIT 5
         `);

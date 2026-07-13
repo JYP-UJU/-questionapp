@@ -31,6 +31,7 @@ router.get('/random', authenticateToken, async (req, res) => {
                      WHERE or2.session_id = $1
                        AND or2.round_number = 2
                        AND sq.option_1 IS NOT NULL
+                       AND sq.review_stage = 'final_reviewed'
                      LIMIT 4`,
                     [sessionId]
                 );
@@ -54,6 +55,7 @@ router.get('/random', authenticateToken, async (req, res) => {
                 `SELECT id, question, category, option_1, option_2, option_3, option_4, option_5
                  FROM seed_questions
                  WHERE option_1 IS NOT NULL
+                 AND review_stage = 'final_reviewed'
                  ${placeholders}
                  ORDER BY RANDOM()
                  LIMIT $1`,
