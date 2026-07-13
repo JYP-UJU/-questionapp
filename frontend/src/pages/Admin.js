@@ -81,7 +81,9 @@ const ACTIVITY_LABELS = {
   related: '관련질문',
   opinion: '의견',
   reaction: '관심표시',
-  quiz: '퀴즈'
+  quiz: '퀴즈',
+  weekly_journal: '주간일지',
+  monthly_journal: '월간일지'
 };
 
 const ACTIVITY_COLORS = {
@@ -89,7 +91,9 @@ const ACTIVITY_COLORS = {
   related: '#3bb36e',
   opinion: '#f5a623',
   reaction: '#e87c7c',
-  quiz: '#9b6fc4'
+  quiz: '#9b6fc4',
+  weekly_journal: '#06b6d4',
+  monthly_journal: '#0891b2'
 };
 
 function Admin() {
@@ -151,10 +155,11 @@ function Admin() {
   }, [tab, loadActivities, loadUsers]);
 
   const handleDelete = async (type, id) => {
-    if (!window.confirm('이 항목을 삭제할까요?')) return;
+    if (!window.confirm('이 항목을 삭제할까요? (지급된 송이도 함께 회수됩니다)')) return;
     try {
-      await api.delete('/admin/activity', { params: { type, id } });
+      const res = await api.delete('/admin/activity', { params: { type, id } });
       setActivities(prev => prev.filter(a => !(a.id === id && a.activity_type === type)));
+      alert(res.data?.message || '삭제 완료');
     } catch (err) {
       alert('삭제 실패');
     }
@@ -271,7 +276,8 @@ function Admin() {
                   </div>
                     <div style={styles.activityDate}>{formatDate(a.created_at)}</div>
                   </div>
-                  {(a.activity_type === 'question' || a.activity_type === 'related' || a.activity_type === 'opinion') && (
+                  {(a.activity_type === 'question' || a.activity_type === 'related' || a.activity_type === 'opinion'
+                    || a.activity_type === 'weekly_journal' || a.activity_type === 'monthly_journal') && (
                     <button style={styles.deleteBtn}
                       onClick={() => handleDelete(a.activity_type, a.id)}>삭제</button>
                   )}
