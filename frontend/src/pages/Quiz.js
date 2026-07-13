@@ -436,7 +436,6 @@ useEffect(() => {
                                 // 에러가 나도 메인으로 이동
                             }
                             
-                            sessionStorage.removeItem(QUIZ_SESSION_KEY);
                             navigate('/saved');
                         }}
                     >
