@@ -330,9 +330,9 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
       [id, userId, opinion, questionType]
     );
 
-    // 3송이 지급
+    // 2송이 지급
     await client.query(
-      'UPDATE users SET songi_count = songi_count + 3 WHERE id = $1',
+      'UPDATE users SET songi_count = songi_count + 2 WHERE id = $1',
       [userId]
     );
 
@@ -353,14 +353,14 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
     // songi_transactions 기록
     await client.query(
       `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-       VALUES ($1, 3, 'opinion', '의견 작성', $2, $3)`,
+       VALUES ($1, 2, 'opinion', '의견 작성', $2, $3)`,
       [userId, opinionQId, questionText]
     );
 
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: '의견이 등록되었습니다! 3송이를 획득했어요 🌸',
+      message: '의견이 등록되었습니다! 2송이를 획득했어요 🌸',
       opinion: result.rows[0]
     });
 
@@ -651,20 +651,20 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
         [id]
       );
 
-      // 관심있음(like)일 때만 송이 지급 — 하루 최대 3점 캡
+      // 관심있음(like)일 때만 송이 지급 — 하루 최대 6회(=3점) 캡
       if (reactionType === 'like') {
         const today = new Date().toISOString().slice(0, 10);
         const capCheck = await client.query(
-          `SELECT COALESCE(SUM(amount), 0) as today_total
+          `SELECT COUNT(*) as today_count
            FROM songi_transactions
            WHERE user_id = $1
              AND activity_type = 'interest'
              AND DATE(created_at) = $2`,
           [userId, today]
         );
-        const todayTotal = parseInt(capCheck.rows[0].today_total) || 0;
+        const todayCount = parseInt(capCheck.rows[0].today_count) || 0;
 
-        if (todayTotal < 3) {
+        if (todayCount < 6) {
           // 원래 질문 내용 조회
           const isSeedQ2 = ['icebreaking', 'seed', 'quiz'].includes(questionType);
           let interestQText = '';
@@ -680,12 +680,12 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
           }
 
           await client.query(
-            'UPDATE users SET songi_count = songi_count + 1 WHERE id = $1',
+            'UPDATE users SET songi_count = songi_count + 0.5 WHERE id = $1',
             [userId]
           );
           await client.query(
             `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-             VALUES ($1, 1, 'interest', '관심 표시', $2, $3)`,
+             VALUES ($1, 0.5, 'interest', '관심 표시', $2, $3)`,
             [userId, interestQId, interestQText]
           );
         }

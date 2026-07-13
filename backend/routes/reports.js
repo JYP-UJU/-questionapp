@@ -273,21 +273,42 @@ router.post('/weekly/reflection', authenticateToken, async (req, res) => {
         [userId, weekStart, mostCurious, didResearch, researchTopic, researchNote, funFriendQuestion, weeklyFeeling]
       );
 
-      // 주간 일지 완료 시 8송이 지급
+      // 주간 일지 완료 시 새 점수 구조:
+      // Q1(mostCurious, 항상 필수) = 3점
+      // Q2(찾아본 활동 선택, didResearch/researchTopic) = 선택 시 +2점
+      // Q3(funFriendQuestion) 또는 Q4(weeklyFeeling) 중 하나라도 채우면 +2점 (중복 없음)
+      const hasResearchSelection = didResearch === true || (researchTopic && String(researchTopic).trim() !== '');
+      const hasQ3OrQ4 =
+        (funFriendQuestion && String(funFriendQuestion).trim() !== '') ||
+        (weeklyFeeling && String(weeklyFeeling).trim() !== '');
+
+      const weeklySongiEarned = 3 + (hasResearchSelection ? 2 : 0) + (hasQ3OrQ4 ? 2 : 0);
+
       await pool.query(
-        'UPDATE users SET songi_count = songi_count + 8 WHERE id = $1',
-        [userId]
+        'UPDATE users SET songi_count = songi_count + $1 WHERE id = $2',
+        [weeklySongiEarned, userId]
       );
 
       // songi_transactions 기록
       await pool.query(
         `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
-         VALUES ($1, 8, 'weekly_journal', '주간 일지 완료')`,
-        [userId]
+         VALUES ($1, $2, 'weekly_journal', '주간 일지 완료')`,
+        [userId, weeklySongiEarned]
       );
     }
 
-    res.json({ message: '주간 돌아보기가 저장되었어요! 🌸' });
+    res.json({
+      message: existing.rows.length > 0
+        ? '주간 돌아보기가 수정되었어요! 🌸'
+        : (() => {
+            const hasResearch = didResearch === true || (researchTopic && String(researchTopic).trim() !== '');
+            const hasQ3OrQ4 =
+              (funFriendQuestion && String(funFriendQuestion).trim() !== '') ||
+              (weeklyFeeling && String(weeklyFeeling).trim() !== '');
+            const earned = 3 + (hasResearch ? 2 : 0) + (hasQ3OrQ4 ? 2 : 0);
+            return `주간 돌아보기가 저장되었어요! +${earned}송이 획득 🌸`;
+          })()
+    });
 
   } catch (error) {
     console.error('주간 돌아보기 저장 오류:', error);
@@ -401,14 +422,31 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
         `INSERT INTO monthly_reflections (user_id, month_start, most_curious, did_research, research_topic, research_note, monthly_feeling) VALUES ($1, $2::date, $3, $4, $5, $6, $7)`,
         [userId, monthStart, mostCurious, didResearch, researchTopic, researchNote, monthlyFeeling]
       );
-      await pool.query('UPDATE users SET songi_count = songi_count + 10 WHERE id = $1', [userId]);
+      // 월간 일지 완료 시 새 점수 구조 (주간과 동일한 원리):
+      // Q1(mostCurious, 항상 필수) = 3점
+      // 연구 선택(didResearch/researchTopic) = 선택 시 +2점
+      // monthlyFeeling 채우면 +2점 (월간엔 funFriendQuestion 필드가 없어서 이 하나만 체크)
+      const monthlyHasResearch = didResearch === true || (researchTopic && String(researchTopic).trim() !== '');
+      const monthlyHasFeeling = monthlyFeeling && String(monthlyFeeling).trim() !== '';
+      const monthlySongiEarned = 3 + (monthlyHasResearch ? 2 : 0) + (monthlyHasFeeling ? 2 : 0);
+
+      await pool.query('UPDATE users SET songi_count = songi_count + $1 WHERE id = $2', [monthlySongiEarned, userId]);
       await pool.query(
-        `INSERT INTO songi_transactions (user_id, amount, activity_type, description) VALUES ($1, 10, 'monthly_journal', '월간 일지 완료')`,
-        [userId]
+        `INSERT INTO songi_transactions (user_id, amount, activity_type, description) VALUES ($1, $2, 'monthly_journal', '월간 일지 완료')`,
+        [userId, monthlySongiEarned]
       );
     }
 
-    res.json({ message: '월간 돌아보기가 저장되었어요! 🌸' });
+    res.json({
+      message: existing.rows.length > 0
+        ? '월간 돌아보기가 수정되었어요! 🌸'
+        : (() => {
+            const hasResearch = didResearch === true || (researchTopic && String(researchTopic).trim() !== '');
+            const hasFeeling = monthlyFeeling && String(monthlyFeeling).trim() !== '';
+            const earned = 3 + (hasResearch ? 2 : 0) + (hasFeeling ? 2 : 0);
+            return `월간 돌아보기가 저장되었어요! +${earned}송이 획득 🌸`;
+          })()
+    });
   } catch (error) {
     console.error('월간 돌아보기 저장 오류:', error);
     res.status(500).json({ error: '서버 오류가 발생했습니다' });

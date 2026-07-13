@@ -177,14 +177,14 @@ router.post('/submit', authenticateToken, async (req, res) => {
             }
         }
 
-        // 송이 지급 (+5송이)
+        // 송이 지급 (+4송이)
         await client.query(
-            'UPDATE users SET songi_count = songi_count + 5 WHERE id = $1',
+            'UPDATE users SET songi_count = songi_count + 4 WHERE id = $1',
             [userId]
         );
         await client.query(
             `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
-             VALUES ($1, 5, 'quiz', '퀴즈 완료')`,
+             VALUES ($1, 4, 'quiz', '퀴즈 완료')`,
             [userId]
         );
 
@@ -199,7 +199,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
         res.json({
             correctCount,
             totalCount: responses.length,
-            songiEarned: 5,
+            songiEarned: 4,
             currentSongi,
             results,
             savedCount: savedQuestions.length,

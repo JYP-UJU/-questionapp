@@ -14,7 +14,7 @@ async function initTables() {
       winner_question_text TEXT,
       winner_subject VARCHAR(20),
       winner_type VARCHAR(20),
-      songi_awarded INTEGER DEFAULT 5,
+      songi_awarded INTEGER DEFAULT 4,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
@@ -81,7 +81,7 @@ router.post('/complete', authenticateToken, async (req, res) => {
     const sessionResult = await db.query(
       `INSERT INTO olympic_sessions
         (user_id, winner_question_id, winner_question_text, winner_subject, winner_type, songi_awarded)
-       VALUES ($1, $2, $3, $4, $5, 5)
+       VALUES ($1, $2, $3, $4, $5, 4)
        RETURNING id`,
       [userId, winnerId, winnerText, winnerSubject || null, winnerType || null]
     );
@@ -125,13 +125,20 @@ router.post('/complete', authenticateToken, async (req, res) => {
       }
     }
 
-    // 4. 송이 지급 (+5)
+    // 4. 송이 지급 (+4)
     await db.query(
-      `UPDATE users SET songi_count = COALESCE(songi_count, 0) + 5 WHERE id = $1`,
+      `UPDATE users SET songi_count = COALESCE(songi_count, 0) + 4 WHERE id = $1`,
       [userId]
     );
 
-    // 4. 현재 송이 잔액 조회
+    // songi_transactions 기록 (기존엔 누락되어 있었음 — 2주 교환 판정에 필요해서 추가)
+    await db.query(
+      `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
+       VALUES ($1, 4, 'olympic', '질문올림픽 완료')`,
+      [userId]
+    );
+
+    // 5. 현재 송이 잔액 조회
     const userResult = await db.query(
       `SELECT songi_count FROM users WHERE id = $1`, [userId]
     );
@@ -140,7 +147,7 @@ router.post('/complete', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       sessionId,
-      songiAwarded: 5,
+      songiAwarded: 4,
       currentSongi,
       message: '올림픽 완주 기록 저장 완료!'
     });
