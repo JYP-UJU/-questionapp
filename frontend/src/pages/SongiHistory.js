@@ -66,7 +66,7 @@ function SongiHistory() {
       </header>
 
       <div className="sh-user-bar">
-        <span>누적 {totalSongi}송이</span>
+        <span>누적 {parseFloat(totalSongi).toFixed(1)}송이</span>
       </div>
 
       <div style={{textAlign:'center', fontSize:'12px', color:'#aaa', padding:'8px 0 2px'}}>
@@ -82,7 +82,8 @@ function SongiHistory() {
               <div className="sh-date-label">{date}</div>
               {items.map(t => {
                 const info = ACTIVITY_LABELS[t.activity_type] || { label: t.activity_type, icon: '&#127800;' };
-                const isPlus = t.amount > 0;
+                const amountNum = parseFloat(t.amount);
+                const isPlus = amountNum > 0;
                 return (
                   <div key={t.id} className="sh-item">
                     <div className="sh-item-left">
@@ -101,13 +102,13 @@ function SongiHistory() {
                       </div>
                     </div>
                     <span className={`sh-amount ${isPlus ? 'plus' : 'minus'}`}>
-                      {isPlus ? '+' : ''}{t.amount}
+                      {isPlus ? '+' : ''}{amountNum.toFixed(1)}
                     </span>
                   </div>
                 );
               })}
               <div className="sh-date-total">
-                일일 합계: {items.reduce((sum, t) => sum + t.amount, 0)}송이
+                일일 합계: {items.reduce((sum, t) => sum + parseFloat(t.amount), 0).toFixed(1)}송이
               </div>
             </div>
           ))

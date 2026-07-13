@@ -7,13 +7,24 @@ import './Profile.css';
 function Profile() {
     const navigate = useNavigate();
     const [data, setData] = useState(null);
+    const [exchangeStatus, setExchangeStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showUsernameModal, setShowUsernameModal] = useState(false);
     const [newUsername, setNewUsername] = useState('');
 
     useEffect(() => {
         loadProfile();
+        loadExchangeStatus();
     }, []);
+
+    const loadExchangeStatus = async () => {
+        try {
+            const res = await api.get('/reports/exchange-status');
+            setExchangeStatus(res.data);
+        } catch (err) {
+            console.error('교환 자격 로드 오류:', err);
+        }
+    };
 
     const loadProfile = async () => {
         try {
@@ -73,7 +84,7 @@ function Profile() {
                     <div className="profile-user-info">
                         <div className="profile-username">{user?.username}</div>
                         <div className="profile-joined">가입일 {formatDate(user?.created_at)}</div>
-                        <div className="profile-songi">🌸 총 {user?.songi_count || 0}송이 획득</div>
+                        <div className="profile-songi">🌸 총 {parseFloat(user?.songi_count || 0).toFixed(1)}송이 획득</div>
                     </div>
                     <button className="edit-username-btn" onClick={() => {
                         setNewUsername(user?.username || '');
@@ -114,19 +125,48 @@ function Profile() {
                     </div>
                 </div>
 
-                {/* 송이 진행도 건전지 바 */}
+                {/* 송이 진행도 건전지 바 — 실제 교환 자격(200송이+최근2주+주간일지) 기준 */}
                 <div className="profile-section">
                     <h2 className="section-title">🌸 상품권 교환 진행도</h2>
-                    {(() => {
-                        const total = user?.songi_count || 0;
-                        const progress = total % 100;
-                        const earned = Math.floor(total / 100);
-                        const pct = Math.min((progress / 100) * 100, 100);
+                    {!exchangeStatus ? (
+                        <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
+                    ) : (() => {
+                        const { windowSongi, threshold, eligible, hasJournalInWindow, songiNeeded } = exchangeStatus;
+                        const pct = Math.min((windowSongi / threshold) * 100, 100);
+
+                        // 하단 안내 멘트: 두 조건(주간일지, 송이)을 같이 짚어줌
+                        let message;
+                        if (eligible) {
+                            message = '🎉 교환 조건을 채웠어요! 선생님께 상품권 교환을 요청하세요!';
+                        } else {
+                            const parts = [];
+                            if (!hasJournalInWindow) parts.push('주간일지를 작성하지 않으셨어요');
+                            if (songiNeeded > 0) parts.push(`${songiNeeded.toFixed(1)}송이가 더 필요해요`);
+                            message = parts.join('. 그리고 ') + '. 💪';
+                        }
+
                         return (
                             <div>
+                                {/* 주간일지 작성 여부 체크 */}
+                                <div style={{
+                                    display:'flex', alignItems:'center', gap:'8px',
+                                    marginBottom:'10px', padding:'8px 10px',
+                                    background: hasJournalInWindow ? '#f0fdf4' : '#f9fafb',
+                                    borderRadius:'8px'
+                                }}>
+                                    <span style={{
+                                        fontSize:'18px',
+                                        color: hasJournalInWindow ? '#16a34a' : '#c1c7d0'
+                                    }}>
+                                        {hasJournalInWindow ? '✅' : '⭕'}
+                                    </span>
+                                    <span style={{fontSize:'13px', fontWeight:600, color: hasJournalInWindow ? '#16a34a' : '#999'}}>
+                                        최근 2주 안 주간일지 {hasJournalInWindow ? '작성 완료' : '아직 안 씀'}
+                                    </span>
+                                </div>
+
                                 <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px', fontSize:'14px', color:'#555'}}>
-                                    <span>현재 <strong style={{color:'#3b82f6'}}>{progress}송이</strong> / 100송이</span>
-                                    <span>총 {earned}번 교환 가능했어요</span>
+                                    <span>최근 2주 <strong style={{color:'#3b82f6'}}>{windowSongi.toFixed(1)}송이</strong> / {threshold}송이</span>
                                 </div>
                                 <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
                                     <div style={{
@@ -136,7 +176,7 @@ function Profile() {
                                     }}>
                                         <div style={{
                                             width:`${pct}%`, height:'100%',
-                                            background: pct >= 100
+                                            background: eligible
                                                 ? 'linear-gradient(90deg, #22c55e, #16a34a)'
                                                 : pct >= 60
                                                 ? 'linear-gradient(90deg, #60a5fa, #3b82f6)'
@@ -159,13 +199,10 @@ function Profile() {
                                     }}/>
                                 </div>
                                 <div style={{marginTop:'8px', fontSize:'13px', color:'#888', textAlign:'center'}}>
-                                    {pct >= 100
-                                        ? '🎉 100송이 달성! 선생님께 상품권 교환을 요청하세요!'
-                                        : `앞으로 ${100 - progress}송이 더 모으면 1,000원 상품권! 💪`
-                                    }
+                                    {message}
                                 </div>
                                 <div style={{marginTop:'6px', fontSize:'12px', color:'#aaa', textAlign:'center'}}>
-                                    ⚠️ 매주 주간일지 작성 필수 · 주당 최대 100송이
+                                    ⚠️ 최근 2주 안에 200송이 + 주간일지 작성 시 교환 가능해요
                                 </div>
                             </div>
                         );

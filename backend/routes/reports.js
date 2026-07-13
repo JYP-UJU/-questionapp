@@ -453,4 +453,51 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== 상품권 교환 자격 판정 (200송이 + 최근 2주 윈도우 + 그 안에 주간일지 여부) =====
+router.get('/exchange-status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - 14);
+
+    // 최근 14일간의 송이 합계 (모든 거래 타입 포함 — 회수/차감도 자연스럽게 반영됨)
+    const sumResult = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0) as window_total
+       FROM songi_transactions
+       WHERE user_id = $1 AND created_at >= $2`,
+      [userId, windowStart.toISOString()]
+    );
+    const windowSongi = parseFloat(sumResult.rows[0].window_total);
+
+    // 최근 14일 안에 주간일지 지급 기록이 있는지
+    const journalResult = await pool.query(
+      `SELECT COUNT(*) as cnt
+       FROM songi_transactions
+       WHERE user_id = $1 AND activity_type = 'weekly_journal' AND created_at >= $2`,
+      [userId, windowStart.toISOString()]
+    );
+    const hasJournalInWindow = parseInt(journalResult.rows[0].cnt) > 0;
+
+    const EXCHANGE_THRESHOLD = 200;
+    const eligible = windowSongi >= EXCHANGE_THRESHOLD && hasJournalInWindow;
+
+    // 누적(평생) 송이도 같이 반환 (프로필 "총 획득" 표시용)
+    const userResult = await pool.query('SELECT songi_count FROM users WHERE id = $1', [userId]);
+    const lifetimeSongi = parseFloat(userResult.rows[0]?.songi_count || 0);
+
+    res.json({
+      eligible,
+      windowSongi,
+      hasJournalInWindow,
+      threshold: EXCHANGE_THRESHOLD,
+      songiNeeded: Math.max(0, EXCHANGE_THRESHOLD - windowSongi),
+      windowDays: 14,
+      lifetimeSongi
+    });
+  } catch (error) {
+    console.error('교환 자격 판정 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
+
 module.exports = router;

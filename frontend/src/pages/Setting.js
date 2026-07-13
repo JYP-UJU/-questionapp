@@ -123,7 +123,7 @@ function Setting() {
 
             <div className="setting-user-bar">
                 <span className="user-info-text">
-                    💬 {user?.username || '사용자'} | 🌸 {user?.songi_count || 0}송이
+                    💬 {user?.username || '사용자'} | 🌸 {parseFloat(user?.songi_count || 0).toFixed(1)}송이
                 </span>
             </div>
 
@@ -150,7 +150,7 @@ function Setting() {
                     <button className="menu-btn songi-btn" onClick={() => navigate('/songi-history')}>
                         <span className="menu-icon">🌸</span>
                         <span className="menu-label">송이 내역</span>
-                        <span className="menu-desc">현재 {user?.songi_count || 0}송이</span>
+                        <span className="menu-desc">현재 {parseFloat(user?.songi_count || 0).toFixed(1)}송이</span>
                     </button>
 
                     {/* 3행: 계정 */}
