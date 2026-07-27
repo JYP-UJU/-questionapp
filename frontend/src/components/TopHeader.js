@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import NotificationBell from './NotificationBell';
 
-function TopHeader({ title, icon, messages = [], backTo = -1 }) {
+function TopHeader({ title, icon, messages = [], backTo = -1, showBell = true }) {
     const navigate = useNavigate();
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
     const [visible, setVisible] = useState(true);
@@ -50,7 +51,9 @@ function TopHeader({ title, icon, messages = [], backTo = -1 }) {
                 }}>
                     {icon} {title}
                 </h1>
-                <div style={{ width: '60px' }} />
+                <div style={{ width: '60px', display: 'flex', justifyContent: 'flex-end' }}>
+                    {showBell && <NotificationBell />}
+                </div>
             </div>
 
             {messages.length > 0 && (
