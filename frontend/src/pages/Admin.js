@@ -101,6 +101,7 @@ function Admin() {
   const [tab, setTab] = useState('activities'); // 'activities' | 'users'
   const [activities, setActivities] = useState([]);
   const [users, setUsers] = useState([]);
+  const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // 필터
@@ -149,10 +150,37 @@ function Admin() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const loadRewardClaims = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/reports/reward-claims');
+      setClaims(res.data.claims || []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        alert('관리자 권한이 없어요');
+        navigate('/setting');
+      }
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (tab === 'activities') loadActivities();
-    else loadUsers();
-  }, [tab, loadActivities, loadUsers]);
+    else if (tab === 'users') loadUsers();
+    else loadRewardClaims();
+  }, [tab, loadActivities, loadUsers, loadRewardClaims]);
+
+  const handleCompleteClaim = async (claimId) => {
+    if (!window.confirm('상품권 지급을 완료 처리할까요?')) return;
+    try {
+      await api.put(`/reports/reward-claims/${claimId}/complete`);
+      setClaims(prev => prev.map(c => c.id === claimId ? { ...c, status: 'completed', completed_at: new Date().toISOString() } : c));
+    } catch (err) {
+      alert('처리 실패');
+    }
+  };
 
   const handleDelete = async (type, id) => {
     if (!window.confirm('이 항목을 삭제할까요? (지급된 송이도 함께 회수됩니다)')) return;
@@ -211,6 +239,13 @@ function Admin() {
           onClick={() => setTab('activities')}>활동 피드</button>
         <button style={{...styles.tab, ...(tab === 'users' ? styles.tabActive : {})}}
           onClick={() => setTab('users')}>사용자 목록</button>
+        <button style={{...styles.tab, ...(tab === 'reward_claims' ? styles.tabActive : {})}}
+          onClick={() => setTab('reward_claims')}>
+          🎫 상품권 신청
+          {claims.filter(c => c.status === 'pending').length > 0 && (
+            <span style={styles.pendingBadge}>{claims.filter(c => c.status === 'pending').length}</span>
+          )}
+        </button>
       </div>
 
       {/* ===== 활동 피드 탭 ===== */}
@@ -343,6 +378,48 @@ function Admin() {
         </div>
       )}
 
+      {/* ===== 상품권 신청 탭 ===== */}
+      {tab === 'reward_claims' && (
+        <div>
+          {loading ? (
+            <div style={styles.loading}>로딩 중...</div>
+          ) : (
+            <div style={styles.list}>
+              {claims.length === 0 && <div style={styles.empty}>신청 내역이 없어요</div>}
+              {claims.map(c => (
+                <div key={c.id} style={styles.userItem}>
+                  <div style={styles.userTop}>
+                    <div style={styles.userName}>
+                      {c.username}
+                      {c.status === 'completed' ? (
+                        <span style={styles.completedBadge}>지급완료</span>
+                      ) : (
+                        <span style={styles.pendingBadgeInline}>대기중</span>
+                      )}
+                    </div>
+                    <div style={styles.userSongi}>🌸 신청 당시 {c.songi_at_claim}송이</div>
+                  </div>
+                  <div style={styles.userStats}>
+                    <span>👤 {c.name}</span>
+                    <span>📞 {c.phone}</span>
+                  </div>
+                  <div style={styles.userBottom}>
+                    <span style={styles.userDate}>신청 {formatDate(c.created_at)}</span>
+                    {c.status !== 'completed' && (
+                      <div style={styles.userActions}>
+                        <button style={styles.feedBtn} onClick={() => handleCompleteClaim(c.id)}>
+                          지급완료 처리
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 송이 회수 모달 */}
       {deductModal && (
         <div style={styles.overlay} onClick={() => setDeductModal(null)}>
@@ -401,6 +478,9 @@ const styles = {
   userTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   userName: { fontSize: 15, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 6 },
   adminBadge: { background: '#6b84c4', color: 'white', fontSize: 10, padding: '2px 7px', borderRadius: 10 },
+  pendingBadge: { background: '#dc2626', color: 'white', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', marginLeft: 4 },
+  pendingBadgeInline: { background: '#fef3c7', color: '#b45309', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 },
+  completedBadge: { background: '#dcfce7', color: '#16a34a', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 },
   userSongi: { fontSize: 13, color: '#6b84c4', fontWeight: 600 },
   userStats: { display: 'flex', gap: 10, fontSize: 12, color: '#888', marginBottom: 10 },
   userBottom: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
