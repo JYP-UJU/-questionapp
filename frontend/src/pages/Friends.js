@@ -303,7 +303,7 @@ function Friends() {
                                 <span style={{ color: '#93c5fd', fontWeight: '700', marginRight: '6px' }}>┗━</span>
                                 {node.title}
                             </div>
-                            <span style={{ fontSize: '11px', color: '#aaa', flexShrink: 0, marginTop: '3px', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#333', flexShrink: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>
                                 {node.username}
                             </span>
                         </div>
