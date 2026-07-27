@@ -282,77 +282,80 @@ function Friends() {
         }
     };
 
-    // 관련질문 트리를 재귀적으로 렌더링 (형제는 시간순, 자식은 그 아래 바로)
+    // 관련질문 트리를 재귀적으로 렌더링 - 부모와 분리된 독립 카드, 깊이만큼 들여쓰기
     const renderRelatedNode = (node, allNodes, depth) => {
         const children = allNodes
             .filter(n => n.parent_question_id === node.id)
             .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
         return (
-            <div key={node.id} style={{ marginTop: '10px', paddingLeft: '14px', borderLeft: '3px solid #bfdcff' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '18px', color: '#3b82f6', fontWeight: '700', lineHeight: '1.3', flexShrink: 0 }}>
-                        ┗━
-                    </span>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', color: '#888', marginBottom: '2px' }}>
-                            {node.username}의 관련질문
-                        </div>
-                        <div style={{ fontSize: depth === 0 ? '17px' : '15px', fontWeight: '700', color: '#222', lineHeight: '1.4' }}>
+            <React.Fragment key={node.id}>
+                <div style={{
+                    marginLeft: `${(depth + 1) * 18}px`,
+                    marginTop: '6px',
+                    marginBottom: '6px',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '-4px', paddingLeft: '4px' }}>
+                        <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: '700' }}>┗━</span>
+                        <span style={{ fontSize: '12px', color: '#999' }}>{node.username}의 관련질문</span>
+                    </div>
+                    <div className="question-card" style={{
+                        background: node.latestOpinion ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+                        border: '1px solid #dbeafe',
+                        marginTop: '6px',
+                    }}>
+                        <div className="question-title" style={{ fontSize: depth === 0 ? '16px' : '15px' }}>
                             {node.title}
                         </div>
+
+                        {node.latestOpinion && (
+                            <div className="preview-section">
+                                <div className="preview-row">
+                                    <span className="preview-icon">💬</span>
+                                    <span className="preview-author">{node.latestOpinion.username}:</span>
+                                    <span className="preview-text">{node.latestOpinion.opinion}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="action-bar">
+                            <button
+                                className={`action-btn required-btn ${node.userReaction === 'like' ? 'active-like' : ''}`}
+                                onClick={() => handleChildReaction(node.id, 'like')}
+                            >
+                                <span className="btn-icon">👍</span>
+                                <span className="btn-label">관심있음 {node.likesCount || 0}</span>
+                            </button>
+                            <button
+                                className={`action-btn required-btn ${node.userReaction === 'dislike' ? 'active-dislike' : ''}`}
+                                onClick={() => handleChildReaction(node.id, 'dislike')}
+                            >
+                                <span className="btn-icon">👎</span>
+                                <span className="btn-label">관심없음 {node.dislikesCount || 0}</span>
+                            </button>
+                            <button
+                                className="action-btn optional-btn"
+                                onClick={() => {
+                                    setSelectedQuestion(node.id);
+                                    setSelectedQuestionTitle(node.title);
+                                }}
+                            >
+                                <span className="btn-icon">💬</span>
+                                <span className="btn-label">의견</span>
+                            </button>
+                            <button
+                                className="action-btn optional-btn"
+                                onClick={() => setRelatedModal({ id: node.id, title: node.title })}
+                            >
+                                <span className="btn-icon">❓</span>
+                                <span className="btn-label">관련질문</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                <div className="action-bar" style={{ marginBottom: '4px' }}>
-                    <button
-                        className={`action-btn required-btn ${node.userReaction === 'like' ? 'active-like' : ''}`}
-                        onClick={() => handleChildReaction(node.id, 'like')}
-                    >
-                        <span className="btn-icon">👍</span>
-                        <span className="btn-label">관심있음 {node.likesCount || 0}</span>
-                    </button>
-                    <button
-                        className={`action-btn required-btn ${node.userReaction === 'dislike' ? 'active-dislike' : ''}`}
-                        onClick={() => handleChildReaction(node.id, 'dislike')}
-                    >
-                        <span className="btn-icon">👎</span>
-                        <span className="btn-label">관심없음 {node.dislikesCount || 0}</span>
-                    </button>
-                    <button
-                        className="action-btn optional-btn"
-                        onClick={() => {
-                            setSelectedQuestion(node.id);
-                            setSelectedQuestionTitle(node.title);
-                        }}
-                    >
-                        <span className="btn-icon">💬</span>
-                        <span className="btn-label">의견</span>
-                    </button>
-                    <button
-                        className="action-btn optional-btn"
-                        onClick={() => setRelatedModal({ id: node.id, title: node.title })}
-                    >
-                        <span className="btn-icon">❓</span>
-                        <span className="btn-label">관련질문</span>
-                    </button>
-                </div>
-
-                {node.latestOpinion && (
-                    <div style={{
-                        display: 'flex', gap: '6px', alignItems: 'flex-start',
-                        background: 'rgba(255,255,255,0.7)', borderRadius: '8px',
-                        padding: '8px 10px', marginBottom: '4px',
-                    }}>
-                        <span style={{ fontSize: '14px' }}>💬</span>
-                        <span style={{ fontSize: '13px' }}>
-                            <strong>{node.latestOpinion.username}:</strong> {node.latestOpinion.opinion}
-                        </span>
-                    </div>
-                )}
 
                 {children.map(child => renderRelatedNode(child, allNodes, depth + 1))}
-            </div>
+            </React.Fragment>
         );
     };
 
@@ -393,7 +396,8 @@ function Friends() {
                     ) : (
                         <>
                         {questions.map((q) => (
-                            <div key={q.id} className="question-card">
+                            <React.Fragment key={q.id}>
+                            <div className="question-card">
 
                                 {/* 작성자 + 시간 */}
                                 <div className="question-header">
@@ -439,14 +443,6 @@ function Friends() {
                                     </div>
                                 )}
 
-                                {/* 관련질문 전체 트리: 형제는 시간순, 자식은 그 아래 바로 (재귀) */}
-                                {q.relatedTree && q.relatedTree.length > 0 &&
-                                    q.relatedTree
-                                        .filter(n => n.parent_question_id === null || n.parent_question_id === q.id)
-                                        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-                                        .map(node => renderRelatedNode(node, q.relatedTree, 0))
-                                }
-
                                 {/* 5버튼 액션바 */}
                                 <div className="action-bar">
                                     <button
@@ -490,6 +486,15 @@ function Friends() {
                                 </div>
 
                             </div>
+
+                            {/* 관련질문 전체 트리: 부모와 분리된 독립 카드로, 형제는 시간순, 자식은 그 아래 바로 */}
+                            {q.relatedTree && q.relatedTree.length > 0 &&
+                                q.relatedTree
+                                    .filter(n => n.parent_question_id === null || n.parent_question_id === q.id)
+                                    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                                    .map(node => renderRelatedNode(node, q.relatedTree, 0))
+                            }
+                            </React.Fragment>
                         ))}
                         {questions.length < total && (
                             <button
