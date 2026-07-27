@@ -120,10 +120,11 @@ router.get('/', authenticateToken, async (req, res) => {
             WHERE uq.user_id = $1 
               AND uq.parent_question_id IS NULL 
               AND uq.related_seed_question_id IS NULL
-              AND uq.id NOT IN (
-                SELECT question_id FROM saved_questions 
-                WHERE user_id = $1 
-                AND question_type IN ('user_question', 'user', 'my_question', 'friend_question')
+              AND NOT EXISTS (
+                SELECT 1 FROM saved_questions sq2
+                WHERE sq2.user_id = $1
+                AND sq2.question_id = uq.id
+                AND sq2.question_type IN ('user_question', 'user', 'my_question', 'friend_question')
               )
             ORDER BY uq.created_at DESC
         `, [userId]);
