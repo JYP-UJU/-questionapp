@@ -63,7 +63,7 @@ function SavedQuestions() {
 
             const questionsWithData = await Promise.all(
                 questions.map(async (q) => {
-                    if (!q.questionId) return { ...q, latestOpinion: null, latestRelated: null };
+                    if (!q.questionId) return { ...q, latestOpinion: null, relatedTree: [] };
 
                     try {
                         const statsRes = await api.get(
@@ -85,45 +85,40 @@ function SavedQuestions() {
                             } catch (err) {}
                         }
 
-                        // 최신 관련질문 미리보기 (실제 로드해서 정확한 count 사용)
-                        let latestRelated = null;
-                        let actualRelatedCount = stats.relatedCount || 0;
+                        // 관련질문 전체 트리 (1단계, 2단계, 3단계... 전부, 시간순)
+                        let relatedTree = [];
+                        const actualRelatedCount = stats.relatedCount || 0;
                         if (actualRelatedCount > 0) {
                             try {
-                                const relRes = await api.get(
-                                    `/questions/${q.questionId}/related?type=${q.questionType}`
-                                );
-                                const related = relRes.data.relatedQuestions || [];
-                                latestRelated = related[0] || null;
-                                actualRelatedCount = related.length;
+                                const treeRes = await api.get(`/questions/${q.questionId}/related-tree`);
+                                const rawNodes = treeRes.data.relatedTree || [];
 
-                                // 관련질문 자체의 반응/좋아요/의견도 독립적으로 불러옴 (자기 카드용)
-                                if (latestRelated && latestRelated.id) {
+                                // 각 노드마다 반응/의견 정보 채우기
+                                relatedTree = await Promise.all(rawNodes.map(async (node) => {
+                                    let nodeLikes = 0, nodeDislikes = 0, nodeReaction = null;
+                                    let nodeOpinionCount = 0, nodeLatestOpinion = null;
                                     try {
-                                        const childStats = await api.get(
-                                            `/questions/${latestRelated.id}?type=user_question`
-                                        );
-                                        let childLatestOpinion = null;
-                                        const childOpinionCount = childStats.data.opinionCount || 0;
-                                        if (childOpinionCount > 0) {
+                                        const nodeStats = await api.get(`/questions/${node.id}?type=user_question`);
+                                        nodeLikes = nodeStats.data.likesCount || 0;
+                                        nodeDislikes = nodeStats.data.dislikesCount || 0;
+                                        nodeReaction = nodeStats.data.userReaction || null;
+                                        nodeOpinionCount = nodeStats.data.opinionCount || 0;
+                                        if (nodeOpinionCount > 0) {
                                             try {
-                                                const childOpRes = await api.get(
-                                                    `/questions/${latestRelated.id}/opinions?type=user_question`
-                                                );
-                                                const childOpinions = childOpRes.data.opinions || [];
-                                                childLatestOpinion = childOpinions[0] || null;
+                                                const nodeOpRes = await api.get(`/questions/${node.id}/opinions?type=user_question`);
+                                                nodeLatestOpinion = (nodeOpRes.data.opinions || [])[0] || null;
                                             } catch (e) {}
                                         }
-                                        latestRelated = {
-                                            ...latestRelated,
-                                            likesCount: childStats.data.likesCount || 0,
-                                            dislikesCount: childStats.data.dislikesCount || 0,
-                                            userReaction: childStats.data.userReaction || null,
-                                            opinionCount: childOpinionCount,
-                                            latestOpinion: childLatestOpinion,
-                                        };
                                     } catch (e) {}
-                                }
+                                    return {
+                                        ...node,
+                                        likesCount: nodeLikes,
+                                        dislikesCount: nodeDislikes,
+                                        userReaction: nodeReaction,
+                                        opinionCount: nodeOpinionCount,
+                                        latestOpinion: nodeLatestOpinion,
+                                    };
+                                }));
                             } catch (err) {}
                         }
 
@@ -139,10 +134,10 @@ function SavedQuestions() {
                             relatedCount: actualRelatedCount,
                             userReaction: stats.userReaction,
                             latestOpinion,
-                            latestRelated
+                            relatedTree
                         };
                     } catch (err) {
-                        return { ...q, latestOpinion: null, latestRelated: null };
+                        return { ...q, latestOpinion: null, relatedTree: [] };
                     }
                 })
             );
@@ -228,54 +223,129 @@ function SavedQuestions() {
         }
     };
 
-    // 관련질문 자체에 대한 반응 (부모 카드 안에 중첩된 자기 자신의 액션바용)
-    const handleChildReaction = async (parentQuestionId, childId, reactionType) => {
+    // 관련질문 트리의 임의 노드에 대한 반응 (부모를 자동으로 찾아서 그 안의 트리를 갱신)
+    const handleChildReaction = async (nodeId, reactionType) => {
         try {
-            const parent = savedQuestions.find(q => q.questionId === parentQuestionId);
-            const child = parent?.latestRelated;
-            if (!child || child.id !== childId) return;
+            const parentSaved = savedQuestions.find(q => (q.relatedTree || []).some(n => n.id === nodeId));
+            if (!parentSaved) return;
+            const node = parentSaved.relatedTree.find(n => n.id === nodeId);
+            if (!node) return;
 
-            if (child.userReaction === reactionType) {
-                await api.delete(`/questions/${childId}/reaction?type=user_question`);
+            if (node.userReaction === reactionType) {
+                await api.delete(`/questions/${nodeId}/reaction?type=user_question`);
                 setSavedQuestions(prev => prev.map(q => {
-                    if (q.questionId !== parentQuestionId || !q.latestRelated) return q;
+                    if (q.questionId !== parentSaved.questionId) return q;
                     return {
                         ...q,
-                        latestRelated: {
-                            ...q.latestRelated,
+                        relatedTree: q.relatedTree.map(n => n.id !== nodeId ? n : {
+                            ...n,
                             userReaction: null,
-                            likesCount: reactionType === 'like' ? Math.max(0, (q.latestRelated.likesCount || 1) - 1) : q.latestRelated.likesCount,
-                            dislikesCount: reactionType === 'dislike' ? Math.max(0, (q.latestRelated.dislikesCount || 1) - 1) : q.latestRelated.dislikesCount,
-                        }
+                            likesCount: reactionType === 'like' ? Math.max(0, (n.likesCount || 1) - 1) : n.likesCount,
+                            dislikesCount: reactionType === 'dislike' ? Math.max(0, (n.dislikesCount || 1) - 1) : n.dislikesCount,
+                        })
                     };
                 }));
             } else {
-                await api.post(
-                    `/questions/${childId}/reaction`,
-                    { reactionType, questionType: 'user_question' }
-                );
+                await api.post(`/questions/${nodeId}/reaction`, { reactionType, questionType: 'user_question' });
                 setSavedQuestions(prev => prev.map(q => {
-                    if (q.questionId !== parentQuestionId || !q.latestRelated) return q;
-                    const wasLiked = q.latestRelated.userReaction === 'like';
-                    const wasDisliked = q.latestRelated.userReaction === 'dislike';
+                    if (q.questionId !== parentSaved.questionId) return q;
                     return {
                         ...q,
-                        latestRelated: {
-                            ...q.latestRelated,
-                            userReaction: reactionType,
-                            likesCount: reactionType === 'like'
-                                ? (q.latestRelated.likesCount || 0) + 1
-                                : wasLiked ? Math.max(0, (q.latestRelated.likesCount || 1) - 1) : q.latestRelated.likesCount,
-                            dislikesCount: reactionType === 'dislike'
-                                ? (q.latestRelated.dislikesCount || 0) + 1
-                                : wasDisliked ? Math.max(0, (q.latestRelated.dislikesCount || 1) - 1) : q.latestRelated.dislikesCount,
-                        }
+                        relatedTree: q.relatedTree.map(n => {
+                            if (n.id !== nodeId) return n;
+                            const wasLiked = n.userReaction === 'like';
+                            const wasDisliked = n.userReaction === 'dislike';
+                            return {
+                                ...n,
+                                userReaction: reactionType,
+                                likesCount: reactionType === 'like'
+                                    ? (n.likesCount || 0) + 1
+                                    : wasLiked ? Math.max(0, (n.likesCount || 1) - 1) : n.likesCount,
+                                dislikesCount: reactionType === 'dislike'
+                                    ? (n.dislikesCount || 0) + 1
+                                    : wasDisliked ? Math.max(0, (n.dislikesCount || 1) - 1) : n.dislikesCount,
+                            };
+                        })
                     };
                 }));
             }
         } catch (err) {
             console.error('Child reaction error:', err);
         }
+    };
+
+    // 관련질문 트리를 재귀적으로 렌더링 (형제는 시간순, 자식은 그 아래 바로)
+    const renderRelatedNode = (node, allNodes, depth) => {
+        const children = allNodes
+            .filter(n => n.parent_question_id === node.id)
+            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+        return (
+            <div key={node.id} style={{ marginTop: '10px', paddingLeft: '14px', borderLeft: '3px solid #bfdcff' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '18px', color: '#3b82f6', fontWeight: '700', lineHeight: '1.3', flexShrink: 0 }}>
+                        ┗━
+                    </span>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', color: '#888', marginBottom: '2px' }}>
+                            {node.username}의 관련질문
+                        </div>
+                        <div style={{ fontSize: depth === 0 ? '17px' : '15px', fontWeight: '700', color: '#222', lineHeight: '1.4' }}>
+                            {node.title}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="action-bar" style={{ marginBottom: '4px' }}>
+                    <button
+                        className={`action-btn required-btn ${node.userReaction === 'like' ? 'active-like' : ''}`}
+                        onClick={() => handleChildReaction(node.id, 'like')}
+                    >
+                        <span className="btn-icon">👍</span>
+                        <span className="btn-label">관심있음 {node.likesCount || 0}</span>
+                    </button>
+                    <button
+                        className={`action-btn required-btn ${node.userReaction === 'dislike' ? 'active-dislike' : ''}`}
+                        onClick={() => handleChildReaction(node.id, 'dislike')}
+                    >
+                        <span className="btn-icon">👎</span>
+                        <span className="btn-label">관심없음 {node.dislikesCount || 0}</span>
+                    </button>
+                    <button
+                        className="action-btn optional-btn"
+                        onClick={() => {
+                            setSelectedQuestion(node.id);
+                            setSelectedQuestionTitle(node.title);
+                        }}
+                    >
+                        <span className="btn-icon">💬</span>
+                        <span className="btn-label">의견</span>
+                    </button>
+                    <button
+                        className="action-btn optional-btn"
+                        onClick={() => setRelatedModal({ id: node.id, title: node.title, questionType: 'user_question' })}
+                    >
+                        <span className="btn-icon">❓</span>
+                        <span className="btn-label">관련질문</span>
+                    </button>
+                </div>
+
+                {node.latestOpinion && (
+                    <div style={{
+                        display: 'flex', gap: '6px', alignItems: 'flex-start',
+                        background: 'rgba(255,255,255,0.7)', borderRadius: '8px',
+                        padding: '8px 10px', marginBottom: '4px',
+                    }}>
+                        <span style={{ fontSize: '14px' }}>💬</span>
+                        <span style={{ fontSize: '13px' }}>
+                            <strong>{node.latestOpinion.username}:</strong> {node.latestOpinion.opinion}
+                        </span>
+                    </div>
+                )}
+
+                {children.map(child => renderRelatedNode(child, allNodes, depth + 1))}
+            </div>
+        );
     };
 
     const handleOpinionSubmit = async (text) => {
@@ -396,10 +466,10 @@ function SavedQuestions() {
 
                                 return (
                                     <div key={saved.savedId} className="question-card" style={{
-                                    background: (saved.latestOpinion || saved.latestRelated)
+                                    background: (saved.latestOpinion || (saved.relatedTree && saved.relatedTree.length > 0))
                                         ? 'rgba(239, 246, 255, 0.98)'
                                         : 'rgba(255, 255, 255, 0.92)',
-                                    borderLeft: (saved.latestOpinion || saved.latestRelated)
+                                    borderLeft: (saved.latestOpinion || (saved.relatedTree && saved.relatedTree.length > 0))
                                         ? '4px solid #3b82f6'
                                         : 'none'
                                 }}>
@@ -447,107 +517,13 @@ function SavedQuestions() {
                                             </div>
                                         )}
 
-                                        {/* 관련질문: ㄴ자 연결선 + 독립된 자기 카드 (반응/의견/관련질문 버튼 포함) */}
-                                        {saved.latestRelated && (
-                                            <div style={{
-                                                marginTop: '10px',
-                                                paddingLeft: '14px',
-                                                borderLeft: '3px solid #bfdcff',
-                                            }}>
-                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '8px' }}>
-                                                    <span style={{ fontSize: '18px', color: '#3b82f6', fontWeight: '700', lineHeight: '1.3', flexShrink: 0 }}>
-                                                        ┗━
-                                                    </span>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ fontSize: '13px', color: '#888', marginBottom: '2px' }}>
-                                                            {saved.latestRelated.username}의 관련질문
-                                                        </div>
-                                                        <div style={{ fontSize: '17px', fontWeight: '700', color: '#222', lineHeight: '1.4' }}>
-                                                            {saved.latestRelated.title}
-                                                        </div>
-                                                    </div>
-                                                    {(saved.relatedCount || 0) > 1 && (
-                                                        <button
-                                                            className="preview-toggle-btn"
-                                                            onClick={() => handleToggleRelated(saved.questionId, saved.questionType)}
-                                                        >
-                                                            {expandedRelated[saved.questionId] ? '▲ 접기' : `+${saved.relatedCount - 1}개 더 ▼`}
-                                                        </button>
-                                                    )}
-                                                </div>
-
-                                                {/* 관련질문 자신의 액션바 */}
-                                                {saved.latestRelated.id && (
-                                                    <div className="action-bar" style={{ marginBottom: '4px' }}>
-                                                        <button
-                                                            className={`action-btn required-btn ${saved.latestRelated.userReaction === 'like' ? 'active-like' : ''}`}
-                                                            onClick={() => handleChildReaction(saved.questionId, saved.latestRelated.id, 'like')}
-                                                        >
-                                                            <span className="btn-icon">👍</span>
-                                                            <span className="btn-label">관심있음 {saved.latestRelated.likesCount || 0}</span>
-                                                        </button>
-                                                        <button
-                                                            className={`action-btn required-btn ${saved.latestRelated.userReaction === 'dislike' ? 'active-dislike' : ''}`}
-                                                            onClick={() => handleChildReaction(saved.questionId, saved.latestRelated.id, 'dislike')}
-                                                        >
-                                                            <span className="btn-icon">👎</span>
-                                                            <span className="btn-label">관심없음 {saved.latestRelated.dislikesCount || 0}</span>
-                                                        </button>
-                                                        <button
-                                                            className="action-btn optional-btn"
-                                                            onClick={() => {
-                                                                setSelectedQuestion(saved.latestRelated.id);
-                                                                setSelectedQuestionTitle(saved.latestRelated.title);
-                                                            }}
-                                                        >
-                                                            <span className="btn-icon">💬</span>
-                                                            <span className="btn-label">의견</span>
-                                                        </button>
-                                                        <button
-                                                            className="action-btn optional-btn"
-                                                            onClick={() => setRelatedModal({
-                                                                id: saved.latestRelated.id,
-                                                                title: saved.latestRelated.title,
-                                                                questionType: 'user_question'
-                                                            })}
-                                                        >
-                                                            <span className="btn-icon">❓</span>
-                                                            <span className="btn-label">관련질문</span>
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                {/* 관련질문 자신에게 달린 의견 미리보기 */}
-                                                {saved.latestRelated.latestOpinion && (
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        gap: '6px',
-                                                        alignItems: 'flex-start',
-                                                        background: 'rgba(255,255,255,0.7)',
-                                                        borderRadius: '8px',
-                                                        padding: '8px 10px',
-                                                        marginBottom: '4px',
-                                                    }}>
-                                                        <span style={{ fontSize: '14px' }}>💬</span>
-                                                        <span style={{ fontSize: '13px' }}>
-                                                            <strong>{saved.latestRelated.latestOpinion.username}:</strong> {saved.latestRelated.latestOpinion.opinion}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                {expandedRelated[saved.questionId] && (allRelated[saved.questionId] || []).slice(1).map((rq, i, arr) => (
-                                                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginTop: '8px' }}>
-                                                        <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: '700', flexShrink: 0 }}>
-                                                            {i === arr.length - 1 ? '┗━' : '┣━'}
-                                                        </span>
-                                                        <div>
-                                                            <div style={{ fontSize: '12px', color: '#999' }}>{rq.username}</div>
-                                                            <div style={{ fontSize: '15px', fontWeight: '600', color: '#333' }}>{rq.title}</div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                        {/* 관련질문 전체 트리: 형제는 시간순, 자식은 그 아래 바로 (재귀) */}
+                                        {saved.relatedTree && saved.relatedTree.length > 0 &&
+                                            saved.relatedTree
+                                                .filter(n => n.parent_question_id === null || n.parent_question_id === saved.questionId)
+                                                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                                                .map(node => renderRelatedNode(node, saved.relatedTree, 0))
+                                        }
 
                                         {/* ✅ 5버튼 액션바 — 담기 대신 제거 */}
                                         <div className="action-bar">

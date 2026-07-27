@@ -519,6 +519,34 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
   }
 });
 
+// 관련질문 전체 트리 조회 (1단계, 2단계, 3단계... 전부, 재귀)
+router.get('/:id/related-tree', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `WITH RECURSIVE thread AS (
+         SELECT uq.id, uq.title, uq.content, uq.created_at, uq.parent_question_id, u.username, u.id as user_id
+         FROM user_questions uq
+         JOIN users u ON uq.user_id = u.id
+         WHERE uq.related_seed_question_id = $1 OR uq.parent_question_id = $1
+
+         UNION ALL
+
+         SELECT child.id, child.title, child.content, child.created_at, child.parent_question_id, u.username, u.id as user_id
+         FROM user_questions child
+         JOIN users u ON child.user_id = u.id
+         JOIN thread ON child.parent_question_id = thread.id
+       )
+       SELECT * FROM thread ORDER BY created_at ASC`,
+      [id]
+    );
+    res.json({ relatedTree: result.rows, rootId: parseInt(id) });
+  } catch (error) {
+    console.error('관련질문 트리 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
+
 // 관련질문 목록 조회 (type 파라미터로 seed 타입 구분)
 router.get('/:id/related', async (req, res) => {
   try {
