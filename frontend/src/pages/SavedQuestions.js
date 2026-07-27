@@ -118,12 +118,9 @@ function SavedQuestions() {
                 })
             );
 
-            // 상호작용(의견/관련질문) 있는 것 상단으로
-            const sorted = [
-                ...questionsWithData.filter(q => q.latestOpinion || q.latestRelated),
-                ...questionsWithData.filter(q => !q.latestOpinion && !q.latestRelated)
-            ];
-            setSavedQuestions(sorted);
+            // 백엔드가 이미 각 항목의 실제 활동 시각(createdAt) 기준 최신순으로 정렬해서 줌
+            // (질문 작성/반응/의견/관련질문/담기 - 어떤 활동이든 가장 최근 것이 위로)
+            setSavedQuestions(questionsWithData);
 
             try {
                 const songiRes = await api.get('/users/me');
