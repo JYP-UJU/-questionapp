@@ -245,7 +245,7 @@ function Profile() {
                     ) : (
                         <div className="rewards-empty">
                             <p>아직 상품권 수령 내역이 없어요</p>
-                            <p className="rewards-hint">100송이를 모으면 1,000원 상품권을 받을 수 있어요 🌸</p>
+                            <p className="rewards-hint">200송이를 모으면 1,000원 상품권을 받을 수 있어요 🌸</p>
                         </div>
                     )}
 

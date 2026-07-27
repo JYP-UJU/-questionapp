@@ -567,23 +567,82 @@ router.get('/reward-claims', authenticateToken, async (req, res) => {
 });
 
 // ===== 관리자용: 상품권 지급 완료 처리 =====
+// 상태 변경 + 송이 차감 + 거래기록 + 학생 알림을 한 트랜잭션으로 처리
 router.put('/reward-claims/:id/complete', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  let released = false;
+  const releaseOnce = () => { if (!released) { released = true; client.release(); } };
+  let targetUserId = null;
   try {
     const userId = req.user.id || req.user.userId;
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
+    const adminCheck = await client.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
     if (!adminCheck.rows[0]?.is_admin) {
+      releaseOnce();
       return res.status(403).json({ error: '관리자 권한이 필요합니다' });
     }
 
-    await pool.query(
-      `UPDATE reward_claims SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+    const EXCHANGE_THRESHOLD = 200;
+
+    await client.query('BEGIN');
+
+    // 중복 차감 방지: 행을 잠그고 이미 completed인지 확인
+    const claimResult = await client.query(
+      `SELECT id, user_id, status FROM reward_claims WHERE id = $1 FOR UPDATE`,
       [req.params.id]
     );
+    if (claimResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      releaseOnce();
+      return res.status(404).json({ error: '신청 내역을 찾을 수 없습니다' });
+    }
 
-    res.json({ message: '지급 완료로 처리했어요' });
+    const claim = claimResult.rows[0];
+    if (claim.status === 'completed') {
+      await client.query('ROLLBACK');
+      releaseOnce();
+      return res.status(400).json({ error: '이미 지급 완료 처리된 신청이에요' });
+    }
+    targetUserId = claim.user_id;
+
+    // 1) 신청 상태를 완료로
+    await client.query(
+      `UPDATE reward_claims SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+      [claim.id]
+    );
+
+    // 2) 송이 차감 (0 밑으로는 안 내려가게)
+    await client.query(
+      `UPDATE users SET songi_count = GREATEST(songi_count - $1, 0) WHERE id = $2`,
+      [EXCHANGE_THRESHOLD, targetUserId]
+    );
+
+    // 3) 거래 기록 — 프로필 '상품권 내역'에 표시될 근거
+    await client.query(
+      `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
+       VALUES ($1, $2, 'reward_exchange', $3)`,
+      [targetUserId, -EXCHANGE_THRESHOLD, '1,000원 상품권 수령 🎫']
+    );
+
+    await client.query('COMMIT');
+    releaseOnce();
+
+    // 4) 학생에게 알림 (실패해도 지급 처리는 그대로 유지)
+    try {
+      await pool.query(
+        `INSERT INTO notifications (user_id, type, message, is_read)
+         VALUES ($1, 'reward_completed', $2, false)`,
+        [targetUserId, '상품권이 전달되었어요! 200송이가 사용되었어요 🎫']
+      );
+    } catch (notifyErr) {
+      console.error('상품권 지급 알림 생성 오류:', notifyErr);
+    }
+
+    return res.json({ message: `지급 완료! ${EXCHANGE_THRESHOLD}송이를 차감했어요` });
   } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* 이미 종료된 경우 무시 */ }
+    releaseOnce();
     console.error('상품권 지급 완료 처리 오류:', error);
-    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+    return res.status(500).json({ error: '서버 오류가 발생했습니다' });
   }
 });
 

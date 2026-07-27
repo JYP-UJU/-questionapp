@@ -107,13 +107,15 @@ router.get('/me/profile-stats', authenticateToken, async (req, res) => {
       quizCount = 0;
     }
 
-    // 상품권 수령 내역 (songi_transactions에서 admin_deduct 또는 reward 타입)
+    // 상품권 수령 내역
+    // 'reward_exchange' = 관리자가 상품권 지급 완료 처리할 때 남기는 기록 (현재 방식)
+    // 'reward', 'coupon' = 예전 방식으로 남은 기록도 함께 보여줌
     let rewards = [];
     try {
       const rewardsResult = await pool.query(
         `SELECT amount, description, created_at 
          FROM songi_transactions 
-         WHERE user_id = $1 AND activity_type IN ('reward', 'coupon')
+         WHERE user_id = $1 AND activity_type IN ('reward_exchange', 'reward', 'coupon')
          ORDER BY created_at DESC`,
         [userId]
       );
