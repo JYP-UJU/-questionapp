@@ -97,17 +97,30 @@ function SavedQuestions() {
                                 latestRelated = related[0] || null;
                                 actualRelatedCount = related.length;
 
-                                // 관련질문 자체의 반응/좋아요도 독립적으로 불러옴 (자기 카드 액션바용)
+                                // 관련질문 자체의 반응/좋아요/의견도 독립적으로 불러옴 (자기 카드용)
                                 if (latestRelated && latestRelated.id) {
                                     try {
                                         const childStats = await api.get(
                                             `/questions/${latestRelated.id}?type=user_question`
                                         );
+                                        let childLatestOpinion = null;
+                                        const childOpinionCount = childStats.data.opinionCount || 0;
+                                        if (childOpinionCount > 0) {
+                                            try {
+                                                const childOpRes = await api.get(
+                                                    `/questions/${latestRelated.id}/opinions?type=user_question`
+                                                );
+                                                const childOpinions = childOpRes.data.opinions || [];
+                                                childLatestOpinion = childOpinions[0] || null;
+                                            } catch (e) {}
+                                        }
                                         latestRelated = {
                                             ...latestRelated,
                                             likesCount: childStats.data.likesCount || 0,
                                             dislikesCount: childStats.data.dislikesCount || 0,
                                             userReaction: childStats.data.userReaction || null,
+                                            opinionCount: childOpinionCount,
+                                            latestOpinion: childLatestOpinion,
                                         };
                                     } catch (e) {}
                                 }
@@ -501,6 +514,24 @@ function SavedQuestions() {
                                                             <span className="btn-icon">❓</span>
                                                             <span className="btn-label">관련질문</span>
                                                         </button>
+                                                    </div>
+                                                )}
+
+                                                {/* 관련질문 자신에게 달린 의견 미리보기 */}
+                                                {saved.latestRelated.latestOpinion && (
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        gap: '6px',
+                                                        alignItems: 'flex-start',
+                                                        background: 'rgba(255,255,255,0.7)',
+                                                        borderRadius: '8px',
+                                                        padding: '8px 10px',
+                                                        marginBottom: '4px',
+                                                    }}>
+                                                        <span style={{ fontSize: '14px' }}>💬</span>
+                                                        <span style={{ fontSize: '13px' }}>
+                                                            <strong>{saved.latestRelated.latestOpinion.username}:</strong> {saved.latestRelated.latestOpinion.opinion}
+                                                        </span>
                                                     </div>
                                                 )}
 
