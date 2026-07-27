@@ -7,11 +7,12 @@ function Login() {
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
     const [grade, setGrade] = useState('');
     const [agreed, setAgreed] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [signupCode, setSignupCode] = useState(null); // 가입 완료 후 받은 코드
+    const [codeCopied, setCodeCopied] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -28,11 +29,14 @@ function Login() {
             let response;
             if (isLogin) {
                 response = await authAPI.login(username, password);
+                setToken(response.data.token);
+                navigate('/questions');
             } else {
-                response = await authAPI.signup(username, password, name, grade);
+                response = await authAPI.signup(username, password, grade);
+                setToken(response.data.token);
+                // 바로 이동하지 않고, 부모 전달용 코드를 먼저 보여줌
+                setSignupCode(response.data.user?.link_code || null);
             }
-            setToken(response.data.token);
-            navigate('/questions');
         } catch (err) {
             setError(err.response?.data?.message || '오류가 발생했습니다');
         } finally {
@@ -40,15 +44,76 @@ function Login() {
         }
     };
 
+    const handleCopyCode = () => {
+        if (!signupCode) return;
+        navigator.clipboard.writeText(signupCode).then(() => {
+            setCodeCopied(true);
+            setTimeout(() => setCodeCopied(false), 2000);
+        });
+    };
+
+    const handleContinueAfterSignup = () => {
+        navigate('/questions');
+    };
+
     const handleTabSwitch = (loginMode) => {
         setIsLogin(loginMode);
         setError('');
         setUsername('');
         setPassword('');
-        setName('');
         setGrade('');
         setAgreed(false);
     };
+
+    // 회원가입 성공 후: 폼 대신 코드 전달 안내 화면을 보여줌
+    if (signupCode) {
+        return (
+            <div className="auth-container">
+                <div className="auth-box">
+                    <h1 className="auth-title">🌱 물음송이</h1>
+                    <p className="auth-subtitle">가입이 완료됐어요!</p>
+
+                    <div style={{
+                        background: '#f0fdf4', border: '2px solid #86efac',
+                        borderRadius: '14px', padding: '24px 20px', margin: '20px 0',
+                        textAlign: 'center'
+                    }}>
+                        <p style={{ fontSize: '14px', color: '#333', marginBottom: '14px', lineHeight: 1.6 }}>
+                            이 코드를 <strong>부모님께 전달</strong>해주세요.<br/>
+                            부모님 동의서 작성 시 필요해요.
+                        </p>
+                        <div style={{
+                            fontSize: '32px', fontWeight: 800, letterSpacing: '4px',
+                            color: '#16a34a', background: '#fff', border: '2px dashed #86efac',
+                            borderRadius: '10px', padding: '14px', marginBottom: '12px'
+                        }}>
+                            {signupCode}
+                        </div>
+                        <button
+                            onClick={handleCopyCode}
+                            style={{
+                                padding: '10px 20px', border: 'none', borderRadius: '8px',
+                                background: '#16a34a', color: '#fff', fontWeight: 700,
+                                fontSize: '14px', cursor: 'pointer'
+                            }}
+                        >
+                            {codeCopied ? '복사됐어요! ✓' : '코드 복사하기'}
+                        </button>
+                        <p style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>
+                            설정 &gt; 내 코드 다시 보기에서 언제든 확인할 수 있어요.
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={handleContinueAfterSignup}
+                        className="auth-button"
+                    >
+                        확인했어요, 시작하기
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="auth-container">
@@ -88,15 +153,6 @@ function Login() {
                                     연구 참여 안내 →
                                 </a>
                             </div>
-
-                            <input
-                                type="text"
-                                placeholder="이름 (실명)"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                                className="auth-input"
-                            />
 
                             <select
                                 value={grade}

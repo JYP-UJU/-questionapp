@@ -36,8 +36,9 @@ api.interceptors.request.use(
 
 // 인증 API
 export const authAPI = {
-    signup: (username, password, name, grade) => api.post('/auth/register', { username, password, name, grade }),
+    signup: (username, password, grade) => api.post('/auth/register', { username, password, grade }),
     login: (username, password) => api.post('/auth/login', { username, password }),
+    getLinkCode: () => api.get('/auth/link-code'),
 };
 
 // 질문 고르기 API
@@ -92,5 +93,13 @@ export const rankingAPI = {
 export const usersAPI = {
     getProfile: () => api.get('/users/me'),
 };
+
+// 세션(체류시간) API
+export const sessionsAPI = {
+    start: () => api.post('/sessions/start'),
+    heartbeat: (sessionId) => api.post('/sessions/heartbeat', { session_id: sessionId }),
+};
+
+export { API_URL };
 
 export default api;

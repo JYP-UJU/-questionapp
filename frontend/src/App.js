@@ -16,6 +16,7 @@ import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import QuizOlympics from './pages/QuizOlympics';
 import MonthlyReport from './pages/MonthlyReport';
+import SessionTracker from './components/SessionTracker';
 
 // 보호된 라우트 컴포넌트
 function ProtectedRoute({ children }) {
@@ -26,6 +27,7 @@ function ProtectedRoute({ children }) {
 function App() {
     return (
         <Router>
+            <SessionTracker />
             <Routes>
                 <Route path="/login" element={<Login />} />
 
