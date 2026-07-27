@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import SettingBottomNav from '../components/SettingBottomNav';
+import NotificationBell from '../components/NotificationBell';
 import './SongiHistory.css';
 
 const ACTIVITY_LABELS = {
@@ -62,7 +63,7 @@ function SongiHistory() {
       <header className="sh-header">
         <button className="sh-back-btn" onClick={() => navigate(-1)}>&#8592;</button>
         <h1>&#127800; 송이 내역</h1>
-        <div style={{ width: 32 }} />
+        <NotificationBell />
       </header>
 
       <div className="sh-user-bar">

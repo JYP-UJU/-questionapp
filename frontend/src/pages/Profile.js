@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import SettingBottomNav from '../components/SettingBottomNav';
+import NotificationBell from '../components/NotificationBell';
 import './Profile.css';
 
 function Profile() {
@@ -93,7 +94,7 @@ function Profile() {
             <header className="profile-header">
                 <button className="back-btn" onClick={() => navigate(-1)}>←</button>
                 <h1>내 프로필</h1>
-                <div />
+                <NotificationBell />
             </header>
 
             <div className="profile-content">

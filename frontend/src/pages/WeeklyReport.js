@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './WeeklyReport.css';
 import SettingBottomNav from '../components/SettingBottomNav';
+import NotificationBell from '../components/NotificationBell';
 
 function WeeklyReport() {
     const navigate = useNavigate();
@@ -141,7 +142,7 @@ function WeeklyReport() {
             <header className="wr-header">
                 <button onClick={() => navigate(-1)} className="wr-back">← 나의공간</button>
                 <h1 style={{fontSize:"22px", fontWeight:"800", margin:0}}>📊 이번 주의 활동</h1>
-                <div className="wr-spacer"></div>
+                <NotificationBell />
             </header>
 
             <div className="wr-week-nav">

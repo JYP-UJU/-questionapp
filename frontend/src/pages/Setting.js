@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api'; 
 import './Setting.css';
 import SettingBottomNav from '../components/SettingBottomNav';
+import NotificationBell from '../components/NotificationBell';
 
 
 function Setting() {
@@ -117,8 +118,9 @@ function Setting() {
 
     return (
         <div className="setting-container">
-            <header className="setting-header">
-                <h1>🪐 나의공간</h1>
+            <header className="setting-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h1 style={{ margin: 0 }}>🪐 나의공간</h1>
+                <NotificationBell />
             </header>
 
             <div className="setting-user-bar">

@@ -292,20 +292,20 @@ function Friends() {
             <React.Fragment key={node.id}>
                 <div style={{
                     marginLeft: `${(depth + 1) * 18}px`,
-                    marginTop: '6px',
-                    marginBottom: '6px',
+                    marginTop: '8px',
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '-4px', paddingLeft: '4px' }}>
-                        <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: '700' }}>┗━</span>
-                        <span style={{ fontSize: '12px', color: '#999' }}>{node.username}의 관련질문</span>
-                    </div>
                     <div className="question-card" style={{
                         background: node.latestOpinion ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
                         border: '1px solid #dbeafe',
-                        marginTop: '6px',
                     }}>
-                        <div className="question-title" style={{ fontSize: depth === 0 ? '16px' : '15px' }}>
-                            {node.title}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                            <div className="question-title" style={{ fontSize: depth === 0 ? '16px' : '15px', flex: 1 }}>
+                                <span style={{ color: '#93c5fd', fontWeight: '700', marginRight: '6px' }}>┗━</span>
+                                {node.title}
+                            </div>
+                            <span style={{ fontSize: '11px', color: '#aaa', flexShrink: 0, marginTop: '3px', whiteSpace: 'nowrap' }}>
+                                {node.username}
+                            </span>
                         </div>
 
                         {node.latestOpinion && (
@@ -402,7 +402,7 @@ function Friends() {
                                 {/* 작성자 + 시간 */}
                                 <div className="question-header">
                                     {q.is_quiz
-                                        ? <span className="my-badge">🧩</span>
+                                        ? <span className="my-badge">🎯</span>
                                         : q.is_mine && <span className="my-badge">✏️</span>
                                     }
                                     <span className="question-author">
