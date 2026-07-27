@@ -419,14 +419,15 @@ function SavedQuestions() {
     const getSourceInfo = (questionType) => {
         switch (questionType) {
             case 'quiz': return { icon: '🎯', name: '퀴즈' };
-            case 'icebreaking': return { icon: '🤔', name: '질문고르기' };
+            case 'icebreaking': return { icon: '🎯', name: '퀴즈' };
             case 'seed': return { icon: '🎯', name: '퀴즈' };
+            case 'olympic': return { icon: '🎯', name: '퀴즈' };
             case 'user_question': return { icon: '✏️', name: '내질문' };
             case 'friend_question':
             case 'user': return { icon: '👥', name: '친구질문' };
             case 'my_question': return { icon: '✏️', name: '내가 올린 질문' };
             case 'opinion_question': return { icon: '💬', name: '의견 남긴 질문' };
-            default: return { icon: '❓', name: '질문' };
+            default: return { icon: '🎯', name: '퀴즈' };
         }
     };
 

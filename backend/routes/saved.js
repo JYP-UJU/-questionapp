@@ -95,6 +95,7 @@ router.get('/', authenticateToken, async (req, res) => {
             FROM question_reactions qr
             LEFT JOIN user_questions uq ON qr.question_id = uq.id
                 AND qr.question_type IN ('user_question', 'friend_question', 'user')
+                AND uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
             LEFT JOIN seed_questions sq ON qr.question_id = sq.id
                 AND qr.question_type IN ('quiz', 'seed', 'icebreaking')
             WHERE qr.user_id = $1
@@ -144,6 +145,7 @@ router.get('/', authenticateToken, async (req, res) => {
             FROM question_opinions qo
             LEFT JOIN user_questions uq ON qo.question_id = uq.id
                 AND qo.question_type IN ('user_question', 'friend_question', 'user', 'my_question', 'opinion_question')
+                AND uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
             LEFT JOIN seed_questions sq ON qo.question_id = sq.id
                 AND qo.question_type IN ('quiz', 'seed', 'icebreaking')
             LEFT JOIN users u ON uq.user_id = u.id
