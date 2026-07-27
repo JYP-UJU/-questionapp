@@ -268,6 +268,16 @@ WHERE sq.user_id = $1
         });
 
         console.log('=== 담은 질문 조회 성공 ===');
+
+        // 같은 질문이 화면(퀴즈/질문올림픽/질문고르기 등)에 따라 다른 question_type으로
+        // 기록되어도 "같은 질문"으로 인식하도록 그룹화 (중복 카드 방지)
+        const typeGroup = (t) => {
+            if (['user_question', 'user', 'my_question', 'friend_question'].includes(t)) return 'user_group';
+            if (['quiz', 'seed', 'icebreaking', 'olympic'].includes(t)) return 'seed_group';
+            return t;
+        };
+        const dedupKey = (q) => `${q.questionId}_${typeGroup(q.questionType)}`;
+
         // 내가 올린 질문 가공
         const myQuestions = myQuestionsResult.rows.map(row => ({
             savedId: `my_${row.question_id}`,
@@ -296,26 +306,26 @@ WHERE sq.user_id = $1
             authorUsername: row.author_username
         }));
 
-        // 중복 제거 - questionId + questionType 조합으로 비교
-        const savedKeys = new Set(savedQuestions.map(q => `${q.questionId}_${q.questionType}`));
+        // 중복 제거 - questionId + 타입그룹 조합으로 비교 (같은 씨드질문이 quiz/seed/olympic 등으로 갈려도 하나로 취급)
+        const savedKeys = new Set(savedQuestions.map(dedupKey));
         const savedUserQuestionIds = new Set(
             savedQuestions
-                .filter(q => q.questionType === 'user_question' || q.questionType === 'user' || q.questionType === 'my_question')
+                .filter(q => typeGroup(q.questionType) === 'user_group')
                 .map(q => q.questionId)
         );
 
         const uniqueMyQuestions = myQuestions.filter(q =>
-            !savedKeys.has(`${q.questionId}_my_question`) &&
+            !savedKeys.has(dedupKey(q)) &&
             !savedUserQuestionIds.has(q.questionId)
         );
 
         const myAndSavedKeys = new Set([
             ...savedKeys,
-            ...uniqueMyQuestions.map(q => `${q.questionId}_${q.questionType}`)
+            ...uniqueMyQuestions.map(dedupKey)
         ]);
 
         const uniqueOpinionQuestions = opinionQuestions.filter(q =>
-            !myAndSavedKeys.has(`${q.questionId}_${q.questionType}`)
+            !myAndSavedKeys.has(dedupKey(q))
         );
 
         // 관심있음 가공
@@ -330,14 +340,14 @@ WHERE sq.user_id = $1
             dislikesCount: parseInt(row.dislikes_count) || 0,
         }));
 
-        // 중복 제거 - 이미 savedQuestions나 다른 목록에 있는 건 제외
-        const allExistingIds = new Set([
-            ...savedQuestions.map(q => `${q.questionId}_${q.questionType}`),
-            ...uniqueMyQuestions.map(q => `${q.questionId}_${q.questionType}`),
-            ...uniqueOpinionQuestions.map(q => `${q.questionId}_${q.questionType}`),
+        // 중복 제거 - 이미 다른 목록에 있는 건 제외 (타입그룹 기준)
+        const allExistingKeys = new Set([
+            ...savedQuestions.map(dedupKey),
+            ...uniqueMyQuestions.map(dedupKey),
+            ...uniqueOpinionQuestions.map(dedupKey),
         ]);
-        const uniqueLikedQuestions = likedQuestions.filter(q => 
-            !allExistingIds.has(`${q.questionId}_${q.questionType}`)
+        const uniqueLikedQuestions = likedQuestions.filter(q =>
+            !allExistingKeys.has(dedupKey(q))
         );
 
         const allQuestions = [...savedQuestions, ...uniqueMyQuestions, ...uniqueOpinionQuestions, ...uniqueLikedQuestions]
