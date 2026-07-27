@@ -16,6 +16,7 @@ function SavedQuestions() {
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
     const [selectedQuestion, setSelectedQuestion] = useState(null);
+    const [selectedQuestionTitle, setSelectedQuestionTitle] = useState('');
     const [relatedModal, setRelatedModal] = useState(null);
 
     const [expandedOpinions, setExpandedOpinions] = useState({});
@@ -95,6 +96,21 @@ function SavedQuestions() {
                                 const related = relRes.data.relatedQuestions || [];
                                 latestRelated = related[0] || null;
                                 actualRelatedCount = related.length;
+
+                                // 관련질문 자체의 반응/좋아요도 독립적으로 불러옴 (자기 카드 액션바용)
+                                if (latestRelated && latestRelated.id) {
+                                    try {
+                                        const childStats = await api.get(
+                                            `/questions/${latestRelated.id}?type=user_question`
+                                        );
+                                        latestRelated = {
+                                            ...latestRelated,
+                                            likesCount: childStats.data.likesCount || 0,
+                                            dislikesCount: childStats.data.dislikesCount || 0,
+                                            userReaction: childStats.data.userReaction || null,
+                                        };
+                                    } catch (e) {}
+                                }
                             } catch (err) {}
                         }
 
@@ -196,6 +212,56 @@ function SavedQuestions() {
             }
         } catch (err) {
             console.error('Reaction error:', err);
+        }
+    };
+
+    // 관련질문 자체에 대한 반응 (부모 카드 안에 중첩된 자기 자신의 액션바용)
+    const handleChildReaction = async (parentQuestionId, childId, reactionType) => {
+        try {
+            const parent = savedQuestions.find(q => q.questionId === parentQuestionId);
+            const child = parent?.latestRelated;
+            if (!child || child.id !== childId) return;
+
+            if (child.userReaction === reactionType) {
+                await api.delete(`/questions/${childId}/reaction?type=user_question`);
+                setSavedQuestions(prev => prev.map(q => {
+                    if (q.questionId !== parentQuestionId || !q.latestRelated) return q;
+                    return {
+                        ...q,
+                        latestRelated: {
+                            ...q.latestRelated,
+                            userReaction: null,
+                            likesCount: reactionType === 'like' ? Math.max(0, (q.latestRelated.likesCount || 1) - 1) : q.latestRelated.likesCount,
+                            dislikesCount: reactionType === 'dislike' ? Math.max(0, (q.latestRelated.dislikesCount || 1) - 1) : q.latestRelated.dislikesCount,
+                        }
+                    };
+                }));
+            } else {
+                await api.post(
+                    `/questions/${childId}/reaction`,
+                    { reactionType, questionType: 'user_question' }
+                );
+                setSavedQuestions(prev => prev.map(q => {
+                    if (q.questionId !== parentQuestionId || !q.latestRelated) return q;
+                    const wasLiked = q.latestRelated.userReaction === 'like';
+                    const wasDisliked = q.latestRelated.userReaction === 'dislike';
+                    return {
+                        ...q,
+                        latestRelated: {
+                            ...q.latestRelated,
+                            userReaction: reactionType,
+                            likesCount: reactionType === 'like'
+                                ? (q.latestRelated.likesCount || 0) + 1
+                                : wasLiked ? Math.max(0, (q.latestRelated.likesCount || 1) - 1) : q.latestRelated.likesCount,
+                            dislikesCount: reactionType === 'dislike'
+                                ? (q.latestRelated.dislikesCount || 0) + 1
+                                : wasDisliked ? Math.max(0, (q.latestRelated.dislikesCount || 1) - 1) : q.latestRelated.dislikesCount,
+                        }
+                    };
+                }));
+            }
+        } catch (err) {
+            console.error('Child reaction error:', err);
         }
     };
 
@@ -368,34 +434,22 @@ function SavedQuestions() {
                                             </div>
                                         )}
 
-                                        {/* 관련질문: ㄴ자 연결선 + 원 질문과 비슷한 크기로 표시 */}
+                                        {/* 관련질문: ㄴ자 연결선 + 독립된 자기 카드 (반응/의견/관련질문 버튼 포함) */}
                                         {saved.latestRelated && (
-                                            <div className="preview-section preview-related-section">
-                                                <div style={{
-                                                    display: 'flex',
-                                                    alignItems: 'flex-start',
-                                                    gap: '6px',
-                                                    marginBottom: '4px',
-                                                }}>
-                                                    <span style={{
-                                                        fontSize: '18px',
-                                                        color: '#3b82f6',
-                                                        fontWeight: '700',
-                                                        lineHeight: '1.3',
-                                                        flexShrink: 0,
-                                                    }}>
+                                            <div style={{
+                                                marginTop: '10px',
+                                                paddingLeft: '14px',
+                                                borderLeft: '3px solid #bfdcff',
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '8px' }}>
+                                                    <span style={{ fontSize: '18px', color: '#3b82f6', fontWeight: '700', lineHeight: '1.3', flexShrink: 0 }}>
                                                         ┗━
                                                     </span>
                                                     <div style={{ flex: 1 }}>
                                                         <div style={{ fontSize: '13px', color: '#888', marginBottom: '2px' }}>
                                                             {saved.latestRelated.username}의 관련질문
                                                         </div>
-                                                        <div style={{
-                                                            fontSize: '17px',
-                                                            fontWeight: '700',
-                                                            color: '#222',
-                                                            lineHeight: '1.4',
-                                                        }}>
+                                                        <div style={{ fontSize: '17px', fontWeight: '700', color: '#222', lineHeight: '1.4' }}>
                                                             {saved.latestRelated.title}
                                                         </div>
                                                     </div>
@@ -408,8 +462,50 @@ function SavedQuestions() {
                                                         </button>
                                                     )}
                                                 </div>
+
+                                                {/* 관련질문 자신의 액션바 */}
+                                                {saved.latestRelated.id && (
+                                                    <div className="action-bar" style={{ marginBottom: '4px' }}>
+                                                        <button
+                                                            className={`action-btn required-btn ${saved.latestRelated.userReaction === 'like' ? 'active-like' : ''}`}
+                                                            onClick={() => handleChildReaction(saved.questionId, saved.latestRelated.id, 'like')}
+                                                        >
+                                                            <span className="btn-icon">👍</span>
+                                                            <span className="btn-label">관심있음 {saved.latestRelated.likesCount || 0}</span>
+                                                        </button>
+                                                        <button
+                                                            className={`action-btn required-btn ${saved.latestRelated.userReaction === 'dislike' ? 'active-dislike' : ''}`}
+                                                            onClick={() => handleChildReaction(saved.questionId, saved.latestRelated.id, 'dislike')}
+                                                        >
+                                                            <span className="btn-icon">👎</span>
+                                                            <span className="btn-label">관심없음 {saved.latestRelated.dislikesCount || 0}</span>
+                                                        </button>
+                                                        <button
+                                                            className="action-btn optional-btn"
+                                                            onClick={() => {
+                                                                setSelectedQuestion(saved.latestRelated.id);
+                                                                setSelectedQuestionTitle(saved.latestRelated.title);
+                                                            }}
+                                                        >
+                                                            <span className="btn-icon">💬</span>
+                                                            <span className="btn-label">의견</span>
+                                                        </button>
+                                                        <button
+                                                            className="action-btn optional-btn"
+                                                            onClick={() => setRelatedModal({
+                                                                id: saved.latestRelated.id,
+                                                                title: saved.latestRelated.title,
+                                                                questionType: 'user_question'
+                                                            })}
+                                                        >
+                                                            <span className="btn-icon">❓</span>
+                                                            <span className="btn-label">관련질문</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+
                                                 {expandedRelated[saved.questionId] && (allRelated[saved.questionId] || []).slice(1).map((rq, i, arr) => (
-                                                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginTop: '8px', paddingLeft: '4px' }}>
+                                                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginTop: '8px' }}>
                                                         <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: '700', flexShrink: 0 }}>
                                                             {i === arr.length - 1 ? '┗━' : '┣━'}
                                                         </span>
@@ -440,7 +536,10 @@ function SavedQuestions() {
                                             </button>
                                             <button
                                                 className="action-btn optional-btn"
-                                                onClick={() => setSelectedQuestion(saved.questionId)}
+                                                onClick={() => {
+                                                    setSelectedQuestion(saved.questionId);
+                                                    setSelectedQuestionTitle(saved.title);
+                                                }}
                                             >
                                                 <span className="btn-icon">💬</span>
                                                 <span className="btn-label">의견</span>
@@ -481,7 +580,7 @@ function SavedQuestions() {
             {/* 의견 작성 모달 */}
             {selectedQuestion && (
                 <OpinionModal
-                    questionTitle={savedQuestions.find(q => q.questionId === selectedQuestion)?.title}
+                    questionTitle={selectedQuestionTitle}
                     onSubmit={handleOpinionSubmit}
                     onClose={() => setSelectedQuestion(null)}
                     songi={3}
