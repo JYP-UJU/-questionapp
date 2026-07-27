@@ -57,7 +57,9 @@ router.get('/weekly', authenticateToken, async (req, res) => {
 const questionsListResult = await pool.query(
   `SELECT id, title, created_at,
     COALESCE(likes_count, 0) as likes,
-    (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id) as opinion_count
+    (SELECT COUNT(*) FROM question_opinions 
+     WHERE question_id = uq.id 
+     AND question_type IN ('user_question', 'user', 'my_question', 'friend_question')) as opinion_count
    FROM user_questions uq
    WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3
    AND parent_question_id IS NULL AND related_seed_question_id IS NULL
@@ -142,11 +144,15 @@ const opinionsListResult = await pool.query(
     const topQuestionsResult = await pool.query(
       `SELECT uq.id, uq.title, 
         COALESCE(uq.likes_count, 0) as likes,
-        (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id) as opinion_count
+        (SELECT COUNT(*) FROM question_opinions 
+         WHERE question_id = uq.id 
+         AND question_type IN ('user_question', 'user', 'my_question', 'friend_question')) as opinion_count
        FROM user_questions uq
        WHERE uq.user_id = $1 AND uq.created_at >= $2 AND uq.created_at <= $3
        ORDER BY COALESCE(uq.likes_count, 0) + 
-         (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id) DESC
+         (SELECT COUNT(*) FROM question_opinions 
+          WHERE question_id = uq.id 
+          AND question_type IN ('user_question', 'user', 'my_question', 'friend_question')) DESC
        LIMIT 3`,
       [userId, weekStart, weekEnd]
     );
@@ -348,7 +354,7 @@ router.get('/monthly', authenticateToken, async (req, res) => {
       pool.query(`SELECT COUNT(*) as cnt FROM question_reactions WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3`, [userId, monthStart, monthEnd]),
       pool.query(`SELECT COUNT(*) as cnt FROM saved_questions WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3`, [userId, monthStart, monthEnd]),
       pool.query(`SELECT COUNT(*) as cnt FROM user_questions WHERE user_id = $1 AND (parent_question_id IS NOT NULL OR related_seed_question_id IS NOT NULL) AND created_at >= $2 AND created_at <= $3`, [userId, monthStart, monthEnd]),
-      pool.query(`SELECT uq.id, uq.title, COALESCE(uq.likes_count, 0) as likes, (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id) as opinion_count FROM user_questions uq WHERE uq.user_id = $1 AND uq.created_at >= $2 AND uq.created_at <= $3 AND uq.parent_question_id IS NULL ORDER BY COALESCE(uq.likes_count, 0) + (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id) DESC LIMIT 3`, [userId, monthStart, monthEnd]),
+      pool.query(`SELECT uq.id, uq.title, COALESCE(uq.likes_count, 0) as likes, (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id AND question_type IN ('user_question', 'user', 'my_question', 'friend_question')) as opinion_count FROM user_questions uq WHERE uq.user_id = $1 AND uq.created_at >= $2 AND uq.created_at <= $3 AND uq.parent_question_id IS NULL ORDER BY COALESCE(uq.likes_count, 0) + (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id AND question_type IN ('user_question', 'user', 'my_question', 'friend_question')) DESC LIMIT 3`, [userId, monthStart, monthEnd]),
       pool.query(`SELECT qo.opinion as content, qo.created_at, COALESCE(uq.title, sq.question) as question_title FROM question_opinions qo LEFT JOIN user_questions uq ON qo.question_id = uq.id AND qo.question_type IN ('user_question', 'friend_question', 'user') LEFT JOIN seed_questions sq ON qo.question_id = sq.id AND qo.question_type IN ('seed', 'quiz', 'icebreaking') WHERE qo.user_id = $1 AND qo.created_at >= $2 AND qo.created_at <= $3 ORDER BY qo.created_at DESC`, [userId, monthStart, monthEnd]),
       pool.query(`SELECT COALESCE(uq.title, sq.question) as question_title, qr.reaction_type FROM question_reactions qr LEFT JOIN user_questions uq ON qr.question_id = uq.id AND qr.question_type IN ('user_question', 'friend_question', 'user') LEFT JOIN seed_questions sq ON qr.question_id = sq.id AND qr.question_type IN ('seed', 'quiz', 'icebreaking') WHERE qr.user_id = $1 AND qr.created_at >= $2 AND qr.created_at <= $3 ORDER BY qr.created_at DESC`, [userId, monthStart, monthEnd]),
       pool.query(`SELECT * FROM monthly_reflections WHERE user_id = $1 AND month_start = $2::date`, [userId, monthStart]),
@@ -453,15 +459,23 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== 상품권 교환 자격 판정 (누적 200송이 + 최근 2주 안 주간일지 제출 여부) =====
+// ===== 상품권 교환 자격 판정 (200송이 + 최근 2주 윈도우 + 그 안에 주간일지 여부) =====
 router.get('/exchange-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
     const windowStart = new Date();
     windowStart.setDate(windowStart.getDate() - 14);
 
+    // 최근 14일간의 송이 합계 (모든 거래 타입 포함 — 회수/차감도 자연스럽게 반영됨)
+    const sumResult = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0) as window_total
+       FROM songi_transactions
+       WHERE user_id = $1 AND created_at >= $2`,
+      [userId, windowStart.toISOString()]
+    );
+    const windowSongi = parseFloat(sumResult.rows[0].window_total);
+
     // 최근 14일 안에 주간일지 지급 기록이 있는지
-    // (누적 송이가 아무리 많아도, 최근에 꾸준히 참여하고 있어야 교환 가능하게 하는 조건은 그대로 유지)
     const journalResult = await pool.query(
       `SELECT COUNT(*) as cnt
        FROM songi_transactions
@@ -470,21 +484,21 @@ router.get('/exchange-status', authenticateToken, async (req, res) => {
     );
     const hasJournalInWindow = parseInt(journalResult.rows[0].cnt) > 0;
 
-    // 누적(평생) 송이 - 관리자가 상품권 지급 시 '/admin/deduct-songi'로 차감하므로
-    // 이미 교환한 만큼은 여기서 자동으로 빠져 있는 상태
+    const EXCHANGE_THRESHOLD = 200;
+    const eligible = windowSongi >= EXCHANGE_THRESHOLD && hasJournalInWindow;
+
+    // 누적(평생) 송이도 같이 반환 (프로필 "총 획득" 표시용)
     const userResult = await pool.query('SELECT songi_count FROM users WHERE id = $1', [userId]);
     const lifetimeSongi = parseFloat(userResult.rows[0]?.songi_count || 0);
 
-    const EXCHANGE_THRESHOLD = 200;
-    const eligible = lifetimeSongi >= EXCHANGE_THRESHOLD && hasJournalInWindow;
-
     res.json({
       eligible,
-      lifetimeSongi,
+      windowSongi,
       hasJournalInWindow,
       threshold: EXCHANGE_THRESHOLD,
-      songiNeeded: Math.max(0, EXCHANGE_THRESHOLD - lifetimeSongi),
-      windowDays: 14
+      songiNeeded: Math.max(0, EXCHANGE_THRESHOLD - windowSongi),
+      windowDays: 14,
+      lifetimeSongi
     });
   } catch (error) {
     console.error('교환 자격 판정 오류:', error);
