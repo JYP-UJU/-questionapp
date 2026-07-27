@@ -11,6 +11,14 @@ function SongiStatus() {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [showInfoBanner, setShowInfoBanner] = useState(
+        localStorage.getItem('songi_info_dismissed') !== 'true'
+    );
+
+    const dismissInfoBanner = () => {
+        localStorage.setItem('songi_info_dismissed', 'true');
+        setShowInfoBanner(false);
+    };
 
     useEffect(() => {
         loadUserInfo();
@@ -69,6 +77,46 @@ function SongiStatus() {
             </div>
 
             <div className="songi-content">
+
+                {showInfoBanner && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        background: '#eef6ff',
+                        border: '1px solid #bfdcff',
+                        borderRadius: '12px',
+                        padding: '12px 14px',
+                        margin: '0 0 14px',
+                        fontSize: '13px',
+                        color: '#1e4d8f',
+                        lineHeight: '1.5',
+                    }}>
+                        <span style={{ fontSize: '18px', flexShrink: 0 }}>💡</span>
+                        <div style={{ flex: 1 }}>
+                            <strong>송이가 뭐예요?</strong>
+                            <p style={{ margin: '4px 0 0' }}>
+                                질문하고, 반응하고, 일지를 쓸 때마다 <strong>송이</strong>가 쌓여요.
+                                <strong> 100송이를 모으면 1,000원 상품권</strong>으로 바꿀 수 있어요!
+                            </p>
+                        </div>
+                        <button
+                            onClick={dismissInfoBanner}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#1e4d8f',
+                                fontSize: '16px',
+                                cursor: 'pointer',
+                                padding: '0 2px',
+                                flexShrink: 0,
+                            }}
+                            aria-label="닫기"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                )}
 
                 <div className="battery-section">
                     <div className="battery-top-row">
