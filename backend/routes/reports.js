@@ -498,4 +498,93 @@ router.get('/exchange-status', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== 상품권 신청 (이름/전화번호 제출) =====
+router.post('/claim-reward', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const { name, phone } = req.body;
+
+    if (!name || !name.trim() || !phone || !phone.trim()) {
+      return res.status(400).json({ error: '이름과 휴대폰 번호를 모두 입력해주세요' });
+    }
+
+    const userResult = await pool.query('SELECT username, songi_count FROM users WHERE id = $1', [userId]);
+    const user = userResult.rows[0];
+
+    const insertResult = await pool.query(
+      `INSERT INTO reward_claims (user_id, name, phone, songi_at_claim, status)
+       VALUES ($1, $2, $3, $4, 'pending')
+       RETURNING id, created_at`,
+      [userId, name.trim(), phone.trim(), user?.songi_count || 0]
+    );
+
+    // 관리자 전원에게 알림
+    try {
+      const admins = await pool.query('SELECT id FROM users WHERE is_admin = true');
+      for (const admin of admins.rows) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, message, is_read)
+           VALUES ($1, 'reward_claim', $2, false)`,
+          [admin.id, `${user?.username || '누군가'}님이 상품권 교환을 신청했어요 🎫`]
+        );
+      }
+    } catch (notifyErr) {
+      console.error('상품권 신청 알림 생성 오류:', notifyErr);
+    }
+
+    res.status(201).json({
+      message: '상품권 교환 신청이 접수되었어요! 선생님이 곧 연락드릴게요',
+      claim: insertResult.rows[0]
+    });
+  } catch (error) {
+    console.error('상품권 신청 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
+
+// ===== 관리자용: 상품권 신청 목록 =====
+router.get('/reward-claims', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
+    if (!adminCheck.rows[0]?.is_admin) {
+      return res.status(403).json({ error: '관리자 권한이 필요합니다' });
+    }
+
+    const result = await pool.query(
+      `SELECT rc.id, rc.user_id, u.username, rc.name, rc.phone,
+              rc.songi_at_claim, rc.status, rc.created_at, rc.completed_at
+       FROM reward_claims rc
+       JOIN users u ON rc.user_id = u.id
+       ORDER BY rc.status ASC, rc.created_at DESC`
+    );
+
+    res.json({ claims: result.rows });
+  } catch (error) {
+    console.error('상품권 신청 목록 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
+
+// ===== 관리자용: 상품권 지급 완료 처리 =====
+router.put('/reward-claims/:id/complete', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
+    if (!adminCheck.rows[0]?.is_admin) {
+      return res.status(403).json({ error: '관리자 권한이 필요합니다' });
+    }
+
+    await pool.query(
+      `UPDATE reward_claims SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+      [req.params.id]
+    );
+
+    res.json({ message: '지급 완료로 처리했어요' });
+  } catch (error) {
+    console.error('상품권 지급 완료 처리 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
+
 module.exports = router;

@@ -11,6 +11,10 @@ function Profile() {
     const [loading, setLoading] = useState(true);
     const [showUsernameModal, setShowUsernameModal] = useState(false);
     const [newUsername, setNewUsername] = useState('');
+    const [claimName, setClaimName] = useState('');
+    const [claimPhone, setClaimPhone] = useState('');
+    const [claimSubmitted, setClaimSubmitted] = useState(false);
+    const [claimSubmitting, setClaimSubmitting] = useState(false);
 
     useEffect(() => {
         loadProfile();
@@ -50,6 +54,22 @@ function Profile() {
             loadProfile();
         } catch (err) {
             alert(err.response?.data?.error || '닉네임 변경에 실패했어요');
+        }
+    };
+
+    const handleClaimSubmit = async () => {
+        if (!claimName.trim() || !claimPhone.trim()) {
+            alert('이름과 휴대폰 번호를 모두 입력해주세요');
+            return;
+        }
+        setClaimSubmitting(true);
+        try {
+            await api.post('/reports/claim-reward', { name: claimName, phone: claimPhone });
+            setClaimSubmitted(true);
+        } catch (err) {
+            alert(err.response?.data?.error || '신청에 실패했어요');
+        } finally {
+            setClaimSubmitting(false);
         }
     };
 
@@ -226,6 +246,68 @@ function Profile() {
                             <p>아직 상품권 수령 내역이 없어요</p>
                             <p className="rewards-hint">100송이를 모으면 1,000원 상품권을 받을 수 있어요 🌸</p>
                         </div>
+                    )}
+
+                    {/* 교환 자격을 채웠을 때만 신청 폼 표시 */}
+                    {exchangeStatus?.eligible && (
+                        claimSubmitted ? (
+                            <div style={{
+                                marginTop: '14px', padding: '14px', borderRadius: '10px',
+                                background: '#f0fdf4', textAlign: 'center',
+                            }}>
+                                <p style={{ margin: 0, color: '#16a34a', fontWeight: 600 }}>
+                                    ✓ 신청이 접수됐어요! 선생님이 곧 연락드릴게요
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{
+                                marginTop: '14px', padding: '14px', borderRadius: '10px',
+                                background: '#fefce8', border: '1px solid #fde68a',
+                            }}>
+                                <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: '14px' }}>
+                                    🎁 상품권 전달 정보를 입력해주세요
+                                </p>
+                                <div style={{ marginBottom: '8px' }}>
+                                    <label style={{ fontSize: '12px', color: '#888' }}>이름</label>
+                                    <input
+                                        type="text"
+                                        placeholder="이름을 적어주세요"
+                                        value={claimName}
+                                        onChange={e => setClaimName(e.target.value)}
+                                        style={{
+                                            width: '100%', boxSizing: 'border-box', padding: '8px 10px',
+                                            borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '2px',
+                                        }}
+                                    />
+                                </div>
+                                <div style={{ marginBottom: '10px' }}>
+                                    <label style={{ fontSize: '12px', color: '#888' }}>휴대폰 번호</label>
+                                    <input
+                                        type="tel"
+                                        placeholder="010-0000-0000"
+                                        value={claimPhone}
+                                        onChange={e => setClaimPhone(e.target.value)}
+                                        style={{
+                                            width: '100%', boxSizing: 'border-box', padding: '8px 10px',
+                                            borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '2px',
+                                        }}
+                                    />
+                                </div>
+                                <p style={{ fontSize: '11px', color: '#aaa', margin: '0 0 10px' }}>
+                                    이름과 휴대폰 번호는 상품권 전달 외 목적으로 사용하지 않아요.
+                                </p>
+                                <button
+                                    onClick={handleClaimSubmit}
+                                    disabled={claimSubmitting}
+                                    style={{
+                                        width: '100%', padding: '10px', borderRadius: '8px', border: 'none',
+                                        background: '#f59e0b', color: 'white', fontWeight: 700, cursor: 'pointer',
+                                    }}
+                                >
+                                    {claimSubmitting ? '제출 중...' : '신청하기'}
+                                </button>
+                            </div>
+                        )
                     )}
                 </div>
 
