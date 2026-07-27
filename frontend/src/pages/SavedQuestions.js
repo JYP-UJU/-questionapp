@@ -368,13 +368,37 @@ function SavedQuestions() {
                                             </div>
                                         )}
 
-                                        {/* 관련질문 미리보기 B방식: 최신 1개 + 토글 */}
+                                        {/* 관련질문: ㄴ자 연결선 + 원 질문과 비슷한 크기로 표시 */}
                                         {saved.latestRelated && (
                                             <div className="preview-section preview-related-section">
-                                                <div className="preview-row">
-                                                    <span className="preview-icon">❓</span>
-                                                    <span className="preview-author">{saved.latestRelated.username}:</span>
-                                                    <span className="preview-text">{saved.latestRelated.title}</span>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'flex-start',
+                                                    gap: '6px',
+                                                    marginBottom: '4px',
+                                                }}>
+                                                    <span style={{
+                                                        fontSize: '18px',
+                                                        color: '#3b82f6',
+                                                        fontWeight: '700',
+                                                        lineHeight: '1.3',
+                                                        flexShrink: 0,
+                                                    }}>
+                                                        ┗━
+                                                    </span>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: '13px', color: '#888', marginBottom: '2px' }}>
+                                                            {saved.latestRelated.username}의 관련질문
+                                                        </div>
+                                                        <div style={{
+                                                            fontSize: '17px',
+                                                            fontWeight: '700',
+                                                            color: '#222',
+                                                            lineHeight: '1.4',
+                                                        }}>
+                                                            {saved.latestRelated.title}
+                                                        </div>
+                                                    </div>
                                                     {(saved.relatedCount || 0) > 1 && (
                                                         <button
                                                             className="preview-toggle-btn"
@@ -385,12 +409,14 @@ function SavedQuestions() {
                                                     )}
                                                 </div>
                                                 {expandedRelated[saved.questionId] && (allRelated[saved.questionId] || []).slice(1).map((rq, i, arr) => (
-                                                    <div key={i} className="preview-row preview-row-indent">
-                                                        <span className="tree-connector">
+                                                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginTop: '8px', paddingLeft: '4px' }}>
+                                                        <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: '700', flexShrink: 0 }}>
                                                             {i === arr.length - 1 ? '┗━' : '┣━'}
                                                         </span>
-                                                        <span className="preview-author">{rq.username}:</span>
-                                                        <span className="preview-text">{rq.title}</span>
+                                                        <div>
+                                                            <div style={{ fontSize: '12px', color: '#999' }}>{rq.username}</div>
+                                                            <div style={{ fontSize: '15px', fontWeight: '600', color: '#333' }}>{rq.title}</div>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
