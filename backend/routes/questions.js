@@ -212,9 +212,9 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            NULL as user_id,
            '퀴즈' as username,
            GREATEST(
-             COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), NOW()),
-             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE related_seed_question_id = sq.id), NOW()),
-             COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), NOW())
+             COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), TIMESTAMP '1970-01-01'),
+             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE related_seed_question_id = sq.id), TIMESTAMP '1970-01-01'),
+             COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), TIMESTAMP '1970-01-01')
            ) as latest_activity
          FROM seed_questions sq
          WHERE
