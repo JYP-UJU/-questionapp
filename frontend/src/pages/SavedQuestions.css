@@ -308,6 +308,18 @@
     border-color: #d1d5db;
 }
 
+/* 지우기 버튼 (내가 쓴 관련질문) */
+.delete-btn {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 2px solid #fed7aa;
+}
+
+.delete-btn:hover {
+    background: #fed7aa;
+    border-color: #fb923c;
+}
+
 /* 제거 버튼 */
 .remove-btn {
     background: #fff1f2;

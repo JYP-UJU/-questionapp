@@ -96,6 +96,7 @@ router.get('/', authenticateToken, async (req, res) => {
             LEFT JOIN user_questions uq ON qr.question_id = uq.id
                 AND qr.question_type IN ('user_question', 'friend_question', 'user')
                 AND uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
+                AND uq.is_deleted = false
             LEFT JOIN seed_questions sq ON qr.question_id = sq.id
                 AND qr.question_type IN ('quiz', 'seed', 'icebreaking')
             WHERE qr.user_id = $1
@@ -119,6 +120,7 @@ router.get('/', authenticateToken, async (req, res) => {
             FROM user_questions uq
             JOIN users u ON uq.user_id = u.id
             WHERE uq.user_id = $1 
+              AND uq.is_deleted = false
               AND uq.parent_question_id IS NULL 
               AND uq.related_seed_question_id IS NULL
               AND NOT EXISTS (
@@ -143,7 +145,7 @@ router.get('/', authenticateToken, async (req, res) => {
                 COALESCE(uq.dislikes_count, sq.dislikes_count, 0) as dislikes_count,
                 u.username as author_username
             FROM question_opinions qo
-            LEFT JOIN user_questions uq ON qo.question_id = uq.id
+            LEFT JOIN user_questions uq ON qo.question_id = uq.id AND uq.is_deleted = false
                 AND qo.question_type IN ('user_question', 'friend_question', 'user', 'my_question', 'opinion_question')
                 AND uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
             LEFT JOIN seed_questions sq ON qo.question_id = sq.id
@@ -197,7 +199,7 @@ router.get('/', authenticateToken, async (req, res) => {
                 
             FROM saved_questions sq
 LEFT JOIN seed_questions seed ON sq.question_id = seed.id AND COALESCE(sq.question_type, sq.source_type) IN ('quiz', 'icebreaking', 'seed')
-LEFT JOIN user_questions uq ON sq.question_id = uq.id AND COALESCE(sq.question_type, sq.source_type) IN ('user', 'user_question', 'friend_question', 'quiz_related', 'icebreaking_related', 'related_question')
+LEFT JOIN user_questions uq ON sq.question_id = uq.id AND uq.is_deleted = false AND COALESCE(sq.question_type, sq.source_type) IN ('user', 'user_question', 'friend_question', 'quiz_related', 'icebreaking_related', 'related_question')
 LEFT JOIN users u ON uq.user_id = u.id
 LEFT JOIN LATERAL (
     SELECT DISTINCT ON (question_id) question_text, subject, question_type

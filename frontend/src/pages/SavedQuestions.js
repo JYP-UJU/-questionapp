@@ -18,6 +18,7 @@ function SavedQuestions() {
     const [selectedQuestion, setSelectedQuestion] = useState(null);
     const [selectedQuestionTitle, setSelectedQuestionTitle] = useState('');
     const [relatedModal, setRelatedModal] = useState(null);
+    const [myUserId, setMyUserId] = useState(null);
 
     const [expandedOpinions, setExpandedOpinions] = useState({});
     const [expandedRelated, setExpandedRelated] = useState({});
@@ -150,6 +151,7 @@ function SavedQuestions() {
                 const songiRes = await api.get('/users/me');
                 const userData = songiRes.data.user || songiRes.data;
                 setTotalSongi(userData.songi_count || userData.songiCount || 0);
+                setMyUserId(userData.id ?? null);
             } catch (err) {
                 setTotalSongi(0);
             }
@@ -274,6 +276,37 @@ function SavedQuestions() {
         }
     };
 
+    // 내가 쓴 관련질문 삭제 (송이도 함께 반납)
+    const handleDeleteRelated = async (nodeId) => {
+        const ok = window.confirm(
+            '이 관련질문을 지울까요?\n\n질문을 올릴 때 받았던 5송이도 함께 반납돼요.'
+        );
+        if (!ok) return;
+
+        try {
+            const res = await api.delete(`/questions/${nodeId}`);
+            alert(res.data?.message || '질문을 지웠어요');
+            // 화면에서 해당 노드와 그 아래 자식들까지 제거
+            setSavedQuestions(prev => prev.map(q => {
+                if (!q.relatedTree || q.relatedTree.length === 0) return q;
+                const removeIds = new Set([nodeId]);
+                let changed = true;
+                while (changed) {
+                    changed = false;
+                    q.relatedTree.forEach(nd => {
+                        if (removeIds.has(nd.parent_question_id) && !removeIds.has(nd.id)) {
+                            removeIds.add(nd.id);
+                            changed = true;
+                        }
+                    });
+                }
+                return { ...q, relatedTree: q.relatedTree.filter(nd => !removeIds.has(nd.id)) };
+            }));
+        } catch (err) {
+            alert(err.response?.data?.error || '삭제에 실패했어요');
+        }
+    };
+
     // 관련질문 트리를 재귀적으로 렌더링 - 부모와 분리된 독립 카드, 깊이만큼 들여쓰기
     const renderRelatedNode = (node, allNodes, depth) => {
         const children = allNodes
@@ -295,7 +328,7 @@ function SavedQuestions() {
                                 <span style={{ color: '#93c5fd', fontWeight: '700', marginRight: '6px' }}>┗━</span>
                                 {node.title}
                             </div>
-                            <span style={{ fontSize: '11px', color: '#aaa', flexShrink: 0, marginTop: '3px', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#333', flexShrink: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>
                                 {node.username}
                             </span>
                         </div>
@@ -342,6 +375,15 @@ function SavedQuestions() {
                                 <span className="btn-icon">❓</span>
                                 <span className="btn-label">관련질문</span>
                             </button>
+                            {myUserId !== null && node.user_id === myUserId && (
+                                <button
+                                    className="action-btn delete-btn"
+                                    onClick={() => handleDeleteRelated(node.id)}
+                                >
+                                    <span className="btn-icon">🗑️</span>
+                                    <span className="btn-label">지우기</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

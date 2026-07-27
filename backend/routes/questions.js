@@ -141,7 +141,7 @@ router.get('/with-status', authenticateToken, async (req, res) => {
         -- 관련질문 수
         CASE
           WHEN q.question_source = 'user_question' THEN
-            (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = q.id)
+            (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = q.id AND is_deleted = false)
           ELSE
             COALESCE((SELECT related_count FROM seed_questions WHERE id = q.id), 0)
         END as related_count,
@@ -167,13 +167,13 @@ router.get('/with-status', authenticateToken, async (req, res) => {
             (SELECT json_build_object('username', u3.username, 'title', rq.title)
              FROM user_questions rq
              JOIN users u3 ON rq.user_id = u3.id
-             WHERE rq.parent_question_id = q.id
+             WHERE rq.parent_question_id = q.id AND rq.is_deleted = false
              ORDER BY rq.created_at DESC LIMIT 1)
           ELSE
             (SELECT json_build_object('username', u3.username, 'title', rq.title)
              FROM user_questions rq
              JOIN users u3 ON rq.user_id = u3.id
-             WHERE rq.related_seed_question_id = q.id
+             WHERE rq.related_seed_question_id = q.id AND rq.is_deleted = false
              ORDER BY rq.created_at DESC LIMIT 1)
         END as latest_related
        FROM (
@@ -192,12 +192,12 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            GREATEST(
              uq.created_at,
              COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = uq.id AND question_type = 'user_question'), uq.created_at),
-             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE parent_question_id = uq.id), uq.created_at),
+             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE parent_question_id = uq.id AND is_deleted = false), uq.created_at),
              COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = uq.id AND question_type = 'user_question'), uq.created_at)
            ) as latest_activity
          FROM user_questions uq
          JOIN users u ON uq.user_id = u.id
-         WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
+         WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL AND uq.is_deleted = false
 
          UNION ALL
 
@@ -215,13 +215,13 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            '퀴즈' as username,
            GREATEST(
              COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), TIMESTAMP '1970-01-01'),
-             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE related_seed_question_id = sq.id), TIMESTAMP '1970-01-01'),
+             COALESCE((SELECT MAX(created_at) FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false), TIMESTAMP '1970-01-01'),
              COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), TIMESTAMP '1970-01-01')
            ) as latest_activity
          FROM seed_questions sq
          WHERE
            EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
-           OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id)
+           OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
        ) q
        ORDER BY q.latest_activity DESC
@@ -234,7 +234,7 @@ router.get('/with-status', authenticateToken, async (req, res) => {
       `SELECT COUNT(*) as total FROM (
          SELECT uq.id
          FROM user_questions uq
-         WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
+         WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL AND uq.is_deleted = false
 
          UNION ALL
 
@@ -242,7 +242,7 @@ router.get('/with-status', authenticateToken, async (req, res) => {
          FROM seed_questions sq
          WHERE
            EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
-           OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id)
+           OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
        ) t`
     );
@@ -278,7 +278,7 @@ router.get('/my', authenticateToken, async (req, res) => {
         dislikes_count,
         created_at
        FROM user_questions
-       WHERE user_id = $1
+       WHERE user_id = $1 AND is_deleted = false
        ORDER BY created_at DESC`,
       [userId]
     );
@@ -311,9 +311,10 @@ router.get('/', async (req, res) => {
         uq.dislikes_count,
         uq.created_at,
         u.username,
-        (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = uq.id) as comment_count
+        (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = uq.id AND is_deleted = false) as comment_count
        FROM user_questions uq
        JOIN users u ON uq.user_id = u.id
+       WHERE uq.is_deleted = false
        ORDER BY ${orderBy}
        LIMIT 100`
     );
@@ -558,14 +559,14 @@ router.get('/:id/related-tree', async (req, res) => {
          SELECT uq.id, uq.title, uq.content, uq.created_at, uq.parent_question_id, u.username, u.id as user_id
          FROM user_questions uq
          JOIN users u ON uq.user_id = u.id
-         WHERE uq.related_seed_question_id = $1 OR uq.parent_question_id = $1
+         WHERE (uq.related_seed_question_id = $1 OR uq.parent_question_id = $1) AND uq.is_deleted = false
 
          UNION ALL
 
          SELECT child.id, child.title, child.content, child.created_at, child.parent_question_id, u.username, u.id as user_id
          FROM user_questions child
          JOIN users u ON child.user_id = u.id
-         JOIN thread ON child.parent_question_id = thread.id
+         JOIN thread ON child.parent_question_id = thread.id AND child.is_deleted = false
        )
        SELECT * FROM thread ORDER BY created_at ASC`,
       [id]
@@ -599,7 +600,7 @@ router.get('/:id/related', async (req, res) => {
         u.id as user_id
        FROM user_questions uq
        JOIN users u ON uq.user_id = u.id
-       WHERE ${whereClause}
+       WHERE ${whereClause} AND uq.is_deleted = false
        ORDER BY uq.created_at DESC`,
       [id]
     );
@@ -880,7 +881,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
           u.username,
           u.id as user_id,
           (SELECT COUNT(*) FROM question_opinions WHERE question_id = uq.id AND (question_type = 'user_question' OR question_type IS NULL)) as opinion_count,
-          (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = uq.id) as related_count
+          (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = uq.id AND is_deleted = false) as related_count
          FROM user_questions uq
          JOIN users u ON uq.user_id = u.id
          WHERE uq.id = $1`,
@@ -988,32 +989,92 @@ router.put('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// 질문 삭제
+// 질문 삭제 (소프트 삭제 + 지급됐던 송이 회수)
+// 실제로 행을 지우지 않고 is_deleted = true 로만 표시함.
+// 학생 화면에서는 완전히 사라지지만 연구 분석용으로 원문은 DB에 남음.
 router.delete('/:id', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  let released = false;
+  const releaseOnce = () => { if (!released) { released = true; client.release(); } };
   try {
     const { id } = req.params;
     const userId = req.user.id || req.user.userId;
 
-    const checkResult = await pool.query(
-      'SELECT user_id FROM user_questions WHERE id = $1',
+    await client.query('BEGIN');
+
+    const checkResult = await client.query(
+      `SELECT user_id, parent_question_id, related_seed_question_id, is_deleted
+       FROM user_questions WHERE id = $1 FOR UPDATE`,
       [id]
     );
 
     if (checkResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      releaseOnce();
       return res.status(404).json({ error: '질문을 찾을 수 없습니다' });
     }
 
-    if (checkResult.rows[0].user_id !== userId) {
+    const row = checkResult.rows[0];
+
+    if (row.user_id !== userId) {
+      await client.query('ROLLBACK');
+      releaseOnce();
       return res.status(403).json({ error: '삭제 권한이 없습니다' });
     }
 
-    await pool.query('DELETE FROM user_questions WHERE id = $1', [id]);
+    if (row.is_deleted) {
+      await client.query('ROLLBACK');
+      releaseOnce();
+      return res.status(400).json({ error: '이미 삭제된 질문이에요' });
+    }
 
-    res.json({ message: '질문이 삭제되었습니다' });
+    // 소프트 삭제
+    await client.query(
+      'UPDATE user_questions SET is_deleted = true WHERE id = $1',
+      [id]
+    );
+
+    // 이 질문을 올릴 때 지급됐던 송이를 찾아서 그만큼만 회수
+    const isRelated = row.parent_question_id !== null || row.related_seed_question_id !== null;
+    const activityType = isRelated ? 'related' : 'question';
+
+    const tx = await client.query(
+      `SELECT amount FROM songi_transactions
+       WHERE question_id = $1 AND activity_type = $2 AND user_id = $3
+       ORDER BY created_at DESC LIMIT 1`,
+      [id, activityType, userId]
+    );
+
+    let reversedAmount = 0;
+    if (tx.rows.length > 0) reversedAmount = parseFloat(tx.rows[0].amount);
+
+    if (reversedAmount > 0) {
+      await client.query(
+        'UPDATE users SET songi_count = GREATEST(songi_count - $1, 0) WHERE id = $2',
+        [reversedAmount, userId]
+      );
+      await client.query(
+        `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
+         VALUES ($1, $2, 'user_delete_reversal', $3)`,
+        [userId, -reversedAmount, `본인 삭제로 인한 회수 (${activityType})`]
+      );
+    }
+
+    await client.query('COMMIT');
+    releaseOnce();
+
+    return res.json({
+      message: reversedAmount > 0
+        ? `질문을 지웠어요. ${reversedAmount}송이도 함께 반납됐어요`
+        : '질문을 지웠어요',
+      reversedAmount
+    });
 
   } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* 무시 */ }
+    releaseOnce();
     console.error('질문 삭제 오류:', error);
-    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+    return res.status(500).json({ error: '서버 오류가 발생했습니다' });
   }
 });
 
