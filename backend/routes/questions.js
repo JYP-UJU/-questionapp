@@ -357,15 +357,27 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
       [userId]
     );
 
-    // 원래 질문 내용 조회
+    // 원래 질문 내용 조회 + 작성자에게 알림 (씨드질문은 작성자가 없어서 알림 대상 아님)
     const isSeedQ = ['icebreaking', 'seed', 'quiz'].includes(questionType);
     let questionText = '';
     let opinionQId = null;
     try {
-      const qRes = isSeedQ
-        ? await client.query('SELECT question as title FROM seed_questions WHERE id = $1', [parseInt(id)])
-        : await client.query('SELECT title FROM user_questions WHERE id = $1', [parseInt(id)]);
-      questionText = qRes.rows[0]?.title || '';
+      if (isSeedQ) {
+        const qRes = await client.query('SELECT question as title FROM seed_questions WHERE id = $1', [parseInt(id)]);
+        questionText = qRes.rows[0]?.title || '';
+      } else {
+        const qRes = await client.query('SELECT title, user_id FROM user_questions WHERE id = $1', [parseInt(id)]);
+        questionText = qRes.rows[0]?.title || '';
+        const authorId = qRes.rows[0]?.user_id;
+        // 작성자가 본인이 아닌 경우에만 알림 생성
+        if (authorId && authorId !== userId) {
+          await client.query(
+            `INSERT INTO notifications (user_id, type, message, related_question_id)
+             VALUES ($1, 'opinion', $2, $3)`,
+            [authorId, `내 질문 "${questionText}"에 누군가 의견을 남겼어요.`, parseInt(id)]
+          );
+        }
+      }
       opinionQId = parseInt(id) || null;
     } catch (e) {
       console.error('질문 내용 조회 실패 (무시):', e.message);
@@ -457,6 +469,24 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
     }
 
     const newQuestionId = insertResult.rows[0].id;
+
+    // 대상이 사용자 질문인 경우, 그 작성자에게 알림 (본인이 아닌 경우만; 씨드질문은 작성자가 없어 생략)
+    if (!isSeedType) {
+      try {
+        const parentRes = await client.query('SELECT user_id, title FROM user_questions WHERE id = $1', [id]);
+        const parentAuthor = parentRes.rows[0]?.user_id;
+        const parentTitle = parentRes.rows[0]?.title || '';
+        if (parentAuthor && parentAuthor !== userId) {
+          await client.query(
+            `INSERT INTO notifications (user_id, type, message, related_question_id)
+             VALUES ($1, 'related', $2, $3)`,
+            [parentAuthor, `내 질문 "${parentTitle}"에 관련질문이 달렸어요: "${title}"`, id]
+          );
+        }
+      } catch (e) {
+        console.error('관련질문 알림 생성 실패 (무시):', e.message);
+      }
+    }
 
     // saved_questions에도 저장 (내활동에서 보이게)
     const savedType = isSeedType ? `${questionType}_related` : 'related_question';
@@ -699,6 +729,25 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
         `UPDATE ${tableName} SET ${countColumn} = ${countColumn} + 1 WHERE id = $1`,
         [id]
       );
+
+      // 대상이 사용자 질문인 경우, 작성자에게 알림 (본인이 아닌 경우만; 씨드질문은 작성자가 없어 생략)
+      if (!isSeed) {
+        try {
+          const ownerRes = await client.query('SELECT user_id, title FROM user_questions WHERE id = $1', [id]);
+          const ownerId = ownerRes.rows[0]?.user_id;
+          const ownerTitle = ownerRes.rows[0]?.title || '';
+          if (ownerId && ownerId !== userId) {
+            const reactionLabel = reactionType === 'like' ? '관심있음' : '관심없음';
+            await client.query(
+              `INSERT INTO notifications (user_id, type, message, related_question_id)
+               VALUES ($1, 'reaction', $2, $3)`,
+              [ownerId, `내 질문 "${ownerTitle}"에 누군가 ${reactionLabel}을 눌렀어요.`, parseInt(id)]
+            );
+          }
+        } catch (e) {
+          console.error('반응 알림 생성 실패 (무시):', e.message);
+        }
+      }
 
       // 관심있음(like)일 때만 송이 지급 — 하루 최대 6회(=3점) 캡
       if (reactionType === 'like') {
