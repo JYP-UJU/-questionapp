@@ -17,6 +17,7 @@ import Admin from './pages/Admin';
 import QuizOlympics from './pages/QuizOlympics';
 import MonthlyReport from './pages/MonthlyReport';
 import SessionTracker from './components/SessionTracker';
+import Notifications from './pages/Notifications';
 
 // 보호된 라우트 컴포넌트
 function ProtectedRoute({ children }) {
@@ -48,6 +49,7 @@ function App() {
                 <Route path="/songi-history" element={<ProtectedRoute><SongiHistory /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
 
                 <Route path="/" element={<Navigate to="/login" />} />
                 <Route path="*" element={

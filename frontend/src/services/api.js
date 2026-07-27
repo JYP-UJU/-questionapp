@@ -100,6 +100,14 @@ export const sessionsAPI = {
     heartbeat: (sessionId) => api.post('/sessions/heartbeat', { session_id: sessionId }),
 };
 
+// 알림 API
+export const notificationsAPI = {
+    getAll: () => api.get('/notifications'),
+    getUnreadCount: () => api.get('/notifications/unread-count'),
+    markAllRead: () => api.put('/notifications/read-all'),
+    markRead: (id) => api.put(`/notifications/${id}/read`),
+};
+
 export { API_URL };
 
 export default api;
