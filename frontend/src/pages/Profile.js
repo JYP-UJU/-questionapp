@@ -125,24 +125,24 @@ function Profile() {
                     </div>
                 </div>
 
-                {/* 송이 진행도 건전지 바 — 실제 교환 자격(200송이+최근2주+주간일지) 기준 */}
+                {/* 송이 진행도 건전지 바 — 실제 교환 자격(누적 200송이 + 최근2주 주간일지) 기준 */}
                 <div className="profile-section">
                     <h2 className="section-title">🌸 상품권 교환 진행도</h2>
                     {!exchangeStatus ? (
                         <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
                     ) : (() => {
-                        const { windowSongi, threshold, eligible, hasJournalInWindow, songiNeeded } = exchangeStatus;
-                        const pct = Math.min((windowSongi / threshold) * 100, 100);
+                        const { lifetimeSongi, threshold, eligible, hasJournalInWindow, songiNeeded } = exchangeStatus;
+                        const pct = Math.min((lifetimeSongi / threshold) * 100, 100);
 
-                        // 하단 안내 멘트: 두 조건(주간일지, 송이)을 같이 짚어줌
+                        // 하단 안내 멘트: 막히는 이유만 짚어줌 (누적 송이는 위에서 이미 보여주므로 중복 설명 안 함)
                         let message;
                         if (eligible) {
                             message = '🎉 교환 조건을 채웠어요! 선생님께 상품권 교환을 요청하세요!';
                         } else {
                             const parts = [];
-                            if (!hasJournalInWindow) parts.push('주간일지를 작성하지 않으셨어요');
-                            if (songiNeeded > 0) parts.push(`${songiNeeded.toFixed(1)}송이가 더 필요해요`);
-                            message = parts.join('. 그리고 ') + '. 💪';
+                            if (songiNeeded > 0) parts.push(`아직 ${songiNeeded.toFixed(1)}송이가 더 필요해요`);
+                            if (!hasJournalInWindow) parts.push('최근 2주 안에 주간일지를 작성하지 않으셨어요');
+                            message = parts.join('. 그리고 ') + '.';
                         }
 
                         return (
@@ -166,7 +166,7 @@ function Profile() {
                                 </div>
 
                                 <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px', fontSize:'14px', color:'#555'}}>
-                                    <span>최근 2주 <strong style={{color:'#3b82f6'}}>{windowSongi.toFixed(1)}송이</strong> / {threshold}송이</span>
+                                    <span>누적 <strong style={{color:'#3b82f6'}}>{lifetimeSongi.toFixed(1)}송이</strong> (교환 기준 {threshold}송이)</span>
                                 </div>
                                 <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
                                     <div style={{
@@ -202,7 +202,7 @@ function Profile() {
                                     {message}
                                 </div>
                                 <div style={{marginTop:'6px', fontSize:'12px', color:'#aaa', textAlign:'center'}}>
-                                    ⚠️ 최근 2주 안에 200송이 + 주간일지 작성 시 교환 가능해요
+                                    ⚠️ 누적 {threshold}송이 이상 + 최근 2주 안 주간일지 작성 시 교환 가능해요
                                 </div>
                             </div>
                         );
