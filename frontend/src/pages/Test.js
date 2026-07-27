@@ -103,7 +103,7 @@ function Test() {
                 icon="✏️"
                 title="내 질문하기"
                 messages={[]}
-                backTo="/main"
+                backTo="/questions"
             />
 
             <div className="create-content">
@@ -157,8 +157,19 @@ function Test() {
                     </div>
                 </form>
 
-                <div className="reward-info-bright">
-                    <p>💐 질문하면 5송이가 주어져요!</p>
+                <div className="bottom-info-row">
+                    <button
+                        type="button"
+                        className="friends-link-box"
+                        onClick={() => navigate('/questions')}
+                    >
+                        <span className="friends-link-icon">👥</span>
+                        <span>친구질문<br />보러가기</span>
+                    </button>
+
+                    <div className="reward-info-bright">
+                        <p>💐 질문하면 5송이가 주어져요!</p>
+                    </div>
                 </div>
             </div>
 

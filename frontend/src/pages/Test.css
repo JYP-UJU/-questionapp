@@ -224,6 +224,68 @@
     box-shadow: none;
 }
 
+/* 하단 안내 2단 배치 (친구질문 링크 + 리워드 안내) */
+.bottom-info-row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.bottom-info-row .reward-info-bright {
+    flex: 1 1 60%;
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 친구질문 보러가기 상자 */
+.friends-link-box {
+    flex: 0 0 38%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 14px 10px;
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: #075985;
+    line-height: 1.35;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.friends-link-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(56, 189, 248, 0.35);
+}
+
+.friends-link-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+/* 화면이 아주 좁으면 위아래로 쌓기 */
+@media (max-width: 420px) {
+    .bottom-info-row {
+        flex-direction: column;
+    }
+    .friends-link-box {
+        flex: 1 1 auto;
+        flex-direction: row;
+        gap: 8px;
+        padding: 12px;
+    }
+}
+
 /* 리워드 안내 */
 .reward-info-bright {
     text-align: center;

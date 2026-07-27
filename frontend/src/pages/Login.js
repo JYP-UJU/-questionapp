@@ -30,7 +30,7 @@ function Login() {
             if (isLogin) {
                 response = await authAPI.login(username, password);
                 setToken(response.data.token);
-                navigate('/questions');
+                navigate('/create');   // 로그인 후 첫 화면 = 질문쓰기
             } else {
                 response = await authAPI.signup(username, password, grade);
                 setToken(response.data.token);
@@ -53,7 +53,7 @@ function Login() {
     };
 
     const handleContinueAfterSignup = () => {
-        navigate('/questions');
+        navigate('/create');   // 가입 후 첫 화면 = 질문쓰기
     };
 
     const handleTabSwitch = (loginMode) => {

@@ -32,8 +32,8 @@ function App() {
             <Routes>
                 <Route path="/login" element={<Login />} />
 
-                {/* /main은 /questions로 리디렉션 (Main 페이지 제거) */}
-                <Route path="/main" element={<Navigate to="/questions" />} />
+                {/* /main은 질문쓰기로 리디렉션 (Main 페이지 제거) */}
+                <Route path="/main" element={<Navigate to="/create" />} />
 
                 <Route path="/create" element={<ProtectedRoute><Test /></ProtectedRoute>} />
                 <Route path="/icebreaking" element={<ProtectedRoute><IcebreakingNew /></ProtectedRoute>} />
@@ -57,7 +57,7 @@ function App() {
                         <h2>없는 페이지예요 🌱</h2>
                         <p>주소를 확인해주세요</p>
                         <button
-                            onClick={() => window.location.href = '/questions'}
+                            onClick={() => window.location.href = '/create'}
                             style={{
                                 padding: '10px 20px',
                                 background: '#87CEEB',
