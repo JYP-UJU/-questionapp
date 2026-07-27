@@ -118,6 +118,8 @@ router.post('/thumbnail', authenticateToken, async (req, res) => {
 router.get('/with-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
+    const limit = Math.min(parseInt(req.query.limit) || 25, 100);
+    const offset = parseInt(req.query.offset) || 0;
 
     const result = await pool.query(
       `SELECT
@@ -223,9 +225,28 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
        ) q
        ORDER BY q.latest_activity DESC
-       LIMIT 25`,
-      [userId, userId, userId, userId]
+       LIMIT $5 OFFSET $6`,
+      [userId, userId, userId, userId, limit, offset]
     );
+
+    // 전체 개수도 함께 반환 (프론트에서 "더보기" 버튼 표시 여부 판단용)
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM (
+         SELECT uq.id
+         FROM user_questions uq
+         WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
+
+         UNION ALL
+
+         SELECT sq.id
+         FROM seed_questions sq
+         WHERE
+           EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
+           OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id)
+           OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
+       ) t`
+    );
+    const total = parseInt(countResult.rows[0].total);
 
     // user_reaction 필드 통일
     const questions = result.rows.map(q => ({
@@ -234,7 +255,7 @@ router.get('/with-status', authenticateToken, async (req, res) => {
       is_quiz: q.question_source === 'quiz',
     }));
 
-    res.json({ questions });
+    res.json({ questions, total, limit, offset });
 
   } catch (error) {
     console.error('질문 목록 조회 오류:', error);

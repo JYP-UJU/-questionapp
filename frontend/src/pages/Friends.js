@@ -10,10 +10,12 @@ import RelatedModal from '../components/RelatedModal';
 function Friends() {
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState('');
     const [selectedQuestion, setSelectedQuestion] = useState(null);
     const [relatedModal, setRelatedModal] = useState(null);
-    const [visibleCount, setVisibleCount] = useState(25);
+    const [total, setTotal] = useState(0);
+    const PAGE_SIZE = 25;
 
     const [expandedOpinions, setExpandedOpinions] = useState({});
     const [expandedRelated, setExpandedRelated] = useState({});
@@ -42,19 +44,39 @@ function Friends() {
     const loadQuestions = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/questions/with-status');
+            const response = await api.get(`/questions/with-status?limit=${PAGE_SIZE}&offset=0`);
             // ✅ 백엔드에서 미리보기까지 같이 줌 - 개별 API 호출 불필요
-            const questions = response.data.questions.map(q => ({
+            const newQuestions = response.data.questions.map(q => ({
                 ...q,
                 latestOpinion: q.latest_opinion || null,
                 latestRelated: q.latest_related || null,
             }));
-            setQuestions(questions);
+            setQuestions(newQuestions);
+            setTotal(response.data.total || newQuestions.length);
             setError('');
         } catch (err) {
             setError('질문을 불러오는데 실패했습니다');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadMoreQuestions = async () => {
+        if (loadingMore) return;
+        try {
+            setLoadingMore(true);
+            const response = await api.get(`/questions/with-status?limit=${PAGE_SIZE}&offset=${questions.length}`);
+            const moreQuestions = response.data.questions.map(q => ({
+                ...q,
+                latestOpinion: q.latest_opinion || null,
+                latestRelated: q.latest_related || null,
+            }));
+            setQuestions(prev => [...prev, ...moreQuestions]);
+            setTotal(response.data.total ?? total);
+        } catch (err) {
+            alert('더 불러오는데 실패했습니다');
+        } finally {
+            setLoadingMore(false);
         }
     };
 
@@ -205,7 +227,7 @@ function Friends() {
                         </div>
                     ) : (
                         <>
-                        {questions.slice(0, visibleCount).map((q) => (
+                        {questions.map((q) => (
                             <div key={q.id} className="question-card">
 
                                 {/* 작성자 + 시간 */}
@@ -321,12 +343,13 @@ function Friends() {
 
                             </div>
                         ))}
-                        {visibleCount < questions.length && (
+                        {questions.length < total && (
                             <button
                                 className="load-more-btn"
-                                onClick={() => setVisibleCount(prev => prev + 25)}
+                                onClick={loadMoreQuestions}
+                                disabled={loadingMore}
                             >
-                                더보기 ({questions.length - visibleCount}개 남음)
+                                {loadingMore ? '불러오는 중...' : `더보기 (${total - questions.length}개 남음)`}
                             </button>
                         )}
                         </>
