@@ -54,6 +54,10 @@ function Notifications() {
                 console.error('읽음 처리 오류:', err);
             }
         }
+
+        if (item.related_question_id) {
+            navigate(`/questions/${item.related_question_id}`);
+        }
     };
 
     const handleMarkAllRead = async () => {

@@ -373,9 +373,9 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
         // 작성자가 본인이 아닌 경우에만 알림 생성
         if (authorId && authorId !== userId) {
           await client.query(
-            `INSERT INTO notifications (user_id, type, message, related_question_id)
-             VALUES ($1, 'opinion', $2, $3)`,
-            [authorId, `내 질문 "${questionText}"에 누군가 의견을 남겼어요.`, parseInt(id)]
+            `INSERT INTO notifications (user_id, type, message, related_question_id, actor_id)
+             VALUES ($1, 'opinion', $2, $3, $4)`,
+            [authorId, `내 질문 "${questionText}"에 누군가 의견을 남겼어요.`, parseInt(id), userId]
           );
         }
       }
@@ -479,9 +479,9 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
         const parentTitle = parentRes.rows[0]?.title || '';
         if (parentAuthor && parentAuthor !== userId) {
           await client.query(
-            `INSERT INTO notifications (user_id, type, message, related_question_id)
-             VALUES ($1, 'related', $2, $3)`,
-            [parentAuthor, `내 질문 "${parentTitle}"에 관련질문이 달렸어요: "${title}"`, id]
+            `INSERT INTO notifications (user_id, type, message, related_question_id, actor_id)
+             VALUES ($1, 'related', $2, $3, $4)`,
+            [parentAuthor, `내 질문 "${parentTitle}"에 관련질문이 달렸어요: "${title}"`, id, userId]
           );
         }
       } catch (e) {
@@ -740,9 +740,9 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
           if (ownerId && ownerId !== userId) {
             const reactionLabel = reactionType === 'like' ? '관심있음' : '관심없음';
             await client.query(
-              `INSERT INTO notifications (user_id, type, message, related_question_id)
-               VALUES ($1, 'reaction', $2, $3)`,
-              [ownerId, `내 질문 "${ownerTitle}"에 누군가 ${reactionLabel}을 눌렀어요.`, parseInt(id)]
+              `INSERT INTO notifications (user_id, type, message, related_question_id, actor_id)
+               VALUES ($1, 'reaction', $2, $3, $4)`,
+              [ownerId, `내 질문 "${ownerTitle}"에 누군가 ${reactionLabel}을 눌렀어요.`, parseInt(id), userId]
             );
           }
         } catch (e) {

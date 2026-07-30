@@ -8,10 +8,22 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
     const result = await pool.query(
-      `SELECT id, type, message, related_question_id, is_read, created_at
-       FROM notifications
-       WHERE user_id = $1
-       ORDER BY created_at DESC
+      `SELECT
+         n.id,
+         n.type,
+         CASE
+           WHEN u.id IS NOT NULL THEN REPLACE(n.message, '누군가', COALESCE(u.name, u.username))
+           ELSE n.message
+         END as message,
+         n.related_question_id,
+         n.is_read,
+         n.created_at,
+         u.id as actor_id,
+         COALESCE(u.name, u.username) as actor_name
+       FROM notifications n
+       LEFT JOIN users u ON n.actor_id = u.id
+       WHERE n.user_id = $1
+       ORDER BY n.created_at DESC
        LIMIT 50`,
       [userId]
     );
