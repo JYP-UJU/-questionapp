@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import './Friends.css';
 import BottomNav from '../components/BottomNav';
@@ -24,6 +24,11 @@ function Friends() {
     const [allRelated, setAllRelated] = useState({});
 
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const highlightParam = searchParams.get('highlight');
+    const [highlightedId, setHighlightedId] = useState(null); // 반짝임 표시할 id (알림에서 넘어온 id)
+    const cardRefs = useRef({});
+    const highlightAttempts = useRef(0);
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
     const friendsMessages = [
         "모두의 질문을 볼 수 있어요!",
@@ -41,6 +46,26 @@ function Friends() {
     useEffect(() => {
         loadQuestions();
     }, []);
+
+    // 알림 클릭(?highlight=id)으로 들어온 경우: 최상위 질문이든 그 아래 관련질문 트리 속 질문이든
+    // 카드가 화면(cardRefs)에 잡힐 때까지 "더보기"를 자동으로 반복해서 찾아낸 다음 스크롤 + 반짝임 표시
+    useEffect(() => {
+        if (!highlightParam || loading) return;
+        const targetId = parseInt(highlightParam);
+
+        const el = cardRefs.current[targetId];
+        if (el) {
+            setTimeout(() => {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setHighlightedId(targetId);
+                setTimeout(() => setHighlightedId(null), 2500);
+            }, 150);
+        } else if (questions.length < total && !loadingMore && highlightAttempts.current < 15) {
+            highlightAttempts.current += 1;
+            loadMoreQuestions();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [questions, total, loading, loadingMore, highlightParam]);
 
     // 관련질문 전체 트리(재귀) + 각 노드 통계를 채워서 붙여줌
     const attachRelatedTrees = async (list) => {
@@ -283,7 +308,7 @@ function Friends() {
     };
 
     // 관련질문 트리를 재귀적으로 렌더링 - 부모와 분리된 독립 카드, 깊이만큼 들여쓰기
-    const renderRelatedNode = (node, allNodes, depth) => {
+    const renderRelatedNode = (node, allNodes, depth, refsMap, highlightId) => {
         const children = allNodes
             .filter(n => n.parent_question_id === node.id)
             .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -294,10 +319,14 @@ function Friends() {
                     marginLeft: `${(depth + 1) * 18}px`,
                     marginTop: '8px',
                 }}>
-                    <div className="question-card" style={{
-                        background: node.latestOpinion ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
-                        border: '1px solid #dbeafe',
-                    }}>
+                    <div
+                        className="question-card"
+                        ref={(el) => { if (el && refsMap) refsMap.current[node.id] = el; }}
+                        style={{
+                            background: node.latestOpinion ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+                            border: '1px solid #dbeafe',
+                            ...(highlightId === node.id ? { boxShadow: '0 0 0 3px #fbbf24' } : {}),
+                        }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                             <div className="question-title" style={{ fontSize: depth === 0 ? '16px' : '15px', flex: 1 }}>
                                 <span style={{ color: '#93c5fd', fontWeight: '700', marginRight: '6px' }}>┗━</span>
@@ -354,7 +383,7 @@ function Friends() {
                     </div>
                 </div>
 
-                {children.map(child => renderRelatedNode(child, allNodes, depth + 1))}
+                {children.map(child => renderRelatedNode(child, allNodes, depth + 1, refsMap, highlightId))}
             </React.Fragment>
         );
     };
@@ -397,7 +426,14 @@ function Friends() {
                         <>
                         {questions.map((q) => (
                             <React.Fragment key={q.id}>
-                            <div className="question-card">
+                            <div
+                                className="question-card"
+                                ref={(el) => { if (el) cardRefs.current[q.id] = el; }}
+                                style={highlightedId === q.id ? {
+                                    boxShadow: '0 0 0 3px #fbbf24',
+                                    transition: 'box-shadow 0.3s',
+                                } : undefined}
+                            >
 
                                 {/* 작성자 + 시간 */}
                                 <div className="question-header">
@@ -492,7 +528,7 @@ function Friends() {
                                 q.relatedTree
                                     .filter(n => n.parent_question_id === null || n.parent_question_id === q.id)
                                     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-                                    .map(node => renderRelatedNode(node, q.relatedTree, 0))
+                                    .map(node => renderRelatedNode(node, q.relatedTree, 0, cardRefs, highlightedId))
                             }
                             </React.Fragment>
                         ))}

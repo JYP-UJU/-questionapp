@@ -56,7 +56,7 @@ function Notifications() {
         }
 
         if (item.related_question_id) {
-            navigate(`/questions/${item.related_question_id}`);
+            navigate(`/questions?highlight=${item.related_question_id}`);
         }
     };
 
