@@ -12,6 +12,14 @@ function MonthlyReport() {
     const [loading, setLoading] = useState(true);
     const [monthOffset, setMonthOffset] = useState(0);
     const [openToggles, setOpenToggles] = useState({});
+    const [monthlyHeroes, setMonthlyHeroes] = useState([]);
+
+    useEffect(() => {
+        const { start, end } = getMonthRange(monthOffset);
+        api.get(`/reports/monthly-leaderboard?start=${start}&end=${end}`)
+            .then(res => setMonthlyHeroes(res.data.leaderboard || []))
+            .catch(err => console.error('이달의 영웅 로드 오류:', err));
+    }, [monthOffset]);
 
     const [mostCurious, setMostCurious] = useState('');
     const [selectedQuestions, setSelectedQuestions] = useState([]);
@@ -131,6 +139,22 @@ function MonthlyReport() {
             </div>
 
             <div className="wr-content">
+
+                {/* ===== 이달의 영웅 TOP 3 ===== */}
+                {monthlyHeroes.length > 0 && (
+                    <div className="stats-card" style={{background:'linear-gradient(135deg, #fff7e6, #fff1cc)'}}>
+                        <h3>🏆 이달의 영웅</h3>
+                        <div style={{display:'flex', flexDirection:'column', gap:'8px', marginTop:'8px'}}>
+                            {monthlyHeroes.map((h, i) => (
+                                <div key={i} style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                    <span style={{fontSize:'20px'}}>{['🥇','🥈','🥉'][i]}</span>
+                                    <span style={{flex:1, fontWeight:600, color:'#333'}}>{h.name}</span>
+                                    <span style={{color:'#f59e0b', fontWeight:700}}>{h.songi}송이</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* ===== 돌아보기 ===== */}
                 <div className="reflection-card">

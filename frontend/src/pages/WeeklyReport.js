@@ -26,6 +26,14 @@ function WeeklyReport() {
     };
 
     const [weekOffset, setWeekOffset] = useState(0);
+    const [weeklyHeroes, setWeeklyHeroes] = useState([]);
+
+    useEffect(() => {
+        const { start, end } = getWeekRange(weekOffset);
+        api.get(`/reports/weekly-leaderboard?start=${start}&end=${end}`)
+            .then(res => setWeeklyHeroes(res.data.leaderboard || []))
+            .catch(err => console.error('이주의 영웅 로드 오류:', err));
+    }, [weekOffset]);
 
     useEffect(() => {
         loadReport();
@@ -159,6 +167,22 @@ function WeeklyReport() {
             </div>
 
             <div className="wr-content">
+                {/* ===== 이주의 영웅 TOP 3 ===== */}
+                {weeklyHeroes.length > 0 && (
+                    <div className="stats-card" style={{background:'linear-gradient(135deg, #fff7e6, #fff1cc)'}}>
+                        <h3>🏆 이주의 영웅</h3>
+                        <div style={{display:'flex', flexDirection:'column', gap:'8px', marginTop:'8px'}}>
+                            {weeklyHeroes.map((h, i) => (
+                                <div key={i} style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                    <span style={{fontSize:'20px'}}>{['🥇','🥈','🥉'][i]}</span>
+                                    <span style={{flex:1, fontWeight:600, color:'#333'}}>{h.name}</span>
+                                    <span style={{color:'#f59e0b', fontWeight:700}}>{h.songi}송이</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* ===== 돌아보기 ===== */}
                 <div className="reflection-card">
                     <h3>💭 이번 주 돌아보기</h3>

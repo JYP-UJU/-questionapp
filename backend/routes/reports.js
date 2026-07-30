@@ -666,18 +666,26 @@ router.put('/reward-claims/:id/complete', authenticateToken, async (req, res) =>
   }
 });
 
-// ===== 이주의 영웅 TOP 3 (이번 주 실제 활동으로 번 송이 합계 기준) =====
+// ===== 이주의 영웅 TOP 3 (start/end 쿼리로 특정 주차 지정 가능, 없으면 이번 주) =====
 router.get('/weekly-leaderboard', authenticateToken, async (req, res) => {
   try {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + mondayOffset);
-    monday.setHours(0, 0, 0, 0);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    sunday.setHours(23, 59, 59, 999);
+    let weekStart, weekEnd;
+    if (req.query.start && req.query.end) {
+      weekStart = req.query.start;
+      weekEnd = req.query.end;
+    } else {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + mondayOffset);
+      monday.setHours(0, 0, 0, 0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      weekStart = monday.toISOString();
+      weekEnd = sunday.toISOString();
+    }
 
     const result = await pool.query(
       `SELECT COALESCE(u.name, u.username) as display_name, SUM(st.amount) as total
@@ -687,7 +695,7 @@ router.get('/weekly-leaderboard', authenticateToken, async (req, res) => {
        GROUP BY u.id, u.username, u.name
        ORDER BY total DESC
        LIMIT 3`,
-      [monday.toISOString(), sunday.toISOString()]
+      [weekStart, weekEnd]
     );
 
     res.json({
@@ -699,12 +707,18 @@ router.get('/weekly-leaderboard', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== 이달의 영웅 TOP 3 (이번 달 실제 활동으로 번 송이 합계 기준) =====
+// ===== 이달의 영웅 TOP 3 (start/end 쿼리로 특정 월 지정 가능, 없으면 이번 달) =====
 router.get('/monthly-leaderboard', authenticateToken, async (req, res) => {
   try {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    let monthStart, monthEnd;
+    if (req.query.start && req.query.end) {
+      monthStart = req.query.start;
+      monthEnd = req.query.end;
+    } else {
+      const now = new Date();
+      monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+    }
 
     const result = await pool.query(
       `SELECT COALESCE(u.name, u.username) as display_name, SUM(st.amount) as total
@@ -714,7 +728,7 @@ router.get('/monthly-leaderboard', authenticateToken, async (req, res) => {
        GROUP BY u.id, u.username, u.name
        ORDER BY total DESC
        LIMIT 3`,
-      [monthStart.toISOString(), monthEnd.toISOString()]
+      [monthStart, monthEnd]
     );
 
     res.json({
