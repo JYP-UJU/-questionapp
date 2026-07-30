@@ -461,38 +461,20 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
 
 // ===== 상품권 교환 자격 판정 =====
 // 규칙: (1) 누적 송이가 교환 기준(200) 이상
-//       (2) 지금까지 쓴 주간일지가 누적 2개 이상 (시점 상관없음 — 한달 전 1개 + 이번주 1개도 인정)
-//       (3) 마지막 교환 후 14일이 지나야 다음 교환 가능 (2주에 한 번 캡)
+//       (2) 지금까지 쓴 일지(주간+월간 합쳐서)가 누적 2개 이상 (시점 상관없음)
 router.get('/exchange-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
     const EXCHANGE_THRESHOLD = 200;
     const MIN_JOURNAL_COUNT = 2;
-    const COOLDOWN_DAYS = 14;
 
-    // 지금까지 쓴 주간일지 개수 (누적, 기간 제한 없음)
+    // 지금까지 쓴 일지 개수 (주간 + 월간 합산, 기간 제한 없음)
     const journalResult = await pool.query(
       `SELECT COUNT(*) as cnt FROM songi_transactions
-       WHERE user_id = $1 AND activity_type = 'weekly_journal'`,
+       WHERE user_id = $1 AND activity_type IN ('weekly_journal', 'monthly_journal')`,
       [userId]
     );
     const journalCount = parseInt(journalResult.rows[0].cnt);
-
-    // 마지막으로 완료된 교환 시각 (쿨다운 계산용)
-    const completedResult = await pool.query(
-      `SELECT MAX(completed_at) as last_completed_at
-       FROM reward_claims WHERE user_id = $1 AND status = 'completed'`,
-      [userId]
-    );
-    const lastCompletedAt = completedResult.rows[0].last_completed_at;
-
-    let cooldownActive = false;
-    let cooldownUntil = null;
-    if (lastCompletedAt) {
-      cooldownUntil = new Date(lastCompletedAt);
-      cooldownUntil.setDate(cooldownUntil.getDate() + COOLDOWN_DAYS);
-      cooldownActive = new Date() < cooldownUntil;
-    }
 
     // 누적(현재 보유) 송이
     const userResult = await pool.query('SELECT songi_count FROM users WHERE id = $1', [userId]);
@@ -500,7 +482,7 @@ router.get('/exchange-status', authenticateToken, async (req, res) => {
 
     const hasSongi = lifetimeSongi >= EXCHANGE_THRESHOLD;
     const hasJournals = journalCount >= MIN_JOURNAL_COUNT;
-    const eligible = hasSongi && hasJournals && !cooldownActive;
+    const eligible = hasSongi && hasJournals;
 
     res.json({
       eligible,
@@ -508,9 +490,7 @@ router.get('/exchange-status', authenticateToken, async (req, res) => {
       threshold: EXCHANGE_THRESHOLD,
       songiNeeded: Math.max(0, EXCHANGE_THRESHOLD - lifetimeSongi),
       journalCount,
-      minJournalCount: MIN_JOURNAL_COUNT,
-      cooldownActive,
-      cooldownUntil: cooldownUntil ? cooldownUntil.toISOString() : null
+      minJournalCount: MIN_JOURNAL_COUNT
     });
   } catch (error) {
     console.error('교환 자격 판정 오류:', error);
