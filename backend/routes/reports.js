@@ -459,38 +459,58 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== 상품권 교환 자격 판정 (누적 200송이 + 최근 2주 안 주간일지 제출 여부) =====
+// ===== 상품권 교환 자격 판정 =====
+// 규칙: (1) 누적 송이가 교환 기준(200) 이상
+//       (2) 지금까지 쓴 주간일지가 누적 2개 이상 (시점 상관없음 — 한달 전 1개 + 이번주 1개도 인정)
+//       (3) 마지막 교환 후 14일이 지나야 다음 교환 가능 (2주에 한 번 캡)
 router.get('/exchange-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
-    const windowStart = new Date();
-    windowStart.setDate(windowStart.getDate() - 14);
+    const EXCHANGE_THRESHOLD = 200;
+    const MIN_JOURNAL_COUNT = 2;
+    const COOLDOWN_DAYS = 14;
 
-    // 최근 14일 안에 주간일지 지급 기록이 있는지
-    // (누적 송이가 아무리 많아도, 최근에 꾸준히 참여하고 있어야 교환 가능하게 하는 조건은 유지)
+    // 지금까지 쓴 주간일지 개수 (누적, 기간 제한 없음)
     const journalResult = await pool.query(
-      `SELECT COUNT(*) as cnt
-       FROM songi_transactions
-       WHERE user_id = $1 AND activity_type = 'weekly_journal' AND created_at >= $2`,
-      [userId, windowStart.toISOString()]
+      `SELECT COUNT(*) as cnt FROM songi_transactions
+       WHERE user_id = $1 AND activity_type = 'weekly_journal'`,
+      [userId]
     );
-    const hasJournalInWindow = parseInt(journalResult.rows[0].cnt) > 0;
+    const journalCount = parseInt(journalResult.rows[0].cnt);
 
-    // 누적(평생) 송이 - 관리자가 상품권 지급 시 '/admin/deduct-songi'로 차감하므로
-    // 이미 교환한 만큼은 여기서 자동으로 빠져 있는 상태
+    // 마지막으로 완료된 교환 시각 (쿨다운 계산용)
+    const completedResult = await pool.query(
+      `SELECT MAX(completed_at) as last_completed_at
+       FROM reward_claims WHERE user_id = $1 AND status = 'completed'`,
+      [userId]
+    );
+    const lastCompletedAt = completedResult.rows[0].last_completed_at;
+
+    let cooldownActive = false;
+    let cooldownUntil = null;
+    if (lastCompletedAt) {
+      cooldownUntil = new Date(lastCompletedAt);
+      cooldownUntil.setDate(cooldownUntil.getDate() + COOLDOWN_DAYS);
+      cooldownActive = new Date() < cooldownUntil;
+    }
+
+    // 누적(현재 보유) 송이
     const userResult = await pool.query('SELECT songi_count FROM users WHERE id = $1', [userId]);
     const lifetimeSongi = parseFloat(userResult.rows[0]?.songi_count || 0);
 
-    const EXCHANGE_THRESHOLD = 200;
-    const eligible = lifetimeSongi >= EXCHANGE_THRESHOLD && hasJournalInWindow;
+    const hasSongi = lifetimeSongi >= EXCHANGE_THRESHOLD;
+    const hasJournals = journalCount >= MIN_JOURNAL_COUNT;
+    const eligible = hasSongi && hasJournals && !cooldownActive;
 
     res.json({
       eligible,
       lifetimeSongi,
-      hasJournalInWindow,
       threshold: EXCHANGE_THRESHOLD,
       songiNeeded: Math.max(0, EXCHANGE_THRESHOLD - lifetimeSongi),
-      windowDays: 14
+      journalCount,
+      minJournalCount: MIN_JOURNAL_COUNT,
+      cooldownActive,
+      cooldownUntil: cooldownUntil ? cooldownUntil.toISOString() : null
     });
   } catch (error) {
     console.error('교환 자격 판정 오류:', error);

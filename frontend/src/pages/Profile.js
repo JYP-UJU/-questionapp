@@ -152,37 +152,45 @@ function Profile() {
                     {!exchangeStatus ? (
                         <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
                     ) : (() => {
-                        const { lifetimeSongi, threshold, eligible, hasJournalInWindow, songiNeeded } = exchangeStatus;
+                        const { lifetimeSongi, threshold, eligible, journalCount, minJournalCount, songiNeeded, cooldownActive, cooldownUntil } = exchangeStatus;
                         const pct = Math.min((lifetimeSongi / threshold) * 100, 100);
+                        const hasJournals = journalCount >= minJournalCount;
 
-                        // 하단 안내 멘트: 막히는 이유만 짚어줌 (누적 송이는 위에서 이미 보여주므로 중복 설명 안 함)
+                        const formatDate = (iso) => {
+                            const d = new Date(iso);
+                            return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+                        };
+
+                        // 하단 안내 멘트: 막히는 이유만 짚어줌
                         let message;
                         if (eligible) {
                             message = '🎉 교환 조건을 채웠어요! 선생님께 상품권 교환을 요청하세요!';
+                        } else if (cooldownActive) {
+                            message = `최근에 상품권을 받았어요. ${formatDate(cooldownUntil)} 이후에 다시 교환할 수 있어요`;
                         } else {
                             const parts = [];
                             if (songiNeeded > 0) parts.push(`아직 ${songiNeeded.toFixed(1)}송이가 더 필요해요`);
-                            if (!hasJournalInWindow) parts.push('최근 2주 안에 주간일지를 작성하지 않으셨어요');
+                            if (!hasJournals) parts.push(`주간일지를 ${minJournalCount - journalCount}개 더 써야 해요`);
                             message = parts.join('. 그리고 ') + '.';
                         }
 
                         return (
                             <div>
-                                {/* 주간일지 작성 여부 체크 */}
+                                {/* 주간일지 작성 개수 체크 */}
                                 <div style={{
                                     display:'flex', alignItems:'center', gap:'8px',
                                     marginBottom:'10px', padding:'8px 10px',
-                                    background: hasJournalInWindow ? '#f0fdf4' : '#f9fafb',
+                                    background: hasJournals ? '#f0fdf4' : '#f9fafb',
                                     borderRadius:'8px'
                                 }}>
                                     <span style={{
                                         fontSize:'18px',
-                                        color: hasJournalInWindow ? '#16a34a' : '#c1c7d0'
+                                        color: hasJournals ? '#16a34a' : '#c1c7d0'
                                     }}>
-                                        {hasJournalInWindow ? '✅' : '⭕'}
+                                        {hasJournals ? '✅' : '⭕'}
                                     </span>
-                                    <span style={{fontSize:'13px', fontWeight:600, color: hasJournalInWindow ? '#16a34a' : '#999'}}>
-                                        최근 2주 안 주간일지 {hasJournalInWindow ? '작성 완료' : '아직 안 씀'}
+                                    <span style={{fontSize:'13px', fontWeight:600, color: hasJournals ? '#16a34a' : '#999'}}>
+                                        주간일지 {journalCount}개 작성함 (기준 {minJournalCount}개)
                                     </span>
                                 </div>
 
@@ -223,7 +231,7 @@ function Profile() {
                                     {message}
                                 </div>
                                 <div style={{marginTop:'6px', fontSize:'12px', color:'#aaa', textAlign:'center'}}>
-                                    ⚠️ 누적 {threshold}송이 이상 + 최근 2주 안 주간일지 작성 시 교환 가능해요
+                                    ⚠️ 누적 {threshold}송이 이상 + 주간일지 {minJournalCount}개 이상 작성 시 교환 가능해요 (한 번 교환하면 2주 후에 다시 가능해요)
                                 </div>
                             </div>
                         );
