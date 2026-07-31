@@ -310,7 +310,7 @@ function WeeklyReport() {
                     {reflectionSaved && !editMode && (
                         <button
                             className="save-reflection-btn"
-                            style={{background:'#9ca3af', marginBottom:'12px'}}
+                            style={{background:'#87CEEB', marginBottom:'12px'}}
                             onClick={() => setEditMode(true)}
                         >
                             ✏️ 수정하기
@@ -320,7 +320,7 @@ function WeeklyReport() {
                     {/* 저장 완료 상태 */}
                     {reflectionSaved && !editMode && (
                         <div style={{marginBottom:'12px', background:'#f0fdf4', borderRadius:'12px', padding:'14px 16px', color:'#166534', fontWeight:700, fontSize:14, textAlign:'center'}}>
-                            ✅ 이번 주 돌아보기 완료! 8송이 획득 🌸
+                            ✅ 이번주 완료! 다음주에 만나요.
                         </div>
                     )}
 

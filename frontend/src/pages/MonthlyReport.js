@@ -249,7 +249,7 @@ function MonthlyReport() {
                     {/* 저장 완료 상태 */}
                     {reflectionSaved && !editMode && (
                         <div style={{marginBottom:'12px', background:'#f0fdf4', borderRadius:'12px', padding:'14px 16px', color:'#166534', fontWeight:700, fontSize:14, textAlign:'center'}}>
-                            ✅ 이번 달 돌아보기 완료! 10송이 획득 🌸
+                            ✅ 이번달 완료! 다음달에 만나요.
                         </div>
                     )}
 
@@ -264,7 +264,7 @@ function MonthlyReport() {
                     {reflectionSaved && !editMode && (
                         <button
                             className="save-reflection-btn"
-                            style={{background:'#9ca3af', marginTop:'4px'}}
+                            style={{background:'#87CEEB', marginTop:'4px'}}
                             onClick={() => setEditMode(true)}
                         >
                             ✏️ 수정하기
