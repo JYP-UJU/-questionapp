@@ -73,7 +73,7 @@ router.get('/activities', authenticateToken, requireAdmin, async (req, res) => {
         JOIN users u ON uq.user_id = u.id
         LEFT JOIN user_questions pq ON uq.parent_question_id = pq.id
         LEFT JOIN seed_questions sq ON uq.related_seed_question_id = sq.id
-        WHERE uq.parent_question_id IS NOT NULL OR uq.related_seed_question_id IS NOT NULL
+        WHERE (uq.parent_question_id IS NOT NULL OR uq.related_seed_question_id IS NOT NULL)
         ${userFilter}
       `);
       rows = [...rows, ...q.rows];
