@@ -53,7 +53,8 @@ function Friends() {
         if (!highlightParam || loading) return;
         const targetId = parseInt(highlightParam);
 
-        const el = cardRefs.current[targetId];
+        // 알림(관심/의견/관련질문)은 항상 실제 user_questions 행을 가리키므로 'user_question' 타입으로 조회
+        const el = cardRefs.current[`user_question:${targetId}`];
         if (el) {
             setTimeout(() => {
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -321,7 +322,7 @@ function Friends() {
                 }}>
                     <div
                         className="question-card"
-                        ref={(el) => { if (el && refsMap) refsMap.current[node.id] = el; }}
+                        ref={(el) => { if (el && refsMap) refsMap.current[`user_question:${node.id}`] = el; }}
                         style={{
                             background: node.latestOpinion ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
                             border: '1px solid #dbeafe',
@@ -428,8 +429,13 @@ function Friends() {
                             <React.Fragment key={q.id}>
                             <div
                                 className="question-card"
-                                ref={(el) => { if (el) cardRefs.current[q.id] = el; }}
-                                style={highlightedId === q.id ? {
+                                ref={(el) => {
+                                    if (el) {
+                                        const refKey = `${q.question_source === 'quiz' ? 'seed' : 'user_question'}:${q.id}`;
+                                        cardRefs.current[refKey] = el;
+                                    }
+                                }}
+                                style={(highlightedId === q.id && q.question_source !== 'quiz') ? {
                                     boxShadow: '0 0 0 3px #fbbf24',
                                     transition: 'box-shadow 0.3s',
                                 } : undefined}
