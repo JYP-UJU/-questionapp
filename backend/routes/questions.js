@@ -123,9 +123,19 @@ router.get('/with-status', authenticateToken, async (req, res) => {
     // sort: 'engagement'(기본, 관심있음+관심없음+의견+관련질문 합산 점수 높은 순 → 그 안에서 최신 활동순)
     //       'random' (완전 랜덤 셔플)
     const sort = req.query.sort === 'random' ? 'random' : 'engagement';
+    const engagementExpr = `(
+      COALESCE(q.likes_count,0) + COALESCE(q.dislikes_count,0)
+      + (SELECT COUNT(*) FROM question_opinions WHERE question_id = q.id AND question_type = q.question_source)
+      + (CASE
+           WHEN q.question_source = 'user_question' THEN
+             (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = q.id AND is_deleted = false)
+           ELSE
+             COALESCE((SELECT related_count FROM seed_questions WHERE id = q.id), 0)
+         END)
+    )`;
     const orderClause = sort === 'random'
       ? 'RANDOM()'
-      : '(COALESCE(q.likes_count,0) + COALESCE(q.dislikes_count,0) + opinion_count + related_count) DESC, q.latest_activity DESC';
+      : `${engagementExpr} DESC, q.latest_activity DESC`;
     const search = (req.query.search || '').trim();
     const searchPattern = search ? `%${search}%` : null;
 
