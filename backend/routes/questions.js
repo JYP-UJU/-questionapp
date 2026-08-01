@@ -126,6 +126,8 @@ router.get('/with-status', authenticateToken, async (req, res) => {
     const orderClause = sort === 'random'
       ? 'RANDOM()'
       : '(COALESCE(q.likes_count,0) + COALESCE(q.dislikes_count,0) + opinion_count + related_count) DESC, q.latest_activity DESC';
+    const search = (req.query.search || '').trim();
+    const searchPattern = search ? `%${search}%` : null;
 
     const result = await pool.query(
       `SELECT
@@ -230,27 +232,30 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
        ) q
+       WHERE $7::text IS NULL OR q.title ILIKE $7::text OR q.content ILIKE $7::text
        ORDER BY ${orderClause}
        LIMIT $5 OFFSET $6`,
-      [userId, userId, userId, userId, limit, offset]
+      [userId, userId, userId, userId, limit, offset, searchPattern]
     );
 
     // 전체 개수도 함께 반환 (프론트에서 "더보기" 버튼 표시 여부 판단용)
     const countResult = await pool.query(
       `SELECT COUNT(*) as total FROM (
-         SELECT uq.id
+         SELECT uq.id, uq.title, uq.content
          FROM user_questions uq
          WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL AND uq.is_deleted = false
 
          UNION ALL
 
-         SELECT sq.id
+         SELECT sq.id, sq.question as title, sq.category as content
          FROM seed_questions sq
          WHERE
            EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
-       ) t`
+       ) t
+       WHERE $1::text IS NULL OR t.title ILIKE $1::text OR t.content ILIKE $1::text`,
+      [searchPattern]
     );
     const total = parseInt(countResult.rows[0].total);
 
