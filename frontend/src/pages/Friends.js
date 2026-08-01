@@ -29,6 +29,7 @@ function Friends() {
     const [highlightedId, setHighlightedId] = useState(null); // 반짝임 표시할 id (알림에서 넘어온 id)
     const cardRefs = useRef({});
     const highlightAttempts = useRef(0);
+    const [sortMode, setSortMode] = useState('engagement'); // 'engagement' | 'random'
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
     const friendsMessages = [
         "모두의 질문을 볼 수 있어요!",
@@ -45,7 +46,8 @@ function Friends() {
 
     useEffect(() => {
         loadQuestions();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sortMode]);
 
     // 알림 클릭(?highlight=id)으로 들어온 경우: 최상위 질문이든 그 아래 관련질문 트리 속 질문이든
     // 카드가 화면(cardRefs)에 잡힐 때까지 "더보기"를 자동으로 반복해서 찾아낸 다음 스크롤 + 반짝임 표시
@@ -110,7 +112,7 @@ function Friends() {
     const loadQuestions = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/questions/with-status?limit=${PAGE_SIZE}&offset=0`);
+            const response = await api.get(`/questions/with-status?limit=${PAGE_SIZE}&offset=0&sort=${sortMode}`);
             // ✅ 백엔드에서 미리보기까지 같이 줌 - 개별 API 호출 불필요
             const newQuestions = response.data.questions.map(q => ({
                 ...q,
@@ -131,7 +133,7 @@ function Friends() {
         if (loadingMore) return;
         try {
             setLoadingMore(true);
-            const response = await api.get(`/questions/with-status?limit=${PAGE_SIZE}&offset=${questions.length}`);
+            const response = await api.get(`/questions/with-status?limit=${PAGE_SIZE}&offset=${questions.length}&sort=${sortMode}`);
             const moreQuestions = response.data.questions.map(q => ({
                 ...q,
                 latestOpinion: q.latest_opinion || null,
@@ -414,6 +416,31 @@ function Friends() {
                     {friendsMessages[currentMessageIndex]}
                 </div>
                 {error && <div className="error-message">{error}</div>}
+
+                <div style={{display:'flex', justifyContent:'flex-end', gap:'8px', marginBottom:'10px'}}>
+                    <button
+                        onClick={() => setSortMode('engagement')}
+                        style={{
+                            padding:'6px 12px', borderRadius:'20px', border:'none',
+                            fontSize:'13px', fontWeight:600, cursor:'pointer',
+                            background: sortMode === 'engagement' ? '#3b82f6' : '#e5e7eb',
+                            color: sortMode === 'engagement' ? 'white' : '#666',
+                        }}
+                    >
+                        🔥 인기순
+                    </button>
+                    <button
+                        onClick={() => setSortMode('random')}
+                        style={{
+                            padding:'6px 12px', borderRadius:'20px', border:'none',
+                            fontSize:'13px', fontWeight:600, cursor:'pointer',
+                            background: sortMode === 'random' ? '#3b82f6' : '#e5e7eb',
+                            color: sortMode === 'random' ? 'white' : '#666',
+                        }}
+                    >
+                        🎲 랜덤
+                    </button>
+                </div>
 
                 <div className="questions-list">
                     {questions.length === 0 ? (

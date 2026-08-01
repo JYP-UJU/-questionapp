@@ -120,6 +120,12 @@ router.get('/with-status', authenticateToken, async (req, res) => {
     const userId = req.user.id || req.user.userId;
     const limit = Math.min(parseInt(req.query.limit) || 25, 100);
     const offset = parseInt(req.query.offset) || 0;
+    // sort: 'engagement'(기본, 관심있음+관심없음+의견+관련질문 합산 점수 높은 순 → 그 안에서 최신 활동순)
+    //       'random' (완전 랜덤 셔플)
+    const sort = req.query.sort === 'random' ? 'random' : 'engagement';
+    const orderClause = sort === 'random'
+      ? 'RANDOM()'
+      : '(COALESCE(q.likes_count,0) + COALESCE(q.dislikes_count,0) + opinion_count + related_count) DESC, q.latest_activity DESC';
 
     const result = await pool.query(
       `SELECT
@@ -224,7 +230,7 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
        ) q
-       ORDER BY q.latest_activity DESC
+       ORDER BY ${orderClause}
        LIMIT $5 OFFSET $6`,
       [userId, userId, userId, userId, limit, offset]
     );
