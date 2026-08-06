@@ -575,12 +575,20 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
 router.get('/:id/related-tree', async (req, res) => {
   try {
     const { id } = req.params;
+    // ⚠️ user_questions와 seed_questions는 서로 다른 테이블이라 id가 우연히 같을 수 있음.
+    // type을 명시하지 않으면 엉뚱한 테이블의 질문이 부모/자식으로 잘못 엮일 수 있어서 반드시 구분해야 함.
+    const questionType = req.query.type || 'user_question';
+    const isSeedType = questionType === 'icebreaking' || questionType === 'seed' || questionType === 'quiz';
+    const rootWhere = isSeedType
+      ? 'uq.related_seed_question_id = $1'
+      : 'uq.parent_question_id = $1';
+
     const result = await pool.query(
       `WITH RECURSIVE thread AS (
          SELECT uq.id, uq.title, uq.content, uq.created_at, uq.parent_question_id, u.username, u.id as user_id
          FROM user_questions uq
          JOIN users u ON uq.user_id = u.id
-         WHERE (uq.related_seed_question_id = $1 OR uq.parent_question_id = $1) AND uq.is_deleted = false
+         WHERE ${rootWhere} AND uq.is_deleted = false
 
          UNION ALL
 

@@ -86,7 +86,8 @@ function Friends() {
         return Promise.all(list.map(async (q) => {
             if (!q.related_count || q.related_count < 1) return { ...q, relatedTree: [] };
             try {
-                const treeRes = await api.get(`/questions/${q.id}/related-tree`);
+                const qType = q.question_source === 'quiz' ? 'quiz' : 'user_question';
+                const treeRes = await api.get(`/questions/${q.id}/related-tree?type=${qType}`);
                 const rawNodes = treeRes.data.relatedTree || [];
                 const relatedTree = await Promise.all(rawNodes.map(async (node) => {
                     let nodeLikes = 0, nodeDislikes = 0, nodeReaction = null;
