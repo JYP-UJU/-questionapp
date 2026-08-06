@@ -115,6 +115,11 @@ function Admin() {
   const [deductAmount, setDeductAmount] = useState('');
   const [deductReason, setDeductReason] = useState('');
 
+  // 계정 완전 삭제 모달 (테스트 계정 정리용 - 되돌릴 수 없음)
+  const [deleteUserModal, setDeleteUserModal] = useState(null); // { userId, username }
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [deletingUser, setDeletingUser] = useState(false);
+
 
   const loadActivities = useCallback(async () => {
     setLoading(true);
@@ -211,6 +216,28 @@ function Admin() {
       loadUsers();
     } catch (err) {
       alert('회수 실패');
+    }
+  };
+
+  // 계정 + 모든 활동 완전 삭제 (되돌릴 수 없음 - 테스트 계정 정리용)
+  const handleDeleteUser = async () => {
+    if (deleteConfirmInput !== deleteUserModal.username) {
+      alert('아이디를 정확히 입력해주세요');
+      return;
+    }
+    try {
+      setDeletingUser(true);
+      const res = await api.delete(`/admin/users/${deleteUserModal.userId}`, {
+        data: { confirmUsername: deleteConfirmInput }
+      });
+      alert(res.data?.message || '계정이 삭제되었어요');
+      setDeleteUserModal(null);
+      setDeleteConfirmInput('');
+      loadUsers();
+    } catch (err) {
+      alert(err.response?.data?.error || '삭제에 실패했습니다');
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -369,6 +396,12 @@ function Admin() {
                           송이 회수
                         </button>
                       )}
+                      {!u.is_admin && (
+                        <button style={styles.deleteUserBtn}
+                          onClick={() => setDeleteUserModal({ userId: u.id, username: u.username })}>
+                          🗑️ 계정 삭제
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -438,6 +471,36 @@ function Admin() {
           </div>
         </div>
       )}
+
+      {/* 계정 완전 삭제 모달 - 되돌릴 수 없음! 아이디를 정확히 입력해야 삭제됨 */}
+      {deleteUserModal && (
+        <div style={styles.overlay} onClick={() => { setDeleteUserModal(null); setDeleteConfirmInput(''); }}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{margin: '0 0 8px', fontSize: 16, color: '#dc2626'}}>⚠️ 계정 완전 삭제</h3>
+            <p style={{margin: '0 0 14px', fontSize: 13, color: '#666', lineHeight: 1.5}}>
+              <b>{deleteUserModal.username}</b> 계정과 이 사용자가 작성한 모든 질문, 관련질문, 의견,
+              반응, 일지, 송이 내역이 전부 삭제돼요. <b>되돌릴 수 없어요.</b><br/>
+              (다른 사람이 이 사용자의 질문에 단 관련질문은 지워지지 않고 보존돼요)
+            </p>
+            <p style={{margin: '0 0 8px', fontSize: 13, color: '#333'}}>
+              확인을 위해 아이디 <b>{deleteUserModal.username}</b>를 정확히 입력해주세요.
+            </p>
+            <input style={styles.modalInput} type="text"
+              placeholder={deleteUserModal.username}
+              value={deleteConfirmInput}
+              onChange={e => setDeleteConfirmInput(e.target.value)} />
+            <div style={{display:'flex', gap:8, marginTop:4}}>
+              <button style={styles.cancelBtn}
+                onClick={() => { setDeleteUserModal(null); setDeleteConfirmInput(''); }}>취소</button>
+              <button style={styles.confirmBtn}
+                disabled={deletingUser || deleteConfirmInput !== deleteUserModal.username}
+                onClick={handleDeleteUser}>
+                {deletingUser ? '삭제 중...' : '완전히 삭제하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -488,6 +551,7 @@ const styles = {
   userActions: { display: 'flex', gap: 6 },
   feedBtn: { background: '#eff3ff', color: '#6b84c4', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
   deductBtn: { background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
+  deleteUserBtn: { background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
 
   // 모달
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 },

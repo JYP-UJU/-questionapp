@@ -330,4 +330,112 @@ router.delete('/activity', authenticateToken, requireAdmin, async (req, res) => 
   }
 });
 
+// ===== 계정 + 모든 활동 완전 삭제 (되돌릴 수 없음! 테스트 계정 정리용) =====
+// users.id를 참조하는 모든 테이블에서 이 사용자의 행을 지운 뒤 계정 자체를 삭제함.
+// 이 사용자가 쓴 질문/관련질문(user_questions)에 다른 사람이 단 관련질문(자식)은
+// 지우지 않고 parent_question_id만 NULL로 끊어서 그 사람의 데이터는 보존함.
+router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const targetId = parseInt(req.params.id);
+    const { confirmUsername } = req.body;
+    const requesterId = req.user.id || req.user.userId;
+
+    if (targetId === requesterId) {
+      return res.status(400).json({ error: '본인 계정은 이 기능으로 삭제할 수 없어요' });
+    }
+
+    await client.query('BEGIN');
+
+    const userRes = await client.query(
+      'SELECT id, username, is_admin FROM users WHERE id = $1 FOR UPDATE',
+      [targetId]
+    );
+    if (userRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+    const targetUser = userRes.rows[0];
+
+    // 프론트에서 정확한 username을 입력받아 넘겨야만 실행됨 (오삭제 방지)
+    if (!confirmUsername || confirmUsername !== targetUser.username) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: '확인 문구(아이디)가 일치하지 않습니다' });
+    }
+
+    // 관리자 계정은 이 기능으로 삭제 불가 (안전장치 - 필요하면 DB에서 직접)
+    if (targetUser.is_admin) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: '관리자 계정은 이 기능으로 삭제할 수 없습니다' });
+    }
+
+    // 이 사용자가 작성한 질문 + 관련질문 id 전부 (user_questions 테이블은 둘 다 포함)
+    const qRes = await client.query('SELECT id FROM user_questions WHERE user_id = $1', [targetId]);
+    const questionIds = qRes.rows.map(r => r.id);
+
+    if (questionIds.length > 0) {
+      // 남이 이 질문들에 단 관련질문(자식)은 삭제하지 않고 부모 연결만 끊어서 보존
+      await client.query(
+        `UPDATE user_questions SET parent_question_id = NULL WHERE parent_question_id = ANY($1::int[])`,
+        [questionIds]
+      );
+
+      // user_questions 테이블을 가리키는 question_type 값들 (seed_questions 쪽과 id가 겹치지 않도록 타입 제한)
+      const userQuestionTypes = ['user_question', 'friend_question', 'user', 'my_question', 'related_question', 'quiz_related', 'icebreaking_related'];
+
+      await client.query(
+        `DELETE FROM question_opinions WHERE question_id = ANY($1::int[]) AND question_type = ANY($2::text[])`,
+        [questionIds, userQuestionTypes]
+      );
+      await client.query(
+        `DELETE FROM question_reactions WHERE question_id = ANY($1::int[]) AND question_type = ANY($2::text[])`,
+        [questionIds, userQuestionTypes]
+      );
+      await client.query(
+        `DELETE FROM saved_questions WHERE question_id = ANY($1::int[]) AND question_type = ANY($2::text[])`,
+        [questionIds, userQuestionTypes]
+      );
+      await client.query(
+        `DELETE FROM notifications WHERE related_question_id = ANY($1::int[])`,
+        [questionIds]
+      );
+    }
+
+    // 이 사용자 본인의 활동 기록 전부 삭제 (users.id를 참조하는 모든 테이블 - pgAdmin 조회 결과 기준)
+    await client.query('DELETE FROM follow_up_questions WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM icebreaking_reactions WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM icebreaking_responses WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM interest_responses WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM monthly_reflections WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM notifications WHERE user_id = $1 OR actor_id = $1', [targetId]);
+    await client.query('DELETE FROM question_interests WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM question_opinions WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM question_reactions WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM quiz_responses WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM reward_claims WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM saved_questions WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM songi_transactions WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM user_sessions WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM weekly_reflections WHERE user_id = $1', [targetId]);
+
+    // 본인이 쓴 질문/관련질문 삭제 (남의 자식 연결은 위에서 이미 끊었음)
+    await client.query('DELETE FROM user_questions WHERE user_id = $1', [targetId]);
+
+    // 마지막으로 계정 자체 삭제
+    await client.query('DELETE FROM users WHERE id = $1', [targetId]);
+
+    await client.query('COMMIT');
+    res.json({
+      message: `'${targetUser.username}' 계정과 모든 활동 기록이 삭제되었습니다`,
+      deletedQuestionCount: questionIds.length
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('사용자 완전 삭제 오류:', err);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
