@@ -372,7 +372,9 @@ function Friends() {
                                 {node.title}
                             </div>
                             <span style={{ fontSize: '14px', fontWeight: 600, color: '#333', flexShrink: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>
-                                {node.username}
+                                {currentUser?.id !== undefined && node.user_id === currentUser?.id
+                                    ? <>✏️ 나</>
+                                    : node.username}
                             </span>
                         </div>
 

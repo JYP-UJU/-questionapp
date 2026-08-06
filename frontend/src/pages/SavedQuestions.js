@@ -91,7 +91,7 @@ function SavedQuestions() {
                         const actualRelatedCount = stats.relatedCount || 0;
                         if (actualRelatedCount > 0) {
                             try {
-                                const treeRes = await api.get(`/questions/${q.questionId}/related-tree`);
+                                const treeRes = await api.get(`/questions/${q.questionId}/related-tree?type=${q.questionType}`);
                                 const rawNodes = treeRes.data.relatedTree || [];
 
                                 // 각 노드마다 반응/의견 정보 채우기
@@ -135,7 +135,9 @@ function SavedQuestions() {
                             relatedCount: actualRelatedCount,
                             userReaction: stats.userReaction,
                             latestOpinion,
-                            relatedTree
+                            relatedTree,
+                            authorUsername: stats.question?.username || null,
+                            authorId: stats.question?.user_id ?? null
                         };
                     } catch (err) {
                         return { ...q, latestOpinion: null, relatedTree: [] };
@@ -329,7 +331,9 @@ function SavedQuestions() {
                                 {node.title}
                             </div>
                             <span style={{ fontSize: '14px', fontWeight: 600, color: '#333', flexShrink: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>
-                                {node.username}
+                                {myUserId !== null && node.user_id === myUserId
+                                    ? <>✏️ 나</>
+                                    : node.username}
                             </span>
                         </div>
 
@@ -525,6 +529,11 @@ function SavedQuestions() {
                                         <div className="question-source">
                                             <span className="source-icon">{sourceInfo.icon}</span>
                                             <span className="source-name">{sourceInfo.name}</span>
+                                            {saved.authorUsername && (
+                                                <span className="source-author" style={{ fontSize: '13px', fontWeight: 600, color: '#6b84c4', marginLeft: '4px' }}>
+                                                    {myUserId !== null && saved.authorId === myUserId ? '나' : saved.authorUsername}
+                                                </span>
+                                            )}
                                             <span className="question-time">{formatTime(saved.createdAt)}</span>
                                         </div>
 
