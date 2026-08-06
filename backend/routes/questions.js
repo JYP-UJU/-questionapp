@@ -1038,9 +1038,18 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     const row = checkResult.rows[0];
 
     if (row.user_id !== userId) {
-      await client.query('ROLLBACK');
-      releaseOnce();
-      return res.status(403).json({ error: '삭제 권한이 없습니다' });
+      // 본인 글이 아니면 관리자 권한 확인 (DB에서 직접 조회 — 토큰에 is_admin이 없을 수 있어서)
+      const adminCheck = await client.query(
+        'SELECT is_admin FROM users WHERE id = $1',
+        [userId]
+      );
+      const isAdmin = adminCheck.rows.length > 0 && adminCheck.rows[0].is_admin === true;
+
+      if (!isAdmin) {
+        await client.query('ROLLBACK');
+        releaseOnce();
+        return res.status(403).json({ error: '삭제 권한이 없습니다' });
+      }
     }
 
     if (row.is_deleted) {
@@ -1056,6 +1065,10 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     );
 
     // 이 질문을 올릴 때 지급됐던 송이를 찾아서 그만큼만 회수
+    // 주의: 회수는 항상 '원 작성자(row.user_id)' 기준. 관리자가 삭제해도 관리자 송이가 아니라
+    // 글쓴이 송이가 깎여야 함.
+    const ownerId = row.user_id;
+    const isAdminDelete = ownerId !== userId;
     const isRelated = row.parent_question_id !== null || row.related_seed_question_id !== null;
     const activityType = isRelated ? 'related' : 'question';
 
@@ -1063,7 +1076,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       `SELECT amount FROM songi_transactions
        WHERE question_id = $1 AND activity_type = $2 AND user_id = $3
        ORDER BY created_at DESC LIMIT 1`,
-      [id, activityType, userId]
+      [id, activityType, ownerId]
     );
 
     let reversedAmount = 0;
@@ -1072,12 +1085,14 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     if (reversedAmount > 0) {
       await client.query(
         'UPDATE users SET songi_count = GREATEST(songi_count - $1, 0) WHERE id = $2',
-        [reversedAmount, userId]
+        [reversedAmount, ownerId]
       );
       await client.query(
         `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
          VALUES ($1, $2, 'user_delete_reversal', $3)`,
-        [userId, -reversedAmount, `본인 삭제로 인한 회수 (${activityType})`]
+        [ownerId, -reversedAmount, isAdminDelete
+          ? `관리자 삭제로 인한 회수 (${activityType})`
+          : `본인 삭제로 인한 회수 (${activityType})`]
       );
     }
 
@@ -1088,7 +1103,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       message: reversedAmount > 0
         ? `질문을 지웠어요. ${reversedAmount}송이도 함께 반납됐어요`
         : '질문을 지웠어요',
-      reversedAmount
+      reversedAmount,
+      adminDelete: isAdminDelete
     });
 
   } catch (error) {

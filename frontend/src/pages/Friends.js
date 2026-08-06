@@ -14,7 +14,9 @@ function Friends() {
     const [error, setError] = useState('');
     const [selectedQuestion, setSelectedQuestion] = useState(null);
     const [selectedQuestionTitle, setSelectedQuestionTitle] = useState('');
+    const [selectedQuestionType, setSelectedQuestionType] = useState('user_question');
     const [relatedModal, setRelatedModal] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null); // { id, is_admin } - 삭제 권한 판단용
     const [total, setTotal] = useState(0);
     const PAGE_SIZE = 25;
 
@@ -50,6 +52,13 @@ function Friends() {
         loadQuestions();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sortMode, searchTerm]);
+
+    // 로그인한 사용자 정보 (관리자 여부 확인용)
+    useEffect(() => {
+        api.get('/users/me')
+            .then(res => setCurrentUser(res.data.user || res.data))
+            .catch(() => {});
+    }, []);
 
     // 알림 클릭(?highlight=id)으로 들어온 경우: 최상위 질문이든 그 아래 관련질문 트리 속 질문이든
     // 카드가 화면(cardRefs)에 잡힐 때까지 "더보기"를 자동으로 반복해서 찾아낸 다음 스크롤 + 반짝임 표시
@@ -156,17 +165,18 @@ function Friends() {
         try {
             const question = questions.find(q => q.id === questionId);
             if (!question) return;
+            const qType = question.question_source === 'quiz' ? 'quiz' : 'user_question';
 
             if (question.is_saved) {
                 const savedRes = await api.get('/saved');
                 const savedItem = savedRes.data.savedQuestions.find(
-                    sq => sq.questionType === 'user_question' && sq.questionId === questionId
+                    sq => sq.questionType === qType && sq.questionId === questionId
                 );
                 if (savedItem) {
                     await api.delete(`/saved/${savedItem.savedId}`);
                 }
             } else {
-                await api.post('/saved', { questionId, questionType: 'user_question' });
+                await api.post('/saved', { questionId, questionType: qType });
             }
 
             setQuestions(prev => prev.map(q =>
@@ -181,9 +191,10 @@ function Friends() {
         try {
             const question = questions.find(q => q.id === questionId);
             if (!question) return;
+            const qType = question.question_source === 'quiz' ? 'quiz' : 'user_question';
 
             if (question.user_reaction === reactionType) {
-                await api.delete(`/questions/${questionId}/reaction?type=user_question`);
+                await api.delete(`/questions/${questionId}/reaction?type=${qType}`);
                 setQuestions(prev => prev.map(q => {
                     if (q.id !== questionId) return q;
                     return {
@@ -194,7 +205,7 @@ function Friends() {
                     };
                 }));
             } else {
-                await api.post(`/questions/${questionId}/reaction`, { reactionType, questionType: 'user_question' });
+                await api.post(`/questions/${questionId}/reaction`, { reactionType, questionType: qType });
                 setQuestions(prev => prev.map(q => {
                     if (q.id !== questionId) return q;
                     const old = q.user_reaction;
@@ -217,7 +228,7 @@ function Friends() {
 
     const handleOpinionSubmit = async (text) => {
         try {
-            await api.post(`/questions/${selectedQuestion}/opinion`, { opinion: text });
+            await api.post(`/questions/${selectedQuestion}/opinion`, { opinion: text, questionType: selectedQuestionType });
             setSelectedQuestion(null);
             await loadQuestions();
         } catch (err) {
@@ -227,11 +238,27 @@ function Friends() {
 
     const handleRelatedSubmit = async (text) => {
         try {
-            await api.post(`/questions/${relatedModal.id}/related`, { title: text, questionType: 'friend_question' });
+            await api.post(`/questions/${relatedModal.id}/related`, { title: text, questionType: relatedModal.questionType || 'user_question' });
             setRelatedModal(null);
             await loadQuestions();
         } catch (err) {
             alert('관련질문 등록에 실패했습니다');
+        }
+    };
+
+    // 질문(최상위 또는 관련질문 노드) 삭제 - 본인 글 또는 관리자만 버튼이 보임
+    const handleDeleteQuestion = async (questionId, isAdminDelete) => {
+        const confirmMsg = isAdminDelete
+            ? '관리자 권한으로 이 글을 삭제할까요? (작성자에게 지급된 송이도 함께 회수돼요)'
+            : '이 글을 삭제할까요? 지급된 송이도 함께 반납돼요.';
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const res = await api.delete(`/questions/${questionId}`);
+            alert(res.data?.message || '삭제되었어요');
+            await loadQuestions();
+        } catch (err) {
+            alert(err.response?.data?.error || '삭제에 실패했습니다');
         }
     };
 
@@ -241,7 +268,9 @@ function Friends() {
         } else {
             if (!allOpinions[questionId]) {
                 try {
-                    const opRes = await api.get(`/questions/${questionId}/opinions`);
+                    const q = questions.find(q => q.id === questionId);
+                    const qType = q?.question_source === 'quiz' ? 'quiz' : 'user_question';
+                    const opRes = await api.get(`/questions/${questionId}/opinions?type=${qType}`);
                     setAllOpinions(prev => ({ ...prev, [questionId]: opRes.data.opinions }));
                 } catch (err) {}
             }
@@ -255,7 +284,9 @@ function Friends() {
         } else {
             if (!allRelated[questionId]) {
                 try {
-                    const relRes = await api.get(`/questions/${questionId}/related`);
+                    const q = questions.find(q => q.id === questionId);
+                    const qType = q?.question_source === 'quiz' ? 'quiz' : 'user_question';
+                    const relRes = await api.get(`/questions/${questionId}/related?type=${qType}`);
                     setAllRelated(prev => ({ ...prev, [questionId]: relRes.data.relatedQuestions }));
                 } catch (err) {}
             }
@@ -374,6 +405,7 @@ function Friends() {
                                 onClick={() => {
                                     setSelectedQuestion(node.id);
                                     setSelectedQuestionTitle(node.title);
+                                    setSelectedQuestionType('user_question');
                                 }}
                             >
                                 <span className="btn-icon">💬</span>
@@ -381,11 +413,20 @@ function Friends() {
                             </button>
                             <button
                                 className="action-btn optional-btn"
-                                onClick={() => setRelatedModal({ id: node.id, title: node.title })}
+                                onClick={() => setRelatedModal({ id: node.id, title: node.title, questionType: 'user_question' })}
                             >
                                 <span className="btn-icon">❓</span>
                                 <span className="btn-label">관련질문</span>
                             </button>
+                            {(node.user_id === currentUser?.id || currentUser?.is_admin) && (
+                                <button
+                                    className="action-btn optional-btn"
+                                    onClick={() => handleDeleteQuestion(node.id, node.user_id !== currentUser?.id)}
+                                >
+                                    <span className="btn-icon">🗑️</span>
+                                    <span className="btn-label">삭제</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -578,6 +619,7 @@ function Friends() {
                                         onClick={() => {
                                             setSelectedQuestion(q.id);
                                             setSelectedQuestionTitle(q.title);
+                                            setSelectedQuestionType(q.question_source === 'quiz' ? 'quiz' : 'user_question');
                                         }}
                                     >
                                         <span className="btn-icon">💬</span>
@@ -585,7 +627,7 @@ function Friends() {
                                     </button>
                                     <button
                                         className="action-btn optional-btn"
-                                        onClick={() => setRelatedModal({ id: q.id, title: q.title })}
+                                        onClick={() => setRelatedModal({ id: q.id, title: q.title, questionType: q.question_source === 'quiz' ? 'quiz' : 'user_question' })}
                                     >
                                         <span className="btn-icon">❓</span>
                                         <span className="btn-label">관련질문</span>
@@ -597,6 +639,15 @@ function Friends() {
                                         <span className="btn-icon">🏷️</span>
                                         <span className="btn-label">담기</span>
                                     </button>
+                                    {!q.is_quiz && (q.is_mine || currentUser?.is_admin) && (
+                                        <button
+                                            className="action-btn optional-btn"
+                                            onClick={() => handleDeleteQuestion(q.id, !q.is_mine)}
+                                        >
+                                            <span className="btn-icon">🗑️</span>
+                                            <span className="btn-label">삭제</span>
+                                        </button>
+                                    )}
                                 </div>
 
                             </div>
