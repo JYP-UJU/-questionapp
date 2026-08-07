@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Test from './pages/Test';
-import IcebreakingNew from './pages/IcebreakingNew';
 import Quiz from './pages/Quiz';
 import SavedQuestions from './pages/SavedQuestions';
 import Friends from './pages/Friends';
@@ -36,7 +35,6 @@ function App() {
                 <Route path="/main" element={<Navigate to="/create" />} />
 
                 <Route path="/create" element={<ProtectedRoute><Test /></ProtectedRoute>} />
-                <Route path="/icebreaking" element={<ProtectedRoute><IcebreakingNew /></ProtectedRoute>} />
                 <Route path="/olympic" element={<ProtectedRoute><QuizOlympics /></ProtectedRoute>} />
                 <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
                 <Route path="/saved" element={<ProtectedRoute><SavedQuestions /></ProtectedRoute>} />

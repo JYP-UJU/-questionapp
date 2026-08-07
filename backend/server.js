@@ -15,7 +15,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // 라우트
 const authRoutes = require('./routes/auth');
-const icebreakingRoutes = require('./routes/icebreaking');
 const questionsRoutes = require('./routes/questions');
 const reactionsRoutes = require('./routes/reactions');
 const followupRoutes = require('./routes/followup');
@@ -30,7 +29,6 @@ const notificationsRoutes = require('./routes/notifications');
 const sessionsRoutes = require('./routes/sessions');
 
 app.use('/api/auth', authRoutes);
-app.use('/api/icebreaking', icebreakingRoutes);
 app.use('/api/questions', questionsRoutes);
 app.use('/api/reactions', reactionsRoutes);
 app.use('/api/followup', followupRoutes);
@@ -51,7 +49,6 @@ app.get('/', (req, res) => {
     version: '2.0.0',
     endpoints: {
       auth: '/api/auth',
-      icebreaking: '/api/icebreaking',
       questions: '/api/questions',
       reactions: '/api/reactions',
       followup: '/api/followup',
