@@ -174,7 +174,7 @@ router.get('/with-status', authenticateToken, async (req, res) => {
           WHERE question_id = q.id AND user_id = $4 AND reaction_type = 'dislike'
           AND question_type = q.question_source) as user_disliked,
         -- 최신 의견 미리보기
-        (SELECT json_build_object('username', u2.username, 'opinion', op.opinion)
+        (SELECT json_build_object('id', op.id, 'username', u2.username, 'opinion', op.opinion)
          FROM question_opinions op
          JOIN users u2 ON op.user_id = u2.id
          WHERE op.question_id = q.id AND op.question_type = q.question_source

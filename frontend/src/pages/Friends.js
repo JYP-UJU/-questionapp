@@ -271,6 +271,22 @@ function Friends() {
         }
     };
 
+    // 의견 삭제 (관리자 전용 - 테스트하면서 잘못 단 의견 정리용)
+    const handleDeleteOpinion = async (opinionId) => {
+        if (!opinionId) {
+            alert('이 의견은 삭제할 수 없어요 (id를 못 찾음) - 새로고침 후 다시 시도해주세요');
+            return;
+        }
+        if (!window.confirm('이 의견을 삭제할까요?')) return;
+        try {
+            const res = await api.delete(`/admin/activity?type=opinion&id=${opinionId}`);
+            alert(res.data?.message || '삭제되었어요');
+            await loadQuestions();
+        } catch (err) {
+            alert(err.response?.data?.error || '삭제에 실패했습니다');
+        }
+    };
+
     const handleToggleOpinions = async (questionId) => {
         if (expandedOpinions[questionId]) {
             setExpandedOpinions(prev => ({ ...prev, [questionId]: false }));
@@ -392,6 +408,16 @@ function Friends() {
                                     <span className="preview-icon">💬</span>
                                     <span className="preview-author">{node.latestOpinion.username}:</span>
                                     <span className="preview-text">{node.latestOpinion.opinion}</span>
+                                    {currentUser?.is_admin && (
+                                        <button
+                                            className="preview-toggle-btn"
+                                            style={{ color: '#dc2626' }}
+                                            onClick={() => handleDeleteOpinion(node.latestOpinion.id)}
+                                            title="이 의견 삭제 (관리자)"
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -590,6 +616,16 @@ function Friends() {
                                             <span className="preview-icon">💬</span>
                                             <span className="preview-author">{q.latestOpinion.username}:</span>
                                             <span className="preview-text">{q.latestOpinion.opinion}</span>
+                                            {currentUser?.is_admin && (
+                                                <button
+                                                    className="preview-toggle-btn"
+                                                    style={{ color: '#dc2626' }}
+                                                    onClick={() => handleDeleteOpinion(q.latestOpinion.id)}
+                                                    title="이 의견 삭제 (관리자)"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
                                             {q.opinion_count > 1 && (
                                                 <button
                                                     className="preview-toggle-btn"
@@ -604,6 +640,16 @@ function Friends() {
                                                 <span className="preview-icon">💬</span>
                                                 <span className="preview-author">{op.username}:</span>
                                                 <span className="preview-text">{op.opinion}</span>
+                                                {currentUser?.is_admin && (
+                                                    <button
+                                                        className="preview-toggle-btn"
+                                                        style={{ color: '#dc2626' }}
+                                                        onClick={() => handleDeleteOpinion(op.id)}
+                                                        title="이 의견 삭제 (관리자)"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
