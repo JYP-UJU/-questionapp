@@ -29,12 +29,13 @@ function Friends() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const highlightParam = searchParams.get('highlight');
+    const searchUrlParam = searchParams.get('search') || '';
     const [highlightedId, setHighlightedId] = useState(null); // 반짝임 표시할 id (알림에서 넘어온 id)
     const cardRefs = useRef({});
     const highlightAttempts = useRef(0);
     const [sortMode, setSortMode] = useState('engagement'); // 'engagement' | 'random'
-    const [searchInput, setSearchInput] = useState(''); // 입력창 값 (타이핑 중)
-    const [searchTerm, setSearchTerm] = useState(''); // 실제 검색에 적용된 값
+    const [searchInput, setSearchInput] = useState(searchUrlParam); // 입력창 값 (타이핑 중)
+    const [searchTerm, setSearchTerm] = useState(searchUrlParam); // 실제 검색에 적용된 값 - 프로필 키워드 클릭 등 ?search= 로 진입 시 자동 적용
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
     const friendsMessages = [
         "모두의 질문을 볼 수 있어요!",

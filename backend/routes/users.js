@@ -303,4 +303,119 @@ router.get('/songi-history', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== AI 관심 키워드 (질문올림픽 성향 문구를 대체 - 워드클라우드 스타일) =====
+// 캐시: profile_ai_keywords 테이블에 저장, 마지막 생성이 7일 넘었으면(또는 ?force=true) 재생성
+router.get('/me/keywords', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const force = req.query.force === 'true';
+
+    // 1. 캐시 확인
+    const cached = await pool.query(
+      'SELECT keywords, generated_at FROM profile_ai_keywords WHERE user_id = $1',
+      [userId]
+    );
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const isFresh = cached.rows.length > 0 &&
+      (Date.now() - new Date(cached.rows[0].generated_at).getTime()) < SEVEN_DAYS_MS;
+
+    if (isFresh && !force) {
+      return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true });
+    }
+
+    // 2. 재료 모으기: 내가 쓴 질문 제목들 + 관심있음 누른 질문 제목들
+    const myQuestions = await pool.query(
+      `SELECT title FROM user_questions WHERE user_id = $1 AND is_deleted = false ORDER BY created_at DESC LIMIT 60`,
+      [userId]
+    );
+
+    const likedResult = await pool.query(
+      `SELECT COALESCE(uq.title, sq.question) as title
+       FROM question_reactions qr
+       LEFT JOIN user_questions uq ON qr.question_id = uq.id
+         AND qr.question_type IN ('user_question', 'friend_question', 'user', 'my_question', 'related_question')
+       LEFT JOIN seed_questions sq ON qr.question_id = sq.id
+         AND qr.question_type IN ('seed', 'quiz', 'icebreaking')
+       WHERE qr.user_id = $1 AND qr.reaction_type = 'like'
+       ORDER BY qr.created_at DESC LIMIT 60`,
+      [userId]
+    );
+
+    const myTitles = myQuestions.rows.map(r => r.title).filter(Boolean);
+    const likedTitles = likedResult.rows.map(r => r.title).filter(Boolean);
+
+    // 활동이 거의 없으면 API 호출 없이 바로 안내 메시지
+    if (myTitles.length === 0 && likedTitles.length === 0) {
+      const empty = { overall: [], questions: [], liked: [], insufficientData: true };
+      return res.json({ ...empty, generatedAt: new Date().toISOString(), cached: false });
+    }
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다');
+      // 키가 없으면 예전 캐시라도 있으면 그거라도 반환, 없으면 에러
+      if (cached.rows.length > 0) {
+        return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true, stale: true });
+      }
+      return res.status(500).json({ error: 'AI 키워드 기능이 아직 설정되지 않았어요' });
+    }
+
+    // 3. Claude API 호출
+    const prompt = `다음은 한 학생이 과학 질문 앱에서 활동한 기록입니다.
+
+[학생이 직접 쓴 질문 제목들]
+${myTitles.length > 0 ? myTitles.map(t => `- ${t}`).join('\n') : '(없음)'}
+
+[학생이 "관심있음"을 누른 질문 제목들]
+${likedTitles.length > 0 ? likedTitles.map(t => `- ${t}`).join('\n') : '(없음)'}
+
+각 목록에서 이 학생의 관심사를 대표하는 자연스러운 한국어 키워드(단어 또는 아주 짧은 구, 각 8자 이내)를 3개씩 뽑아줘. 특정 교과 분류명(물리/화학/생물/지구과학 등)이 아니라 실제 흥미로운 주제나 개념 단위로 뽑아줘. 두 목록을 합친 전체 활동에서 대표 키워드 3개도 "overall"로 뽑아줘. 목록이 비어있으면 해당 배열은 빈 배열로 둬.
+
+다른 설명 없이 반드시 아래 JSON 형식으로만 답해:
+{"overall": ["...", "...", "..."], "questions": ["...", "...", "..."], "liked": ["...", "...", "..."]}`;
+
+    let keywords;
+    try {
+      const aiRes = await axios.post(
+        'https://api.anthropic.com/v1/messages',
+        {
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: prompt }]
+        },
+        {
+          headers: {
+            'x-api-key': process.env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json'
+          }
+        }
+      );
+      let text = aiRes.data.content?.[0]?.text || '{}';
+      text = text.trim().replace(/^```json\s*|^```\s*|```$/g, '');
+      keywords = JSON.parse(text);
+    } catch (aiErr) {
+      console.error('AI 키워드 생성 오류:', aiErr.response?.data || aiErr.message);
+      // 실패 시 예전 캐시라도 있으면 그거 반환
+      if (cached.rows.length > 0) {
+        return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true, stale: true });
+      }
+      return res.status(500).json({ error: 'AI 키워드 생성에 실패했어요' });
+    }
+
+    // 4. 캐시 저장 (upsert)
+    await pool.query(
+      `INSERT INTO profile_ai_keywords (user_id, keywords, generated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET keywords = $2, generated_at = NOW()`,
+      [userId, JSON.stringify(keywords)]
+    );
+
+    res.json({ ...keywords, generatedAt: new Date().toISOString(), cached: false });
+
+  } catch (error) {
+    console.error('키워드 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
+
 module.exports = router;

@@ -16,11 +16,33 @@ function Profile() {
     const [claimPhone, setClaimPhone] = useState('');
     const [claimSubmitted, setClaimSubmitted] = useState(false);
     const [claimSubmitting, setClaimSubmitting] = useState(false);
+    const [keywords, setKeywords] = useState(null);
+    const [keywordsLoading, setKeywordsLoading] = useState(true);
+    const [keywordsRefreshing, setKeywordsRefreshing] = useState(false);
 
     useEffect(() => {
         loadProfile();
         loadExchangeStatus();
+        loadKeywords(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const loadKeywords = async (force) => {
+        if (force) setKeywordsRefreshing(true); else setKeywordsLoading(true);
+        try {
+            const res = await api.get('/users/me/keywords', { params: force ? { force: 'true' } : {} });
+            setKeywords(res.data);
+        } catch (err) {
+            console.error('키워드 로드 오류:', err);
+        } finally {
+            setKeywordsLoading(false);
+            setKeywordsRefreshing(false);
+        }
+    };
+
+    const goSearchKeyword = (keyword) => {
+        navigate(`/questions?search=${encodeURIComponent(keyword)}`);
+    };
 
     const loadExchangeStatus = async () => {
         try {
@@ -144,6 +166,65 @@ function Profile() {
                             <div className="stat-label">남긴 의견</div>
                         </div>
                     </div>
+                </div>
+
+                {/* AI 관심 키워드 */}
+                <div className="profile-section">
+                    <h2 className="section-title">🔍 나의 관심 키워드</h2>
+                    {keywordsLoading ? (
+                        <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
+                    ) : keywords?.insufficientData ? (
+                        <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>
+                            아직 활동이 부족해요. 질문을 쓰거나 관심있음을 눌러보세요!
+                        </div>
+                    ) : (
+                        <div>
+                            {[
+                                { key: 'overall', label: '종합 키워드', emoji: '✨' },
+                                { key: 'questions', label: '질문 키워드', emoji: '✏️' },
+                                { key: 'liked', label: '관심 키워드', emoji: '💙' },
+                            ].map(({ key, label, emoji }) => (
+                                (keywords?.[key] && keywords[key].length > 0) && (
+                                    <div key={key} style={{ marginBottom: '12px' }}>
+                                        <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px', fontWeight: 600 }}>
+                                            {emoji} {label}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            {keywords[key].map((kw, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => goSearchKeyword(kw)}
+                                                    style={{
+                                                        padding: '6px 14px',
+                                                        borderRadius: '20px',
+                                                        border: 'none',
+                                                        background: key === 'overall' ? '#3b82f6' : '#eff3ff',
+                                                        color: key === 'overall' ? 'white' : '#3b82f6',
+                                                        fontSize: key === 'overall' ? '15px' : '13px',
+                                                        fontWeight: 700,
+                                                        cursor: 'pointer',
+                                                    }}
+                                                    title="이 키워드로 친구들은 뭘 물어봤을까요?"
+                                                >
+                                                    {kw}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )
+                            ))}
+                            <button
+                                onClick={() => loadKeywords(true)}
+                                disabled={keywordsRefreshing}
+                                style={{
+                                    marginTop: '4px', background: 'none', border: 'none',
+                                    color: '#aaa', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline'
+                                }}
+                            >
+                                {keywordsRefreshing ? '새로 만드는 중...' : '🔄 키워드 새로고침'}
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* 송이 진행도 건전지 바 — 실제 교환 자격(누적 200송이 + 최근2주 주간일지) 기준 */}
