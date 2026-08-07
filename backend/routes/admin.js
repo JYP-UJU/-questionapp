@@ -169,6 +169,21 @@ router.get('/activities', authenticateToken, requireAdmin, async (req, res) => {
       rows = [...rows, ...q.rows];
     }
 
+    if (type === 'all' || type === 'olympic') {
+      const q = await pool.query(`
+        SELECT
+          os.id, os.user_id, u.username,
+          os.winner_question_text as content,
+          'olympic' as activity_type, os.created_at,
+          os.winner_question_id as question_ref,
+          TRIM(CONCAT(COALESCE(os.winner_subject, ''), ' ', COALESCE(os.winner_type, ''))) as question_text
+        FROM olympic_sessions os
+        JOIN users u ON os.user_id = u.id
+        WHERE 1=1 ${userFilter}
+      `);
+      rows = [...rows, ...q.rows];
+    }
+
     // 시간순 정렬
     rows.sort((a, b) => {
       const diff = new Date(a.created_at) - new Date(b.created_at);
@@ -296,6 +311,32 @@ router.delete('/activity', authenticateToken, requireAdmin, async (req, res) => 
       if (tx.rows.length > 0) reversedAmount = parseFloat(tx.rows[0].amount);
 
       await client.query('DELETE FROM monthly_reflections WHERE id = $1', [id]);
+
+    } else if (type === 'olympic') {
+      const owner = await client.query('SELECT user_id, created_at FROM olympic_sessions WHERE id = $1', [id]);
+      if (owner.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: '해당 항목을 찾을 수 없습니다' });
+      }
+      ownerUserId = owner.rows[0].user_id;
+
+      // olympic/complete는 songi_transactions에 question_id를 안 남기므로 시각으로 가장 가까운 걸 매칭
+      const tx = await client.query(
+        `SELECT amount FROM songi_transactions
+         WHERE user_id = $1 AND activity_type = 'olympic'
+         ORDER BY ABS(EXTRACT(EPOCH FROM (created_at - $2::timestamp))) ASC
+         LIMIT 1`,
+        [ownerUserId, owner.rows[0].created_at]
+      );
+      if (tx.rows.length > 0) reversedAmount = parseFloat(tx.rows[0].amount);
+
+      // 이 세션 완주로 자동 저장됐던 saved_questions도 같이 정리
+      await client.query(
+        `DELETE FROM saved_questions WHERE source_type = 'olympic' AND source_id = $1`,
+        [id]
+      );
+      // olympic_rounds는 ON DELETE CASCADE라 세션만 지우면 같이 지워짐
+      await client.query('DELETE FROM olympic_sessions WHERE id = $1', [id]);
 
     } else {
       await client.query('ROLLBACK');

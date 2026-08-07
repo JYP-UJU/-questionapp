@@ -10,7 +10,8 @@ function downloadExcel(activities) {
     opinion: 'OPN',
     reaction_like: 'LIK',
     reaction_dislike: 'DIS',
-    quiz: 'QIZ'
+    quiz: 'QIZ',
+    olympic: 'OLY'
   };
 
   const headers = [
@@ -83,7 +84,8 @@ const ACTIVITY_LABELS = {
   reaction: '관심표시',
   quiz: '퀴즈',
   weekly_journal: '주간일지',
-  monthly_journal: '월간일지'
+  monthly_journal: '월간일지',
+  olympic: '질문올림픽'
 };
 
 const ACTIVITY_COLORS = {
@@ -93,7 +95,8 @@ const ACTIVITY_COLORS = {
   reaction: '#e87c7c',
   quiz: '#9b6fc4',
   weekly_journal: '#06b6d4',
-  monthly_journal: '#0891b2'
+  monthly_journal: '#0891b2',
+  olympic: '#f97316'
 };
 
 function Admin() {
@@ -371,7 +374,8 @@ function Admin() {
                     <div style={styles.activityDate}>{formatDate(a.created_at)}</div>
                   </div>
                   {(a.activity_type === 'question' || a.activity_type === 'related' || a.activity_type === 'opinion'
-                    || a.activity_type === 'weekly_journal' || a.activity_type === 'monthly_journal') && (
+                    || a.activity_type === 'weekly_journal' || a.activity_type === 'monthly_journal'
+                    || a.activity_type === 'olympic') && (
                     <button style={styles.deleteBtn}
                       onClick={() => handleDelete(a.activity_type, a.id)}>삭제</button>
                   )}
