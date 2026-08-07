@@ -98,10 +98,11 @@ const ACTIVITY_COLORS = {
 
 function Admin() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState('activities'); // 'activities' | 'users'
+  const [tab, setTab] = useState('activities'); // 'activities' | 'users' | 'reward_claims' | 'sessions'
   const [activities, setActivities] = useState([]);
   const [users, setUsers] = useState([]);
   const [claims, setClaims] = useState([]);
+  const [sessionsSummary, setSessionsSummary] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // 필터
@@ -171,11 +172,28 @@ function Admin() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const loadSessionsSummary = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/sessions/admin/summary');
+      setSessionsSummary(res.data.summary || []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        alert('관리자 권한이 없어요');
+        navigate('/setting');
+      }
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (tab === 'activities') loadActivities();
     else if (tab === 'users') loadUsers();
+    else if (tab === 'sessions') loadSessionsSummary();
     else loadRewardClaims();
-  }, [tab, loadActivities, loadUsers, loadRewardClaims]);
+  }, [tab, loadActivities, loadUsers, loadRewardClaims, loadSessionsSummary]);
 
   const handleCompleteClaim = async (claimId) => {
     if (!window.confirm('상품권 지급을 완료 처리할까요?')) return;
@@ -247,6 +265,16 @@ function Admin() {
     return `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
   };
 
+  const formatDuration = (seconds) => {
+    if (!seconds || seconds <= 0) return '-';
+    const s = Math.round(seconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (h > 0) return `${h}시간 ${m}분`;
+    if (m > 0) return `${m}분`;
+    return `${s}초`;
+  };
+
   const filteredUsers = users.filter(u =>
     u.username.toLowerCase().includes(userFilter.toLowerCase())
   );
@@ -272,6 +300,10 @@ function Admin() {
           {claims.filter(c => c.status === 'pending').length > 0 && (
             <span style={styles.pendingBadge}>{claims.filter(c => c.status === 'pending').length}</span>
           )}
+        </button>
+        <button style={{...styles.tab, ...(tab === 'sessions' ? styles.tabActive : {})}}
+          onClick={() => setTab('sessions')}>
+          🕒 접속기록
         </button>
       </div>
 
@@ -445,6 +477,34 @@ function Admin() {
                         </button>
                       </div>
                     )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== 접속기록 탭 ===== */}
+      {tab === 'sessions' && (
+        <div>
+          {loading ? (
+            <div style={styles.loading}>로딩 중...</div>
+          ) : (
+            <div style={styles.list}>
+              {sessionsSummary.length === 0 && <div style={styles.empty}>접속 기록이 없어요</div>}
+              {sessionsSummary.map(s => (
+                <div key={s.user_id} style={styles.userItem}>
+                  <div style={styles.userTop}>
+                    <div style={styles.userName}>{s.username}</div>
+                    <div style={styles.userSongi}>총 {s.session_count || 0}회 접속</div>
+                  </div>
+                  <div style={styles.userStats}>
+                    <span>⏱️ 평균 {formatDuration(s.avg_duration_seconds)}</span>
+                    <span>📊 누적 {formatDuration(s.total_duration_seconds)}</span>
+                  </div>
+                  <div style={styles.userBottom}>
+                    <span style={styles.userDate}>최근 접속 {formatDate(s.last_visit)}</span>
                   </div>
                 </div>
               ))}
