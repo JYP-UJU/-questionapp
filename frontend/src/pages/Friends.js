@@ -17,6 +17,7 @@ function Friends() {
     const [selectedQuestionType, setSelectedQuestionType] = useState('user_question');
     const [relatedModal, setRelatedModal] = useState(null);
     const [currentUser, setCurrentUser] = useState(null); // { id, is_admin } - 삭제 권한 판단용
+    const [showScrollTop, setShowScrollTop] = useState(false);
     const [total, setTotal] = useState(0);
     const PAGE_SIZE = 25;
 
@@ -58,6 +59,13 @@ function Friends() {
         api.get('/users/me')
             .then(res => setCurrentUser(res.data.user || res.data))
             .catch(() => {});
+    }, []);
+
+    // 일정 스크롤 이상 내려가면 "위로 가기" 버튼 노출
+    useEffect(() => {
+        const onScroll = () => setShowScrollTop(window.scrollY > 400);
+        window.addEventListener('scroll', onScroll);
+        return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
     // 알림 클릭(?highlight=id)으로 들어온 경우: 최상위 질문이든 그 아래 관련질문 트리 속 질문이든
@@ -696,6 +704,34 @@ function Friends() {
                     onClose={() => setRelatedModal(null)}
                     songi={5}
                 />
+            )}
+
+            {/* 위로 가기 버튼 - 일정 스크롤 이상 내려가면 노출 */}
+            {showScrollTop && (
+                <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    aria-label="맨 위로"
+                    style={{
+                        position: 'fixed',
+                        right: '18px',
+                        bottom: '84px', // 하단 네비게이션 위에 겹치지 않도록
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: '#3b82f6',
+                        color: 'white',
+                        fontSize: '20px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                        cursor: 'pointer',
+                        zIndex: 999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                >
+                    ↑
+                </button>
             )}
 
             <BottomNav />

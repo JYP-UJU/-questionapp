@@ -140,7 +140,8 @@ function SavedQuestions() {
                             authorId: stats.question?.user_id ?? null
                         };
                     } catch (err) {
-                        return { ...q, latestOpinion: null, relatedTree: [] };
+                        const isSeededErr = q.questionType === 'quiz' || q.questionType === 'icebreaking' || q.questionType === 'seed';
+                        return { ...q, content: isSeededErr ? null : q.content, latestOpinion: null, relatedTree: [] };
                     }
                 })
             );
