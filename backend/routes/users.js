@@ -5,6 +5,53 @@ const authenticateToken = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
 
+// ===== 간단한 조사 제거 + 명사(어간) 빈도 기반 키워드 추출 =====
+// 정식 형태소 분석기(Mecab 등)는 무거워서, 흔한 조사를 규칙 기반으로 떼어내는
+// 가벼운 방식으로 대체함. 완벽하진 않지만 무거운 라이브러리 없이 Railway에서 잘 돌아감.
+// 핵심 장점: 여기서 뽑은 "조사 뗀 어간"을 그대로 검색어로 쓰면, ILIKE 부분일치 검색이
+// "동물은/동물이/동물의" 같은 원문 속 조사 붙은 형태를 전부 잡아냄 (동물 ⊂ 동물은 이므로).
+const JOSA_SUFFIXES = [
+  '으로부터', '에서부터', '이라서', '으로는', '에서는', '이라는', '이라도',
+  '에게서', '한테서', '이에요', '예요',
+  '에서', '에게', '한테', '으로', '이랑', '까지', '부터', '보다', '조차', '마저', '만큼', '처럼',
+  '이나', '나요', '까요', '을까', '일까', '라서', '이라',
+  '은', '는', '이', '가', '을', '를', '의', '에', '로', '와', '과', '도', '만', '요'
+];
+const STOPWORDS = new Set([
+  '왜', '어떻게', '무엇', '뭐', '뭘', '어디', '언제', '누가', '얼마나', '어떤', '무슨',
+  '때문', '그럼', '그리고', '근데', '그런데', '이런', '저런', '그런', '있을까', '있나',
+  '했을까', '될까', '하는', '하나요', '거예요', '그게', '나는', '저는', '제가', '나도'
+]);
+
+function stripJosa(token) {
+  for (const suf of JOSA_SUFFIXES) {
+    if (token.length > suf.length + 1 && token.endsWith(suf)) {
+      return token.slice(0, -suf.length);
+    }
+  }
+  return token;
+}
+
+// texts: 문자열 배열 (질문 제목들 + 의견들). 상위 n개 명사(어간) 반환.
+function extractTopKeywords(texts, n = 3) {
+  const freq = new Map();
+  for (const text of texts) {
+    if (!text) continue;
+    // 한글/영문/숫자가 아닌 문자(문장부호 등) 기준으로 토큰 분리
+    const rawTokens = text.split(/[^가-힣a-zA-Z0-9]+/).filter(Boolean);
+    for (const raw of rawTokens) {
+      const stemmed = stripJosa(raw);
+      if (stemmed.length < 2) continue; // 한 글자짜리는 의미 없는 경우가 많아 제외
+      if (STOPWORDS.has(stemmed) || STOPWORDS.has(raw)) continue;
+      freq.set(stemmed, (freq.get(stemmed) || 0) + 1);
+    }
+  }
+  return [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([word]) => word);
+}
+
 // 내 정보 조회
 router.get('/me', authenticateToken, async (req, res) => {
   try {
@@ -362,16 +409,20 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
       return res.json({ ...empty, generatedAt: new Date().toISOString(), cached: false });
     }
 
+    // 키워드는 AI가 아니라 빈도 기반으로 직접 계산 (검색이 확실히 되도록,
+    // 그리고 AI 호출 비용/변동성 없이 빠르게)
+    const keywords = extractTopKeywords([...myTitles, ...likedTitles, ...opinionTexts], 3);
+
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다');
       if (cached.rows.length > 0) {
         return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true, stale: true });
       }
-      return res.status(500).json({ error: 'AI 키워드 기능이 아직 설정되지 않았어요' });
+      return res.status(500).json({ error: 'AI 질문 기능이 아직 설정되지 않았어요' });
     }
 
-    // 3. Claude API 호출 — (1) 최근 2주 관심사를 대표하는 키워드 3개, (2) 그 관심사를 이어서
-    //    AI 챗봇에 그대로 복사해 물어볼 수 있는 질문 3개, 이렇게 두 가지를 한 번에 요청
+    // 3. Claude API 호출 — 이 관심사를 이어서 AI 챗봇에 그대로 복사해 물어볼 수 있는 질문 3개만 요청
+    //    (키워드는 위에서 빈도 기반으로 이미 계산했으니 AI는 질문 생성에만 집중)
     const prompt = `다음은 한 학생이 과학 질문 앱에서 최근 15일 동안 활동한 기록입니다.
 
 [학생이 쓴 질문/관련질문 제목]
@@ -383,19 +434,15 @@ ${likedTitles.length > 0 ? likedTitles.map(t => `- ${t}`).join('\n') : '(없음)
 [학생이 남긴 의견]
 ${opinionTexts.length > 0 ? opinionTexts.map(t => `- ${t}`).join('\n') : '(없음)'}
 
-이 세 가지를 모두 합쳐서 하나의 활동 기록으로 보고, 아래 두 가지를 만들어줘.
-
-(1) keywords: 이 학생이 최근 2주 동안 관심 가진 것을 대표하는 짧은 한국어 키워드나 짧은 구 3개. 특정 교과 분류명(물리/화학/생물/지구과학 등)이 아니라 실제 흥미로운 주제/개념 단위로. 각 8자 이내. "~에 관심이 많았어요"라는 문장 뒤에 자연스럽게 이어붙일 수 있는 명사(구) 형태로.
-
-(2) questions: 이 관심사를 이어서 Claude/ChatGPT/Copilot 같은 AI 챗봇 채팅창에 그대로 복사해 붙여넣고 물어볼 수 있는 구체적인 질문 문장 3개.
+이 관심사를 이어서 Claude/ChatGPT/Copilot 같은 AI 챗봇 채팅창에 그대로 복사해 붙여넣고 물어볼 수 있는 구체적인 질문 문장 3개를 만들어줘.
 지켜야 할 것:
-- "~에 끌리시네요", "~을 좋아하는 편이에요" 같은 성향 진단/평가 문구는 절대 쓰지 말 것 (그건 keywords 쪽에서 따로 처리하니까 questions에는 넣지 마)
+- "~에 끌리시네요", "~을 좋아하는 편이에요" 같은 성향 진단/평가 문구는 절대 쓰지 말 것
 - 반드시 물음표로 끝나는, 학생이 실제로 궁금해서 AI에게 물어볼 법한 자연스러운 질문 문장일 것 (예: "탄산음료를 흔들면 왜 거품이 갑자기 넘칠까?")
 - 학생이 이미 쓴 질문을 그대로 베끼지 말고, 그 관심사에서 한 걸음 더 들어가거나 옆으로 확장한 새로운 질문일 것
 - 각 질문은 한 문장, 60자 이내
 
 다른 설명 없이 반드시 아래 JSON 형식으로만 답해:
-{"keywords": ["...", "...", "..."], "questions": ["...", "...", "..."]}`;
+{"questions": ["...", "...", "..."]}`;
 
     let parsed;
     try {
@@ -403,7 +450,7 @@ ${opinionTexts.length > 0 ? opinionTexts.map(t => `- ${t}`).join('\n') : '(없�
         'https://api.anthropic.com/v1/messages',
         {
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 400,
+          max_tokens: 300,
           messages: [{ role: 'user', content: prompt }]
         },
         {
@@ -418,22 +465,26 @@ ${opinionTexts.length > 0 ? opinionTexts.map(t => `- ${t}`).join('\n') : '(없�
       text = text.trim().replace(/^```json\s*|^```\s*|```$/g, '');
       parsed = JSON.parse(text);
     } catch (aiErr) {
-      console.error('AI 키워드/질문 생성 오류:', aiErr.response?.data || aiErr.message);
+      console.error('AI 질문 생성 오류:', aiErr.response?.data || aiErr.message);
       if (cached.rows.length > 0) {
         return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true, stale: true });
       }
-      return res.status(500).json({ error: 'AI 키워드/질문 생성에 실패했어요' });
+      // AI 호출이 실패해도 키워드는 빈도 계산이라 이미 성공했으니, 질문만 빈 배열로 내려줌
+      parsed = { questions: [] };
     }
+
+    // keywords는 빈도 계산 결과로 덮어씀 (AI가 questions만 반환하므로)
+    const result = { keywords, questions: parsed.questions || [] };
 
     // 4. 캐시 저장 (upsert)
     await pool.query(
       `INSERT INTO profile_ai_keywords (user_id, keywords, generated_at)
        VALUES ($1, $2, NOW())
        ON CONFLICT (user_id) DO UPDATE SET keywords = $2, generated_at = NOW()`,
-      [userId, JSON.stringify(parsed)]
+      [userId, JSON.stringify(result)]
     );
 
-    res.json({ ...parsed, generatedAt: new Date().toISOString(), cached: false });
+    res.json({ ...result, generatedAt: new Date().toISOString(), cached: false });
 
   } catch (error) {
     console.error('키워드 조회 오류:', error);
