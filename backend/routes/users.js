@@ -323,9 +323,11 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
       return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true });
     }
 
-    // 2. 재료 모으기: 내가 쓴 질문 제목들 + 관심있음 누른 질문 제목들
+    // 2. 재료 모으기: 최근 7일 활동만 - 질문+관련질문 / 관심있음 / 남긴 의견, 네 범주를 하나로 합쳐서 사용
     const myQuestions = await pool.query(
-      `SELECT title FROM user_questions WHERE user_id = $1 AND is_deleted = false ORDER BY created_at DESC LIMIT 60`,
+      `SELECT title FROM user_questions
+       WHERE user_id = $1 AND is_deleted = false AND created_at >= NOW() - INTERVAL '7 days'
+       ORDER BY created_at DESC LIMIT 40`,
       [userId]
     );
 
@@ -337,49 +339,70 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
        LEFT JOIN seed_questions sq ON qr.question_id = sq.id
          AND qr.question_type IN ('seed', 'quiz', 'icebreaking')
        WHERE qr.user_id = $1 AND qr.reaction_type = 'like'
-       ORDER BY qr.created_at DESC LIMIT 60`,
+         AND qr.created_at >= NOW() - INTERVAL '7 days'
+       ORDER BY qr.created_at DESC LIMIT 40`,
+      [userId]
+    );
+
+    const opinionResult = await pool.query(
+      `SELECT qo.opinion FROM question_opinions qo
+       WHERE qo.user_id = $1 AND qo.created_at >= NOW() - INTERVAL '7 days'
+       ORDER BY qo.created_at DESC LIMIT 40`,
       [userId]
     );
 
     const myTitles = myQuestions.rows.map(r => r.title).filter(Boolean);
     const likedTitles = likedResult.rows.map(r => r.title).filter(Boolean);
+    const opinionTexts = opinionResult.rows.map(r => r.opinion).filter(Boolean);
 
-    // 활동이 거의 없으면 API 호출 없이 바로 안내 메시지
-    if (myTitles.length === 0 && likedTitles.length === 0) {
-      const empty = { overall: [], questions: [], liked: [], insufficientData: true };
+    // 최근 7일 활동이 전혀 없으면 API 호출 없이 바로 안내 메시지
+    if (myTitles.length === 0 && likedTitles.length === 0 && opinionTexts.length === 0) {
+      const empty = { keywords: [], questions: [], insufficientData: true };
       return res.json({ ...empty, generatedAt: new Date().toISOString(), cached: false });
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다');
-      // 키가 없으면 예전 캐시라도 있으면 그거라도 반환, 없으면 에러
       if (cached.rows.length > 0) {
         return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true, stale: true });
       }
       return res.status(500).json({ error: 'AI 키워드 기능이 아직 설정되지 않았어요' });
     }
 
-    // 3. Claude API 호출
-    const prompt = `다음은 한 학생이 과학 질문 앱에서 활동한 기록입니다.
+    // 3. Claude API 호출 — (1) 최근 1주일 관심사를 대표하는 키워드 3개, (2) 그 관심사를 이어서
+    //    AI 챗봇에 그대로 복사해 물어볼 수 있는 질문 3개, 이렇게 두 가지를 한 번에 요청
+    const prompt = `다음은 한 학생이 과학 질문 앱에서 최근 7일 동안 활동한 기록입니다.
 
-[학생이 직접 쓴 질문 제목들]
+[학생이 쓴 질문/관련질문 제목]
 ${myTitles.length > 0 ? myTitles.map(t => `- ${t}`).join('\n') : '(없음)'}
 
-[학생이 "관심있음"을 누른 질문 제목들]
+[학생이 "관심있음"을 누른 질문 제목]
 ${likedTitles.length > 0 ? likedTitles.map(t => `- ${t}`).join('\n') : '(없음)'}
 
-각 목록에서 이 학생의 관심사를 대표하는 자연스러운 한국어 키워드(단어 또는 아주 짧은 구, 각 8자 이내)를 3개씩 뽑아줘. 특정 교과 분류명(물리/화학/생물/지구과학 등)이 아니라 실제 흥미로운 주제나 개념 단위로 뽑아줘. 두 목록을 합친 전체 활동에서 대표 키워드 3개도 "overall"로 뽑아줘. 목록이 비어있으면 해당 배열은 빈 배열로 둬.
+[학생이 남긴 의견]
+${opinionTexts.length > 0 ? opinionTexts.map(t => `- ${t}`).join('\n') : '(없음)'}
+
+이 세 가지를 모두 합쳐서 하나의 활동 기록으로 보고, 아래 두 가지를 만들어줘.
+
+(1) keywords: 이 학생이 최근 1주일 동안 관심 가진 것을 대표하는 짧은 한국어 키워드나 짧은 구 3개. 특정 교과 분류명(물리/화학/생물/지구과학 등)이 아니라 실제 흥미로운 주제/개념 단위로. 각 8자 이내. "~에 관심이 많았네요"라는 문장 뒤에 자연스럽게 이어붙일 수 있는 명사(구) 형태로.
+
+(2) questions: 이 관심사를 이어서 Claude/ChatGPT/Copilot 같은 AI 챗봇 채팅창에 그대로 복사해 붙여넣고 물어볼 수 있는 구체적인 질문 문장 3개.
+지켜야 할 것:
+- "~에 끌리시네요", "~을 좋아하는 편이에요" 같은 성향 진단/평가 문구는 절대 쓰지 말 것 (그건 keywords 쪽에서 따로 처리하니까 questions에는 넣지 마)
+- 반드시 물음표로 끝나는, 학생이 실제로 궁금해서 AI에게 물어볼 법한 자연스러운 질문 문장일 것 (예: "탄산음료를 흔들면 왜 거품이 갑자기 넘칠까?")
+- 학생이 이미 쓴 질문을 그대로 베끼지 말고, 그 관심사에서 한 걸음 더 들어가거나 옆으로 확장한 새로운 질문일 것
+- 각 질문은 한 문장, 60자 이내
 
 다른 설명 없이 반드시 아래 JSON 형식으로만 답해:
-{"overall": ["...", "...", "..."], "questions": ["...", "...", "..."], "liked": ["...", "...", "..."]}`;
+{"keywords": ["...", "...", "..."], "questions": ["...", "...", "..."]}`;
 
-    let keywords;
+    let parsed;
     try {
       const aiRes = await axios.post(
         'https://api.anthropic.com/v1/messages',
         {
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 300,
+          max_tokens: 400,
           messages: [{ role: 'user', content: prompt }]
         },
         {
@@ -392,14 +415,13 @@ ${likedTitles.length > 0 ? likedTitles.map(t => `- ${t}`).join('\n') : '(없음)
       );
       let text = aiRes.data.content?.[0]?.text || '{}';
       text = text.trim().replace(/^```json\s*|^```\s*|```$/g, '');
-      keywords = JSON.parse(text);
+      parsed = JSON.parse(text);
     } catch (aiErr) {
-      console.error('AI 키워드 생성 오류:', aiErr.response?.data || aiErr.message);
-      // 실패 시 예전 캐시라도 있으면 그거 반환
+      console.error('AI 키워드/질문 생성 오류:', aiErr.response?.data || aiErr.message);
       if (cached.rows.length > 0) {
         return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true, stale: true });
       }
-      return res.status(500).json({ error: 'AI 키워드 생성에 실패했어요' });
+      return res.status(500).json({ error: 'AI 키워드/질문 생성에 실패했어요' });
     }
 
     // 4. 캐시 저장 (upsert)
@@ -407,13 +429,43 @@ ${likedTitles.length > 0 ? likedTitles.map(t => `- ${t}`).join('\n') : '(없음)
       `INSERT INTO profile_ai_keywords (user_id, keywords, generated_at)
        VALUES ($1, $2, NOW())
        ON CONFLICT (user_id) DO UPDATE SET keywords = $2, generated_at = NOW()`,
-      [userId, JSON.stringify(keywords)]
+      [userId, JSON.stringify(parsed)]
     );
 
-    res.json({ ...keywords, generatedAt: new Date().toISOString(), cached: false });
+    res.json({ ...parsed, generatedAt: new Date().toISOString(), cached: false });
 
   } catch (error) {
     console.error('키워드 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
+
+// ===== AI 탐구 질문 복사/검색 클릭 로그 (연구용 - 실제로 검색까지 이어갔는지 확인) =====
+router.post('/me/keyword-events', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const { eventType, target, questionText } = req.body;
+
+    if (!eventType || !questionText) {
+      return res.status(400).json({ error: 'eventType과 questionText가 필요합니다' });
+    }
+    if (!['copy', 'search_click'].includes(eventType)) {
+      return res.status(400).json({ error: '알 수 없는 eventType입니다' });
+    }
+    if (eventType === 'search_click' && !['google', 'naver'].includes(target)) {
+      return res.status(400).json({ error: '알 수 없는 target입니다' });
+    }
+
+    await pool.query(
+      `INSERT INTO keyword_click_events (user_id, event_type, target, question_text)
+       VALUES ($1, $2, $3, $4)`,
+      [userId, eventType, target || null, questionText]
+    );
+
+    res.json({ ok: true });
+  } catch (error) {
+    // 로그 실패가 사용자 경험을 막으면 안 되니 조용히 실패 처리
+    console.error('키워드 이벤트 기록 오류:', error);
     res.status(500).json({ error: '서버 오류가 발생했습니다' });
   }
 });
