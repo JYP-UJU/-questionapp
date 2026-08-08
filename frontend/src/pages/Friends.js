@@ -554,6 +554,17 @@ function Friends() {
                         🔥 인기순
                     </button>
                     <button
+                        onClick={() => setSortMode('recent')}
+                        style={{
+                            padding:'6px 12px', borderRadius:'20px', border:'none',
+                            fontSize:'13px', fontWeight:600, cursor:'pointer',
+                            background: sortMode === 'recent' ? '#3b82f6' : '#e5e7eb',
+                            color: sortMode === 'recent' ? 'white' : '#666',
+                        }}
+                    >
+                        🕒 최신순
+                    </button>
+                    <button
                         onClick={() => setSortMode('random')}
                         style={{
                             padding:'6px 12px', borderRadius:'20px', border:'none',

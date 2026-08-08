@@ -122,7 +122,9 @@ router.get('/with-status', authenticateToken, async (req, res) => {
     const offset = parseInt(req.query.offset) || 0;
     // sort: 'engagement'(기본, 관심있음+관심없음+의견+관련질문 합산 점수 높은 순 → 그 안에서 최신 활동순)
     //       'random' (완전 랜덤 셔플)
-    const sort = req.query.sort === 'random' ? 'random' : 'engagement';
+    //       'recent' (최신 활동순 - 인기 가중치 없이 순수 최신순)
+    const sortParam = req.query.sort;
+    const sort = sortParam === 'random' ? 'random' : sortParam === 'recent' ? 'recent' : 'engagement';
     const engagementExpr = `(
       COALESCE(q.likes_count,0) + COALESCE(q.dislikes_count,0)
       + (SELECT COUNT(*) FROM question_opinions WHERE question_id = q.id AND question_type = q.question_source)
@@ -135,6 +137,8 @@ router.get('/with-status', authenticateToken, async (req, res) => {
     )`;
     const orderClause = sort === 'random'
       ? 'RANDOM()'
+      : sort === 'recent'
+      ? 'q.latest_activity DESC'
       : `${engagementExpr} DESC, q.latest_activity DESC`;
     const search = (req.query.search || '').trim();
     // 검색어를 단어 단위로 쪼개서 하나라도 포함되면 걸리게 (AI가 만든 키워드는
@@ -526,6 +530,21 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
       );
     } catch (err) {
       console.error('saved_questions 저장 실패:', err);
+    }
+
+    // ⚠️ 부모 질문도 함께 저장 - 관련질문(자식)은 "내 활동"에서 독립 카드로 안 보이게
+    // 필터링돼 있고, 대신 부모 카드 밑에 트리로 중첩돼서 보여야 함. 근데 부모가
+    // saved_questions에 없으면 부모 카드 자체가 안 뜨니 자식이 매달릴 자리가 없어짐.
+    // 그래서 관련질문을 달 때마다 부모도 항상 같이 저장해줌 (이미 저장돼 있으면 그냥 무시됨).
+    try {
+      await client.query(
+        `INSERT INTO saved_questions (user_id, question_id, question_type)
+         VALUES ($1, $2, $3)
+         ON CONFLICT DO NOTHING`,
+        [userId, id, questionType]
+      );
+    } catch (err) {
+      console.error('부모 질문 saved_questions 저장 실패:', err);
     }
 
     // seed_questions의 related_count 업데이트 (트리 구조 표시용)
