@@ -19,6 +19,8 @@ function Profile() {
     const [keywords, setKeywords] = useState(null);
     const [keywordsLoading, setKeywordsLoading] = useState(true);
     const [keywordsRefreshing, setKeywordsRefreshing] = useState(false);
+    const [copiedIndex, setCopiedIndex] = useState(null);
+    const [showTips, setShowTips] = useState(false);
 
     useEffect(() => {
         loadProfile();
@@ -40,8 +42,36 @@ function Profile() {
         }
     };
 
-    const goSearchKeyword = (keyword) => {
-        navigate(`/questions?search=${encodeURIComponent(keyword)}`);
+    // 로그 기록은 화면 반응을 막으면 안 되니 실패해도 조용히 무시 (fire-and-forget)
+    const logKeywordEvent = (eventType, target, questionText) => {
+        api.post('/users/me/keyword-events', { eventType, target, questionText }).catch(() => {});
+    };
+
+    const handleCopy = async (text, index) => {
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch (err) {
+            // 클립보드 API 실패 시(오래된 브라우저 등) 대체 방법
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(textarea);
+        }
+        setCopiedIndex(index);
+        setTimeout(() => setCopiedIndex(null), 1500);
+        logKeywordEvent('copy', null, text);
+    };
+
+    const handleSearchClick = (questionText, engine) => {
+        logKeywordEvent('search_click', engine, questionText);
+        const url = engine === 'naver'
+            ? `https://search.naver.com/search.naver?query=${encodeURIComponent(questionText)}`
+            : `https://www.google.com/search?q=${encodeURIComponent(questionText)}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     const loadExchangeStatus = async () => {
@@ -135,6 +165,114 @@ function Profile() {
                     }}>닉네임 변경</button>
                 </div>
 
+                {/* 최근 1주일 관심사 진단 + AI 탐구 유도 */}
+                <div className="profile-section">
+                    <h2 className="section-title">🔮 당신의 성향은요</h2>
+                    {keywordsLoading ? (
+                        <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
+                    ) : keywords?.insufficientData ? (
+                        <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>
+                            최근 1주일 동안은 활동이 없었어요. 질문을 써보거나 관심있음을 눌러보세요!
+                        </div>
+                    ) : (
+                        <div>
+                            {/* 진단 문구 - 키워드는 클릭하면 앱 내 검색으로 이동 */}
+                            <p style={{ fontSize: '15px', color: '#333', lineHeight: 1.6, margin: '0 0 10px' }}>
+                                최근 1주일 활동에서는 주로{' '}
+                                {(keywords?.keywords || []).map((kw, i) => (
+                                    <React.Fragment key={i}>
+                                        <span
+                                            onClick={() => navigate(`/questions?search=${encodeURIComponent(kw)}`)}
+                                            style={{ color: '#6b84c4', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                                        >
+                                            {kw}
+                                        </span>
+                                        {i < (keywords?.keywords?.length || 0) - 1 ? ', ' : ''}
+                                    </React.Fragment>
+                                ))}
+                                에 관심이 많았네요.
+                            </p>
+                            <p style={{ fontSize: '12px', color: '#aaa', margin: '0 0 16px' }}>
+                                (키워드를 누르면 물음송이 안에서 바로 검색돼요)
+                            </p>
+
+                            <p style={{ fontSize: '13px', color: '#888', margin: '0 0 12px' }}>
+                                이 질문으로 한번 더 찾아볼 수도 있어요.
+                            </p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
+                                {(keywords?.questions || []).map((q, i) => (
+                                    <div key={i} style={{
+                                        background: '#f8f9ff', border: '1px solid #e5e7eb',
+                                        borderRadius: '10px', padding: '10px 12px'
+                                    }}>
+                                        <div style={{ fontSize: '14px', color: '#333', lineHeight: 1.4, marginBottom: '8px' }}>{q}</div>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button
+                                                onClick={() => handleCopy(q, i)}
+                                                style={{
+                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: 'none',
+                                                    background: copiedIndex === i ? '#16a34a' : '#6b84c4',
+                                                    color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                                                }}
+                                            >
+                                                {copiedIndex === i ? '복사됨!' : '📋 복사'}
+                                            </button>
+                                            <button
+                                                onClick={() => handleSearchClick(q, 'google')}
+                                                style={{
+                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                                                    background: 'white', color: '#333', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                                                }}
+                                            >
+                                                🔍 구글에서 찾기
+                                            </button>
+                                            <button
+                                                onClick={() => handleSearchClick(q, 'naver')}
+                                                style={{
+                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                                                    background: 'white', color: '#03c75a', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                                                }}
+                                            >
+                                                🔍 네이버에서 찾기
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* 토글형 AI 활용 팁 - 기본은 접혀있음, 길게 늘어놓지 않기 위해 */}
+                            <button
+                                onClick={() => setShowTips(v => !v)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '4px',
+                                    background: 'none', border: 'none', color: '#6b84c4',
+                                    fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: 0
+                                }}
+                            >
+                                {showTips ? '▲' : '▼'} 찾아볼 때 팁
+                            </button>
+                            {showTips && (
+                                <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '12px', color: '#888', lineHeight: 1.6 }}>
+                                    <li>검색 결과가 어려우면, 모르는 단어만 따로 한 번 더 검색해보세요.</li>
+                                    <li>여러 사이트 결과를 비교해서 읽어보면 이해가 더 잘 돼요.</li>
+                                </ul>
+                            )}
+
+                            <button
+                                onClick={() => loadKeywords(true)}
+                                disabled={keywordsRefreshing}
+                                style={{
+                                    display: 'block', marginTop: '12px', background: 'none', border: 'none',
+                                    color: '#aaa', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline'
+                                }}
+                            >
+                                {keywordsRefreshing ? '새로 만드는 중...' : '🔄 새로 만들기'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 {/* 활동 통계 */}
                 <div className="profile-section">
                     <h2 className="section-title">📊 나의 활동</h2>
@@ -166,65 +304,6 @@ function Profile() {
                             <div className="stat-label">남긴 의견</div>
                         </div>
                     </div>
-                </div>
-
-                {/* AI 관심 키워드 */}
-                <div className="profile-section">
-                    <h2 className="section-title">🔍 나의 관심 키워드</h2>
-                    {keywordsLoading ? (
-                        <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
-                    ) : keywords?.insufficientData ? (
-                        <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>
-                            아직 활동이 부족해요. 질문을 쓰거나 관심있음을 눌러보세요!
-                        </div>
-                    ) : (
-                        <div>
-                            {[
-                                { key: 'overall', label: '종합 키워드', emoji: '✨' },
-                                { key: 'questions', label: '질문 키워드', emoji: '✏️' },
-                                { key: 'liked', label: '관심 키워드', emoji: '💙' },
-                            ].map(({ key, label, emoji }) => (
-                                (keywords?.[key] && keywords[key].length > 0) && (
-                                    <div key={key} style={{ marginBottom: '12px' }}>
-                                        <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px', fontWeight: 600 }}>
-                                            {emoji} {label}
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                            {keywords[key].map((kw, i) => (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => goSearchKeyword(kw)}
-                                                    style={{
-                                                        padding: '6px 14px',
-                                                        borderRadius: '20px',
-                                                        border: 'none',
-                                                        background: key === 'overall' ? '#3b82f6' : '#eff3ff',
-                                                        color: key === 'overall' ? 'white' : '#3b82f6',
-                                                        fontSize: key === 'overall' ? '15px' : '13px',
-                                                        fontWeight: 700,
-                                                        cursor: 'pointer',
-                                                    }}
-                                                    title="이 키워드로 친구들은 뭘 물어봤을까요?"
-                                                >
-                                                    {kw}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )
-                            ))}
-                            <button
-                                onClick={() => loadKeywords(true)}
-                                disabled={keywordsRefreshing}
-                                style={{
-                                    marginTop: '4px', background: 'none', border: 'none',
-                                    color: '#aaa', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline'
-                                }}
-                            >
-                                {keywordsRefreshing ? '새로 만드는 중...' : '🔄 키워드 새로고침'}
-                            </button>
-                        </div>
-                    )}
                 </div>
 
                 {/* 송이 진행도 건전지 바 — 실제 교환 자격(누적 200송이 + 최근2주 주간일지) 기준 */}
