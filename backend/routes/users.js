@@ -356,11 +356,14 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
     const force = req.query.force === 'true';
+    // period: 'recent'(기본, 최근 15일 - 주간일지용) | 'monthly'(최근 30일 - 월간일지용)
+    const period = req.query.period === 'monthly' ? 'monthly' : 'recent';
+    const daysBack = period === 'monthly' ? 30 : 15;
 
-    // 1. 캐시 확인
+    // 1. 캐시 확인 (기간별로 따로 캐싱)
     const cached = await pool.query(
-      'SELECT keywords, generated_at FROM profile_ai_keywords WHERE user_id = $1',
-      [userId]
+      'SELECT keywords, generated_at FROM profile_ai_keywords WHERE user_id = $1 AND period = $2',
+      [userId, period]
     );
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
     const isFresh = cached.rows.length > 0 &&
@@ -370,13 +373,13 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
       return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true });
     }
 
-    // 2. 재료 모으기: 최근 15일(2주) 고정 기간 - 질문+관련질문 / 관심있음 / 남긴 의견, 네 범주를 하나로 합쳐서 사용
-    //    기간을 매번 다르게 적응시키지 않고 15일로 고정 — 연구 데이터 해석 시 일관성 유지 목적
+    // 2. 재료 모으기: 고정 기간(15일 또는 30일) - 질문+관련질문 / 관심있음 / 남긴 의견, 네 범주를 하나로 합쳐서 사용
+    //    기간을 매번 다르게 적응시키지 않고 고정 — 연구 데이터 해석 시 일관성 유지 목적
     const myQuestions = await pool.query(
       `SELECT title FROM user_questions
-       WHERE user_id = $1 AND is_deleted = false AND created_at >= NOW() - INTERVAL '15 days'
+       WHERE user_id = $1 AND is_deleted = false AND created_at >= NOW() - ($2 || ' days')::interval
        ORDER BY created_at DESC LIMIT 40`,
-      [userId]
+      [userId, daysBack]
     );
 
     const likedResult = await pool.query(
@@ -385,25 +388,25 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
        LEFT JOIN user_questions uq ON qr.question_id = uq.id
          AND qr.question_type IN ('user_question', 'friend_question', 'user', 'my_question', 'related_question')
        LEFT JOIN seed_questions sq ON qr.question_id = sq.id
-         AND qr.question_type IN ('seed', 'quiz', 'icebreaking')
+         AND qr.question_type IN ('seed', 'quiz', 'icebreaking', 'olympic')
        WHERE qr.user_id = $1 AND qr.reaction_type = 'like'
-         AND qr.created_at >= NOW() - INTERVAL '15 days'
+         AND qr.created_at >= NOW() - ($2 || ' days')::interval
        ORDER BY qr.created_at DESC LIMIT 40`,
-      [userId]
+      [userId, daysBack]
     );
 
     const opinionResult = await pool.query(
       `SELECT qo.opinion FROM question_opinions qo
-       WHERE qo.user_id = $1 AND qo.created_at >= NOW() - INTERVAL '15 days'
+       WHERE qo.user_id = $1 AND qo.created_at >= NOW() - ($2 || ' days')::interval
        ORDER BY qo.created_at DESC LIMIT 40`,
-      [userId]
+      [userId, daysBack]
     );
 
     const myTitles = myQuestions.rows.map(r => r.title).filter(Boolean);
     const likedTitles = likedResult.rows.map(r => r.title).filter(Boolean);
     const opinionTexts = opinionResult.rows.map(r => r.opinion).filter(Boolean);
 
-    // 최근 15일 활동이 전혀 없으면 API 호출 없이 바로 안내 메시지
+    // 활동이 전혀 없으면 API 호출 없이 바로 안내 메시지
     if (myTitles.length === 0 && likedTitles.length === 0 && opinionTexts.length === 0) {
       const empty = { keywords: [], questions: [], insufficientData: true };
       return res.json({ ...empty, generatedAt: new Date().toISOString(), cached: false });
@@ -423,7 +426,8 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
 
     // 3. Claude API 호출 — 이 관심사를 이어서 AI 챗봇에 그대로 복사해 물어볼 수 있는 질문 3개만 요청
     //    (키워드는 위에서 빈도 기반으로 이미 계산했으니 AI는 질문 생성에만 집중)
-    const prompt = `다음은 한 학생이 과학 질문 앱에서 최근 15일 동안 활동한 기록입니다.
+    const periodLabel = period === 'monthly' ? '30일' : '15일';
+    const prompt = `다음은 한 학생이 과학 질문 앱에서 최근 ${periodLabel} 동안 활동한 기록입니다.
 
 [학생이 쓴 질문/관련질문 제목]
 ${myTitles.length > 0 ? myTitles.map(t => `- ${t}`).join('\n') : '(없음)'}
@@ -474,14 +478,14 @@ ${opinionTexts.length > 0 ? opinionTexts.map(t => `- ${t}`).join('\n') : '(없�
     }
 
     // keywords는 빈도 계산 결과로 덮어씀 (AI가 questions만 반환하므로)
-    const result = { keywords, questions: parsed.questions || [] };
+    const result = { keywords, questions: parsed.questions || [], period };
 
-    // 4. 캐시 저장 (upsert)
+    // 4. 캐시 저장 (upsert, 기간별로 따로)
     await pool.query(
-      `INSERT INTO profile_ai_keywords (user_id, keywords, generated_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET keywords = $2, generated_at = NOW()`,
-      [userId, JSON.stringify(result)]
+      `INSERT INTO profile_ai_keywords (user_id, period, keywords, generated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id, period) DO UPDATE SET keywords = $3, generated_at = NOW()`,
+      [userId, period, JSON.stringify(result)]
     );
 
     res.json({ ...result, generatedAt: new Date().toISOString(), cached: false });

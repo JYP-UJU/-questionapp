@@ -1,30 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import './WeeklyReport.css';
 import SettingBottomNav from '../components/SettingBottomNav';
 import NotificationBell from '../components/NotificationBell';
-import './Profile.css';
 
-function Profile() {
+function MonthlyReport() {
     const navigate = useNavigate();
-    const [data, setData] = useState(null);
-    const [exchangeStatus, setExchangeStatus] = useState(null);
+    const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [showUsernameModal, setShowUsernameModal] = useState(false);
-    const [newUsername, setNewUsername] = useState('');
-    const [claimName, setClaimName] = useState('');
-    const [claimPhone, setClaimPhone] = useState('');
-    const [claimSubmitted, setClaimSubmitted] = useState(false);
-    const [claimSubmitting, setClaimSubmitting] = useState(false);
+
+    const [mostCurious, setMostCurious] = useState('');
+    const [selectedQuestions, setSelectedQuestions] = useState([]);
+    const [monthlyFeeling, setMonthlyFeeling] = useState('');
+    const [reflectionSaved, setReflectionSaved] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [openToggles, setOpenToggles] = useState({});
+    const [editMode, setEditMode] = useState(false);
+
+    // 당신의 성향은요 (월간 = 최근 30일 버전)
     const [keywords, setKeywords] = useState(null);
     const [keywordsLoading, setKeywordsLoading] = useState(true);
     const [keywordsRefreshing, setKeywordsRefreshing] = useState(false);
     const [copiedIndex, setCopiedIndex] = useState(null);
     const [showTips, setShowTips] = useState(false);
 
+    const toggleSection = (key) => {
+        setOpenToggles(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const [monthOffset, setMonthOffset] = useState(0);
+    const [monthlyHeroes, setMonthlyHeroes] = useState([]);
+
     useEffect(() => {
-        loadProfile();
-        loadExchangeStatus();
+        const { start, end } = getMonthRange(monthOffset);
+        api.get(`/reports/monthly-leaderboard?start=${start}&end=${end}`)
+            .then(res => setMonthlyHeroes(res.data.leaderboard || []))
+            .catch(err => console.error('이달의 영웅 로드 오류:', err));
+    }, [monthOffset]);
+
+    useEffect(() => {
+        loadReport();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [monthOffset]);
+
+    // 최근 30일 관심사 브리핑 — monthOffset과 무관하게 항상 "지금 기준 최근 30일"이라 한 번만 불러오면 됨
+    useEffect(() => {
         loadKeywords(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -32,7 +53,7 @@ function Profile() {
     const loadKeywords = async (force) => {
         if (force) setKeywordsRefreshing(true); else setKeywordsLoading(true);
         try {
-            const res = await api.get('/users/me/keywords', { params: force ? { force: 'true' } : {} });
+            const res = await api.get('/users/me/keywords', { params: { period: 'monthly', ...(force ? { force: 'true' } : {}) } });
             setKeywords(res.data);
         } catch (err) {
             console.error('키워드 로드 오류:', err);
@@ -51,7 +72,6 @@ function Profile() {
         try {
             await navigator.clipboard.writeText(text);
         } catch (err) {
-            // 클립보드 API 실패 시(오래된 브라우저 등) 대체 방법
             const textarea = document.createElement('textarea');
             textarea.value = text;
             textarea.style.position = 'fixed';
@@ -70,115 +90,146 @@ function Profile() {
         logKeywordEvent('search_click', engine, questionText);
         const url = engine === 'naver'
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(questionText)}`
-            : `https://www.google.com/search?q=${encodeURIComponent(questionText)}`;
+            : `https://www.google.com/search?q=${encodeURIComponent(questionText + ' 원리 이유')}`;
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    const loadExchangeStatus = async () => {
-        try {
-            const res = await api.get('/reports/exchange-status');
-            setExchangeStatus(res.data);
-        } catch (err) {
-            console.error('교환 자격 로드 오류:', err);
-        }
+    const getMonthRange = (offset = 0) => {
+        const now = new Date();
+        const first = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+        first.setHours(0, 0, 0, 0);
+        const last = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+        last.setHours(23, 59, 59, 999);
+        return { start: first.toISOString(), end: last.toISOString() };
     };
 
-    const loadProfile = async () => {
+    const loadReport = async () => {
         try {
-            const res = await api.get('/users/me/profile-stats');
-            setData(res.data);
+            setLoading(true);
+            const { start, end } = getMonthRange(monthOffset);
+            const response = await api.get(`/reports/monthly?start=${start}&end=${end}`);
+            setReport(response.data);
+
+            if (response.data.reflection) {
+                const r = response.data.reflection;
+                setMostCurious(r.most_curious || '');
+                setSelectedQuestions(r.research_topic ? r.research_topic.split('||').filter(Boolean) : []);
+                setMonthlyFeeling(r.monthly_feeling || '');
+                setReflectionSaved(true);
+                setEditMode(false);
+            } else {
+                setMostCurious('');
+                setSelectedQuestions([]);
+                setMonthlyFeeling('');
+                setReflectionSaved(false);
+                setEditMode(false);
+            }
         } catch (err) {
-            console.error('프로필 로드 오류:', err);
+            console.error('리포트 로드 오류:', err);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleUsernameUpdate = async () => {
-        if (!newUsername.trim()) {
-            alert('닉네임을 입력해주세요');
+    const handleSaveReflection = async () => {
+        if (!mostCurious.trim()) {
+            alert('가장 궁금했던 것을 적어주세요!');
             return;
         }
         try {
-            await api.put('/users/me', { username: newUsername });
-            alert('닉네임이 변경되었어요! 🎉');
-            setShowUsernameModal(false);
-            setNewUsername('');
-            loadProfile();
+            setSaving(true);
+            const { start } = getMonthRange(monthOffset);
+            await api.post('/reports/monthly/reflection', {
+                monthStart: start,
+                mostCurious,
+                didResearch: selectedQuestions.length > 0,
+                researchTopic: selectedQuestions.join('||'),
+                researchNote: '',
+                monthlyFeeling
+            });
+            setReflectionSaved(true);
+            setEditMode(false);
+            loadReport();
         } catch (err) {
-            alert(err.response?.data?.error || '닉네임 변경에 실패했어요');
-        }
-    };
-
-    const handleClaimSubmit = async () => {
-        if (!claimName.trim() || !claimPhone.trim()) {
-            alert('이름과 휴대폰 번호를 모두 입력해주세요');
-            return;
-        }
-        setClaimSubmitting(true);
-        try {
-            await api.post('/reports/claim-reward', { name: claimName, phone: claimPhone });
-            setClaimSubmitted(true);
-        } catch (err) {
-            alert(err.response?.data?.error || '신청에 실패했어요');
+            console.error('돌아보기 저장 오류:', err);
+            alert('저장에 실패했어요');
         } finally {
-            setClaimSubmitting(false);
+            setSaving(false);
         }
     };
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '-';
-        const d = new Date(dateStr);
-        return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+    const getAllItems = () => {
+        const items = [
+            ...(report?.lists?.questions || []).map(q => ({ title: q.title, type: '만든질문' })),
+            ...(report?.lists?.related || []).map(q => ({ title: q.title, type: '관련질문' })),
+        ].filter((item, idx, arr) => item.title && arr.findIndex(a => a.title === item.title) === idx);
+
+        return items;
+    };
+
+    const toggleQuestion = (title) => {
+        setSelectedQuestions(prev =>
+            prev.includes(title) ? prev.filter(t => t !== title) : [...prev, title]
+        );
     };
 
     if (loading) {
-        return <div className="profile-loading">로딩 중...</div>;
+        return <div className="wr-loading">📊 리포트 불러오는 중...</div>;
     }
 
-    const { user, stats, rewards } = data || {};
-    const AVATARS = ['🐱','🐶','🐰','🐻','🐼','🐨','🦊','🐸','🐧','🦋','🐙','🦄','🐬','🦁','🐯'];
-    const avatarEmoji = AVATARS[(user?.id || 0) % AVATARS.length];
+    const isEditable = !reflectionSaved || editMode;
 
     return (
-        <div className="profile-container">
-            {/* 헤더 */}
-            <header className="profile-header">
-                <button className="back-btn" onClick={() => navigate(-1)}>←</button>
-                <h1>내 프로필</h1>
+        <div className="wr-container">
+            <header className="wr-header">
+                <button onClick={() => navigate(-1)} className="wr-back">← 나의공간</button>
+                <h1 style={{fontSize:"22px", fontWeight:"800", margin:0}}>📈 이번 달의 활동</h1>
                 <NotificationBell />
             </header>
 
-            <div className="profile-content">
+            <div className="wr-week-nav">
+                <button onClick={() => setMonthOffset(prev => prev - 1)} className="week-arrow">◀</button>
+                <span className="week-label">
+                    {report?.period?.label || '...'}
+                    {monthOffset === 0 && ' (이번 달)'}
+                </span>
+                <button
+                    onClick={() => setMonthOffset(prev => Math.min(prev + 1, 0))}
+                    className="week-arrow"
+                    disabled={monthOffset >= 0}
+                >▶</button>
+            </div>
 
-                {/* 유저 정보 카드 */}
-                <div className="profile-card user-card">
-                    <div className="profile-avatar">{avatarEmoji}</div>
-                    <div className="profile-user-info">
-                        <div className="profile-username">{user?.username}</div>
-                        <div className="profile-joined">가입일 {formatDate(user?.created_at)}</div>
-                        <div className="profile-songi">🌸 총 {parseFloat(user?.songi_count || 0).toFixed(1)}송이 획득</div>
+            <div className="wr-content">
+                {/* ===== 이달의 영웅 TOP 3 ===== */}
+                {monthlyHeroes.length > 0 && (
+                    <div className="stats-card" style={{background:'linear-gradient(135deg, #fff7e6, #fff1cc)'}}>
+                        <h3>🏆 이달의 영웅</h3>
+                        <div style={{display:'flex', flexDirection:'column', gap:'8px', marginTop:'8px'}}>
+                            {monthlyHeroes.map((h, i) => (
+                                <div key={i} style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                    <span style={{fontSize:'20px'}}>{['🥇','🥈','🥉'][i]}</span>
+                                    <span style={{flex:1, fontWeight:600, color:'#333'}}>{h.name}</span>
+                                    <span style={{color:'#f59e0b', fontWeight:700}}>{h.songi}송이</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                    <button className="edit-username-btn" onClick={() => {
-                        setNewUsername(user?.username || '');
-                        setShowUsernameModal(true);
-                    }}>닉네임 변경</button>
-                </div>
+                )}
 
-                {/* 최근 1주일 관심사 진단 + AI 탐구 유도 */}
-                <div className="profile-section">
-                    <h2 className="section-title">🔮 당신의 성향은요</h2>
+                {/* ===== 최근 30일 관심사 브리핑 ===== */}
+                <div className="stats-card">
+                    <h3>🔮 당신의 성향은요</h3>
                     {keywordsLoading ? (
                         <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
                     ) : keywords?.insufficientData ? (
                         <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>
-                            최근 1주일 동안은 활동이 없었어요. 질문을 써보거나 관심있음을 눌러보세요!
+                            최근 30일 동안은 활동이 없었어요. 질문을 써보거나 관심있음을 눌러보세요!
                         </div>
                     ) : (
                         <div>
-                            {/* 진단 문구 - 키워드는 클릭하면 앱 내 검색으로 이동 */}
-                            <p style={{ fontSize: '15px', color: '#333', lineHeight: 1.6, margin: '0 0 10px' }}>
-                                최근 1주일 활동에서는 주로{' '}
+                            <p style={{ fontSize: '15px', color: '#333', lineHeight: 1.6, margin: '8px 0 16px' }}>
+                                최근 30일 활동에서는 주로{' '}
                                 {(keywords?.keywords || []).map((kw, i) => (
                                     <React.Fragment key={i}>
                                         <span
@@ -190,10 +241,10 @@ function Profile() {
                                         {i < (keywords?.keywords?.length || 0) - 1 ? ', ' : ''}
                                     </React.Fragment>
                                 ))}
-                                에 관심이 많았네요.
-                            </p>
-                            <p style={{ fontSize: '12px', color: '#aaa', margin: '0 0 16px' }}>
-                                (키워드를 누르면 물음송이 안에서 바로 검색돼요)
+                                에 관심이 많았어요.{' '}
+                                <span style={{ fontSize: '12px', color: '#aaa' }}>
+                                    (클릭하면 물음송이의 질문 검색 결과를 볼 수 있어요.)
+                                </span>
                             </p>
 
                             <p style={{ fontSize: '13px', color: '#888', margin: '0 0 12px' }}>
@@ -203,45 +254,48 @@ function Profile() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
                                 {(keywords?.questions || []).map((q, i) => (
                                     <div key={i} style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px',
                                         background: '#f8f9ff', border: '1px solid #e5e7eb',
                                         borderRadius: '10px', padding: '10px 12px'
                                     }}>
-                                        <div style={{ fontSize: '14px', color: '#333', lineHeight: 1.4, marginBottom: '8px' }}>{q}</div>
-                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                        <span style={{ flex: 1, fontSize: '14px', color: '#333', lineHeight: 1.4 }}>{q}</span>
+                                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                                             <button
                                                 onClick={() => handleCopy(q, i)}
                                                 style={{
-                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: 'none',
+                                                    padding: '6px 8px', borderRadius: '8px', border: 'none',
                                                     background: copiedIndex === i ? '#16a34a' : '#6b84c4',
-                                                    color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                                                    color: 'white', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                                                    whiteSpace: 'nowrap'
                                                 }}
                                             >
-                                                {copiedIndex === i ? '복사됨!' : '📋 복사'}
-                                            </button>
-                                            <button
-                                                onClick={() => handleSearchClick(q, 'google')}
-                                                style={{
-                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: '1px solid #e5e7eb',
-                                                    background: 'white', color: '#333', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
-                                                }}
-                                            >
-                                                🔍 구글에서 찾기
+                                                {copiedIndex === i ? '✓' : '📋 복사'}
                                             </button>
                                             <button
                                                 onClick={() => handleSearchClick(q, 'naver')}
                                                 style={{
-                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: '1px solid #e5e7eb',
-                                                    background: 'white', color: '#03c75a', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                                                    padding: '6px 8px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                                                    background: 'white', color: '#03c75a', fontSize: '11px', fontWeight: 700,
+                                                    cursor: 'pointer', whiteSpace: 'nowrap'
                                                 }}
                                             >
-                                                🔍 네이버에서 찾기
+                                                🔍 네이버
+                                            </button>
+                                            <button
+                                                onClick={() => handleSearchClick(q, 'google')}
+                                                style={{
+                                                    padding: '6px 8px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                                                    background: 'white', color: '#333', fontSize: '11px', fontWeight: 700,
+                                                    cursor: 'pointer', whiteSpace: 'nowrap'
+                                                }}
+                                            >
+                                                🔍 구글
                                             </button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* 토글형 AI 활용 팁 - 기본은 접혀있음, 길게 늘어놓지 않기 위해 */}
                             <button
                                 onClick={() => setShowTips(v => !v)}
                                 style={{
@@ -273,232 +327,303 @@ function Profile() {
                     )}
                 </div>
 
-                {/* 활동 통계 */}
-                <div className="profile-section">
-                    <h2 className="section-title">📊 나의 활동</h2>
-                    <div className="stats-grid">
-                        <div className="stat-item">
-                            <div className="stat-value">
-                                {(stats?.myQuestions || 0) + (stats?.relatedQuestions || 0)}
+                {/* ===== 돌아보기 ===== */}
+                <div className="reflection-card">
+                    <h3>💭 이번 달 돌아보기</h3>
+                    <p className="reflection-intro">
+                        이번 달을 돌아보며 적어보세요. {!reflectionSaved && '(+3~7🌸)'}
+                    </p>
+
+                    <div className="reflection-group">
+                        <label>🤔 이번 달 가장 궁금했던 것은?</label>
+                        <textarea
+                            value={mostCurious}
+                            onChange={e => setMostCurious(e.target.value)}
+                            placeholder="이번 달에 가장 궁금했던 것을 적어보세요"
+                            rows={3}
+                            maxLength={300}
+                            className="reflection-textarea"
+                            disabled={!isEditable}
+                        />
+                    </div>
+
+                    <div className="reflection-group">
+                        <label>
+                            🔍 궁금한 것을 더 찾아본 적이 있나요?{' '}
+                            <span style={{fontSize:'14px', color:'#888'}}>이번 달에 활동한 것들 중에서 선택해 보세요.</span>
+                        </label>
+
+                        {reflectionSaved && !editMode ? (
+                            <div style={{marginTop:'8px'}}>
+                                {selectedQuestions.length === 0 ? (
+                                    <div style={{color:'#aaa', fontSize:'13px', padding:'6px 0'}}>선택한 항목이 없어요</div>
+                                ) : (
+                                    <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
+                                        {selectedQuestions.map((title, i) => (
+                                            <div key={i} style={{
+                                                display:'flex', alignItems:'center', gap:'6px',
+                                                background:'#eff6ff', borderRadius:'8px',
+                                                padding:'7px 10px', fontSize:'16px', color:'#1e40af'
+                                            }}>
+                                                <span>✅</span>
+                                                <span>{title}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            <div className="stat-label">총 질문</div>
+                        ) : (
+                            (() => {
+                                const allItems = getAllItems();
+                                if (allItems.length === 0) return (
+                                    <div style={{color:'#aaa', fontSize:'13px', padding:'8px 0'}}>이번 달 활동한 내용이 없어요</div>
+                                );
+                                return (
+                                    <div style={{display:'flex', flexDirection:'column', gap:'6px', marginTop:'8px'}}>
+                                        {allItems.map((item, i) => {
+                                            const checked = selectedQuestions.includes(item.title);
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    onClick={() => toggleQuestion(item.title)}
+                                                    style={{
+                                                        display:'flex', alignItems:'flex-start', gap:'8px',
+                                                        cursor:'pointer', padding:'4px 2px'
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        onChange={() => toggleQuestion(item.title)}
+                                                        onClick={e => e.stopPropagation()}
+                                                        style={{marginTop:'2px', accentColor:'#3b82f6', cursor:'pointer', width:'16px', height:'16px', flexShrink:0}}
+                                                    />
+                                                    <span style={{fontSize:'16px', color:'#333', lineHeight:'1.7', userSelect:'none'}}>
+                                                        {item.title}
+                                                        <span style={{marginLeft:'6px', fontSize:'14px', color:'#aaa'}}>{item.type}</span>
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()
+                        )}
+                    </div>
+
+                    <div className="reflection-group">
+                        <label>💫 이번 달 한마디 <span style={{fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'2px 7px', borderRadius:'10px', marginLeft:'4px'}}>선택</span></label>
+                        <textarea
+                            value={monthlyFeeling}
+                            onChange={e => setMonthlyFeeling(e.target.value)}
+                            placeholder="이번 달 물음송이 활동은 어땠나요?"
+                            rows={2}
+                            maxLength={300}
+                            className="reflection-textarea"
+                            disabled={!isEditable}
+                        />
+                    </div>
+
+                    {!reflectionSaved && (
+                        <button
+                            className="save-reflection-btn"
+                            onClick={handleSaveReflection}
+                            disabled={saving || !mostCurious.trim()}
+                        >
+                            {saving ? '저장 중...' : '돌아보기 완료'}
+                        </button>
+                    )}
+                    {reflectionSaved && !editMode && (
+                        <button
+                            className="save-reflection-btn"
+                            style={{background:'#87CEEB', marginBottom:'12px'}}
+                            onClick={() => setEditMode(true)}
+                        >
+                            ✏️ 수정하기
+                        </button>
+                    )}
+
+                    {reflectionSaved && !editMode && (
+                        <div style={{marginBottom:'12px', background:'#f0fdf4', borderRadius:'12px', padding:'14px 16px', color:'#166534', fontWeight:700, fontSize:14, textAlign:'center'}}>
+                            ✅ 이번 달 완료! 다음 달에 만나요.
                         </div>
-                        <div className="stat-item">
-                            <div className="stat-value">{stats?.myQuestions || 0}</div>
-                            <div className="stat-label">만든 질문</div>
+                    )}
+
+                    {reflectionSaved && editMode && (
+                        <div style={{display:'flex', gap:'8px', marginTop:'4px'}}>
+                            <button
+                                className="save-reflection-btn"
+                                onClick={handleSaveReflection}
+                                disabled={saving || !mostCurious.trim()}
+                                style={{flex:2}}
+                            >
+                                {saving ? '저장 중...' : '💾 수정 저장'}
+                            </button>
+                            <button
+                                className="save-reflection-btn"
+                                style={{flex:1, background:'#9ca3af'}}
+                                onClick={() => { setEditMode(false); loadReport(); }}
+                            >
+                                취소
+                            </button>
                         </div>
-                        <div className="stat-item">
-                            <div className="stat-value">{stats?.relatedQuestions || 0}</div>
-                            <div className="stat-label">관련질문</div>
+                    )}
+                </div>
+
+                <div className="stats-card">
+                    <h3>📝 이번 달의 활동</h3>
+
+                    {/* 1. 만든 질문 */}
+                    <div className="stat-row stat-row-toggle" onClick={() => toggleSection('questions')}>
+                        <span className="stat-icon">✏️</span>
+                        <span className="stat-name">만든 질문</span>
+                        <span className="stat-value">{report?.stats.questionsCreated || 0}개</span>
+                        <span className="toggle-arrow">{openToggles.questions ? '▲' : '▼'}</span>
+                    </div>
+                    {openToggles.questions && (
+                        <div className="toggle-list">
+                            {report?.lists?.questions?.length > 0 ? report.lists.questions.map(q => (
+                                <div key={q.id} className="toggle-item">
+                                    <span className="toggle-item-text">"{q.title}"</span>
+                                    <span className="toggle-item-meta">👍 {q.likes} &nbsp; 💬 {q.opinion_count}</span>
+                                </div>
+                            )) : <div className="toggle-empty">이번 달 만든 질문이 없어요</div>}
                         </div>
-                        <div className="stat-item">
-                            <div className="stat-value">{stats?.quizCount || 0}</div>
-                            <div className="stat-label">퀴즈 완료</div>
+                    )}
+
+                    {/* 2. 관련질문 */}
+                    <div className="stat-row stat-row-toggle" onClick={() => toggleSection('related')}>
+                        <span className="stat-icon">❓</span>
+                        <span className="stat-name">관련질문</span>
+                        <span className="stat-value">{report?.stats.relatedQuestions || 0}개</span>
+                        <span className="toggle-arrow">{openToggles.related ? '▲' : '▼'}</span>
+                    </div>
+                    {openToggles.related && (
+                        <div className="toggle-list">
+                            {report?.lists?.related?.length > 0 ? report.lists.related.map(q => (
+                                <div key={q.id} className="toggle-item">
+                                    {q.parent_title && <div className="toggle-item-question">💬 {q.parent_title}</div>}
+                                    <span className="toggle-item-text">"{q.title}"</span>
+                                    <span className="toggle-item-meta">👍 {q.likes ?? 0} &nbsp; 💬 {q.opinion_count ?? 0}</span>
+                                </div>
+                            )) : <div className="toggle-empty">이번 달 관련질문이 없어요</div>}
                         </div>
-                        <div className="stat-item">
-                            <div className="stat-value">{stats?.reactions || 0}</div>
-                            <div className="stat-label">관심표시</div>
+                    )}
+
+                    {/* 3. 남긴 의견 */}
+                    <div className="stat-row stat-row-toggle" onClick={() => toggleSection('opinions')}>
+                        <span className="stat-icon">💬</span>
+                        <span className="stat-name">남긴 의견</span>
+                        <span className="stat-value">{report?.stats.opinionsGiven || 0}개</span>
+                        <span className="toggle-arrow">{openToggles.opinions ? '▲' : '▼'}</span>
+                    </div>
+                    {openToggles.opinions && (
+                        <div className="toggle-list">
+                            {report?.lists?.opinions?.length > 0 ? report.lists.opinions.map((op, i) => (
+                                <div key={i} className="toggle-item">
+                                    <div className="toggle-item-question">↳ "{op.question_title}"</div>
+                                    <div className="toggle-item-text">"{op.content}"</div>
+                                </div>
+                            )) : <div className="toggle-empty">이번 달 남긴 의견이 없어요</div>}
                         </div>
-                        <div className="stat-item">
-                            <div className="stat-value">{stats?.opinions || 0}</div>
-                            <div className="stat-label">남긴 의견</div>
+                    )}
+
+                    {/* 4. 관심 표시 */}
+                    <div className="stat-row stat-row-toggle" onClick={() => toggleSection('reactions')}>
+                        <span className="stat-icon">👍</span>
+                        <span className="stat-name">관심 표시</span>
+                        <span className="stat-value">{report?.stats.reactionsGiven || 0}개</span>
+                        <span className="toggle-arrow">{openToggles.reactions ? '▲' : '▼'}</span>
+                    </div>
+                    {openToggles.reactions && (
+                        <div className="toggle-list">
+                            {report?.lists?.reactions?.length > 0 ? report.lists.reactions.map((r, i) => (
+                                <div key={i} className="toggle-item">
+                                    <span className="toggle-item-text">{r.question_title}</span>
+                                    <span className="toggle-item-meta">{r.reaction_type === 'like' ? '👍' : '👎'}</span>
+                                </div>
+                            )) : <div className="toggle-empty">이번 달 관심 표시가 없어요</div>}
                         </div>
+                    )}
+
+                    {/* 5. 퀴즈 완료 */}
+                    <div className="stat-row">
+                        <span className="stat-icon">🧩</span>
+                        <span className="stat-name">퀴즈 완료</span>
+                        <span className="stat-value">{report?.stats.quizCompleted || 0}회</span>
                     </div>
                 </div>
 
-                {/* 송이 진행도 건전지 바 — 실제 교환 자격(누적 200송이 + 최근2주 주간일지) 기준 */}
-                <div className="profile-section">
-                    <h2 className="section-title">🌸 상품권 교환 진행도</h2>
-                    {!exchangeStatus ? (
-                        <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
-                    ) : (() => {
-                        const { lifetimeSongi, threshold, eligible, journalCount, minJournalCount, songiNeeded } = exchangeStatus;
-                        const pct = Math.min((lifetimeSongi / threshold) * 100, 100);
-                        const hasJournals = journalCount >= minJournalCount;
-
-                        // 하단 안내 멘트: 막히는 이유만 짚어줌
-                        let message;
-                        if (eligible) {
-                            message = '🎉 교환 조건을 채웠어요! 선생님께 상품권 교환을 요청하세요!';
-                        } else {
-                            const parts = [];
-                            if (songiNeeded > 0) parts.push(`아직 ${songiNeeded.toFixed(1)}송이가 더 필요해요`);
-                            if (!hasJournals) parts.push(`일지를 ${minJournalCount - journalCount}개 더 써야 해요`);
-                            message = parts.join('. 그리고 ') + '.';
-                        }
-
-                        return (
-                            <div>
-                                {/* 일지(주간+월간) 작성 개수 체크 */}
-                                <div style={{
-                                    display:'flex', alignItems:'center', gap:'8px',
-                                    marginBottom:'10px', padding:'8px 10px',
-                                    background: hasJournals ? '#f0fdf4' : '#f9fafb',
-                                    borderRadius:'8px'
-                                }}>
-                                    <span style={{
-                                        fontSize:'18px',
-                                        color: hasJournals ? '#16a34a' : '#c1c7d0'
-                                    }}>
-                                        {hasJournals ? '✅' : '⭕'}
-                                    </span>
-                                    <span style={{fontSize:'13px', fontWeight:600, color: hasJournals ? '#16a34a' : '#999'}}>
-                                        일지(주간+월간) {journalCount}개 작성함 (기준 {minJournalCount}개)
-                                    </span>
-                                </div>
-
-                                <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px', fontSize:'14px', color:'#555'}}>
-                                    <span>누적 <strong style={{color:'#3b82f6'}}>{lifetimeSongi.toFixed(1)}송이</strong> (교환 기준 {threshold}송이)</span>
-                                </div>
-                                <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
-                                    <div style={{
-                                        flex:1, height:'28px',
-                                        background:'#e5e7eb', borderRadius:'6px',
-                                        overflow:'hidden', position:'relative'
-                                    }}>
-                                        <div style={{
-                                            width:`${pct}%`, height:'100%',
-                                            background: eligible
-                                                ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                                                : pct >= 60
-                                                ? 'linear-gradient(90deg, #60a5fa, #3b82f6)'
-                                                : pct >= 30
-                                                ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-                                                : 'linear-gradient(90deg, #f87171, #ef4444)',
-                                            borderRadius:'6px',
-                                            transition:'width 0.5s ease'
-                                        }}/>
-                                        <span style={{
-                                            position:'absolute', top:'50%', left:'50%',
-                                            transform:'translate(-50%,-50%)',
-                                            fontSize:'12px', fontWeight:'700', color:'#333'
-                                        }}>{Math.round(pct)}%</span>
-                                    </div>
-                                    <div style={{
-                                        width:'10px', height:'16px',
-                                        background:'#9ca3af', borderRadius:'0 3px 3px 0',
-                                        flexShrink:0
-                                    }}/>
-                                </div>
-                                <div style={{marginTop:'8px', fontSize:'13px', color:'#888', textAlign:'center'}}>
-                                    {message}
-                                </div>
-                                <div style={{marginTop:'6px', fontSize:'12px', color:'#aaa', textAlign:'center'}}>
-                                    ⚠️ 누적 {threshold}송이 이상 + 일지(주간·월간 합쳐서) {minJournalCount}개 이상 작성 시 교환 가능해요
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
-
-                {/* 상품권 수령 내역 */}
-                <div className="profile-section">
-                    <h2 className="section-title">🎫 상품권 내역</h2>
-                    {rewards && rewards.length > 0 ? (
-                        <div className="rewards-list">
-                            {rewards.map((r, i) => (
-                                <div key={i} className="reward-item">
-                                    <div className="reward-desc">{r.description || '상품권 수령'}</div>
-                                    <div className="reward-date">{formatDate(r.created_at)}</div>
+                {/* 하이라이트 */}
+                {report?.highlights?.topQuestions?.length > 0 && (
+                    <div className="stats-card">
+                        <h3>🌟 이번 달 하이라이트</h3>
+                        <div className="top-questions">
+                            <p className="section-subtitle">인기 질문 TOP</p>
+                            {report.highlights.topQuestions.map((q, i) => (
+                                <div key={q.id} className="top-question-item">
+                                    <span className="top-rank">{i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}</span>
+                                    <span className="top-title">{q.title}</span>
+                                    <span className="top-stats">👍{q.likes} 💬{q.opinion_count}</span>
                                 </div>
                             ))}
                         </div>
-                    ) : (
-                        <div className="rewards-empty">
-                            <p>아직 상품권 수령 내역이 없어요</p>
-                            <p className="rewards-hint">200송이를 모으면 1,000원 상품권을 받을 수 있어요 🌸</p>
-                        </div>
-                    )}
+                    </div>
+                )}
 
-                    {/* 교환 자격을 채웠을 때만 신청 폼 표시 */}
-                    {exchangeStatus?.eligible && (
-                        claimSubmitted ? (
-                            <div style={{
-                                marginTop: '14px', padding: '14px', borderRadius: '10px',
-                                background: '#f0fdf4', textAlign: 'center',
-                            }}>
-                                <p style={{ margin: 0, color: '#16a34a', fontWeight: 600 }}>
-                                    ✓ 신청이 접수됐어요! 선생님이 곧 연락드릴게요
-                                </p>
-                            </div>
-                        ) : (
-                            <div style={{
-                                marginTop: '14px', padding: '14px', borderRadius: '10px',
-                                background: '#fefce8', border: '1px solid #fde68a',
-                            }}>
-                                <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: '14px' }}>
-                                    🎁 상품권 전달 정보를 입력해주세요
-                                </p>
-                                <div style={{ marginBottom: '8px' }}>
-                                    <label style={{ fontSize: '12px', color: '#888' }}>이름</label>
-                                    <input
-                                        type="text"
-                                        placeholder="이름을 적어주세요"
-                                        value={claimName}
-                                        onChange={e => setClaimName(e.target.value)}
-                                        style={{
-                                            width: '100%', boxSizing: 'border-box', padding: '8px 10px',
-                                            borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '2px',
-                                        }}
-                                    />
-                                </div>
-                                <div style={{ marginBottom: '10px' }}>
-                                    <label style={{ fontSize: '12px', color: '#888' }}>휴대폰 번호</label>
-                                    <input
-                                        type="tel"
-                                        placeholder="010-0000-0000"
-                                        value={claimPhone}
-                                        onChange={e => setClaimPhone(e.target.value)}
-                                        style={{
-                                            width: '100%', boxSizing: 'border-box', padding: '8px 10px',
-                                            borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '2px',
-                                        }}
-                                    />
-                                </div>
-                                <p style={{ fontSize: '11px', color: '#aaa', margin: '0 0 10px' }}>
-                                    이름과 휴대폰 번호는 상품권 전달 외 목적으로 사용하지 않아요.
-                                </p>
-                                <button
-                                    onClick={handleClaimSubmit}
-                                    disabled={claimSubmitting}
-                                    style={{
-                                        width: '100%', padding: '10px', borderRadius: '8px', border: 'none',
-                                        background: '#f59e0b', color: 'white', fontWeight: 700, cursor: 'pointer',
-                                    }}
-                                >
-                                    {claimSubmitting ? '제출 중...' : '신청하기'}
-                                </button>
-                            </div>
-                        )
-                    )}
+                {/* 성장 메시지 (월간엔 지난달 비교 데이터가 없어서 절대치 기준으로만 안내) */}
+                <div className="growth-card">
+                    <h3>📈 나의 성장</h3>
+                    {getMonthlyGrowthMessages(report).map((msg, i) => (
+                        <p key={i} className="growth-msg">{msg}</p>
+                    ))}
                 </div>
-
             </div>
 
-            {/* 닉네임 변경 모달 */}
-            {showUsernameModal && (
-                <div className="modal-overlay" onClick={() => setShowUsernameModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>👤 닉네임 변경</h3>
-                        <input
-                            type="text"
-                            placeholder="새 닉네임 (3자 이상)"
-                            value={newUsername}
-                            onChange={e => setNewUsername(e.target.value)}
-                            maxLength={20}
-                            className="modal-input"
-                        />
-                        <div className="modal-buttons">
-                            <button className="modal-cancel" onClick={() => setShowUsernameModal(false)}>취소</button>
-                            <button className="modal-confirm" onClick={handleUsernameUpdate}>변경하기</button>
-                        </div>
-                    </div>
+            <div style={{
+                margin:'12px 8px 80px',
+                background:'#eff6ff',
+                borderRadius:'14px',
+                padding:'16px 20px',
+                textAlign:'center'
+            }}>
+                <div style={{fontSize:'15px', color:'#1e40af', fontWeight:'600', marginBottom:'8px'}}>
+                    🌸 송이를 확인해 보세요!
                 </div>
-            )}
-
+                <button
+                    onClick={() => navigate('/profile')}
+                    style={{
+                        background:'#3b82f6', border:'none',
+                        color:'white', fontWeight:'700',
+                        fontSize:'14px', cursor:'pointer',
+                        padding:'8px 20px', borderRadius:'20px'
+                    }}
+                >
+                    내 프로필에서 확인하기 →
+                </button>
+            </div>
             <SettingBottomNav />
         </div>
     );
 }
 
-export default Profile;
+function getMonthlyGrowthMessages(report) {
+    if (!report) return ['아직 데이터가 없어요. 활동을 시작해보세요! 🌱'];
+    const { stats } = report;
+    const messages = [];
+    if (stats.questionsCreated > 0) {
+        messages.push(`이번 달 ${stats.questionsCreated}개의 질문을 만들었어요! ✏️`);
+    }
+    if (stats.relatedQuestions > 0) {
+        messages.push(`관련질문 ${stats.relatedQuestions}개로 탐구를 넓혔어요! ❓`);
+    }
+    if (stats.opinionsGiven > 0) {
+        messages.push(`의견을 ${stats.opinionsGiven}번 남겼어요! 💬`);
+    }
+    if (stats.questionsCreated === 0 && stats.opinionsGiven === 0 && stats.relatedQuestions === 0) {
+        messages.push('이번 달은 좀 쉬었나봐요. 다음 달에 질문해볼까요? 🌱');
+    }
+    return messages.length > 0 ? messages : ['꾸준히 활동하고 있어요! 좋아요! 🎉'];
+}
+
+export default MonthlyReport;

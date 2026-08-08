@@ -54,7 +54,7 @@ function WeeklyReport() {
     const loadKeywords = async (force) => {
         if (force) setKeywordsRefreshing(true); else setKeywordsLoading(true);
         try {
-            const res = await api.get('/users/me/keywords', { params: force ? { force: 'true' } : {} });
+            const res = await api.get('/users/me/keywords', { params: { period: 'recent', ...(force ? { force: 'true' } : {}) } });
             setKeywords(res.data);
         } catch (err) {
             console.error('키워드 로드 오류:', err);
