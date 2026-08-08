@@ -124,7 +124,7 @@ function SavedQuestions() {
                         }
 
                         // 퀴즈/질문고르기는 content(카테고리) 숨김
-                        const isSeeded = q.questionType === 'quiz' || q.questionType === 'icebreaking' || q.questionType === 'seed';
+                        const isSeeded = q.questionType === 'quiz' || q.questionType === 'icebreaking' || q.questionType === 'seed' || q.questionType === 'olympic';
 
                         return {
                             ...q,
@@ -140,7 +140,7 @@ function SavedQuestions() {
                             authorId: stats.question?.user_id ?? null
                         };
                     } catch (err) {
-                        const isSeededErr = q.questionType === 'quiz' || q.questionType === 'icebreaking' || q.questionType === 'seed';
+                        const isSeededErr = q.questionType === 'quiz' || q.questionType === 'icebreaking' || q.questionType === 'seed' || q.questionType === 'olympic';
                         return { ...q, content: isSeededErr ? null : q.content, latestOpinion: null, relatedTree: [] };
                     }
                 })
@@ -543,7 +543,7 @@ function SavedQuestions() {
                                             <div className="question-title">{saved.title}</div>
                                         )}
                                         {saved.content && saved.content !== saved.title && (
-                                            (saved.questionType === 'quiz' || saved.questionType === 'icebreaking' || saved.questionType === 'seed')
+                                            (saved.questionType === 'quiz' || saved.questionType === 'icebreaking' || saved.questionType === 'seed' || saved.questionType === 'olympic')
                                                 ? <span className="category-badge">{saved.content}</span>
                                                 : <div className="question-content">{saved.content}</div>
                                         )}

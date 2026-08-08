@@ -241,15 +241,15 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            NULL as user_id,
            '퀴즈' as username,
            GREATEST(
-             COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), TIMESTAMP '1970-01-01'),
+             COALESCE((SELECT MAX(created_at) FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic')), TIMESTAMP '1970-01-01'),
              COALESCE((SELECT MAX(created_at) FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false), TIMESTAMP '1970-01-01'),
-             COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking')), TIMESTAMP '1970-01-01')
+             COALESCE((SELECT MAX(created_at) FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic')), TIMESTAMP '1970-01-01')
            ) as latest_activity
          FROM seed_questions sq
          WHERE
-           EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
+           EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic'))
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
-           OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
+           OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic'))
        ) q
        WHERE $7::text[] IS NULL OR q.title ILIKE ANY($7::text[]) OR q.content ILIKE ANY($7::text[])
        ORDER BY ${orderClause}
@@ -269,9 +269,9 @@ router.get('/with-status', authenticateToken, async (req, res) => {
          SELECT sq.id, sq.question as title, sq.category as content
          FROM seed_questions sq
          WHERE
-           EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
+           EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic'))
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
-           OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
+           OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic'))
        ) t
        WHERE $1::text[] IS NULL OR t.title ILIKE ANY($1::text[]) OR t.content ILIKE ANY($1::text[])`,
       [searchTokens]
@@ -389,7 +389,7 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
     );
 
     // 원래 질문 내용 조회 + 작성자에게 알림 (씨드질문은 작성자가 없어서 알림 대상 아님)
-    const isSeedQ = ['icebreaking', 'seed', 'quiz'].includes(questionType);
+    const isSeedQ = ['icebreaking', 'seed', 'quiz', 'olympic'].includes(questionType);
     let questionText = '';
     let opinionQId = null;
     try {
@@ -478,7 +478,7 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
 
     await client.query('BEGIN');
 
-    const isSeedType = questionType === 'icebreaking' || questionType === 'seed' || questionType === 'quiz';
+    const isSeedType = questionType === 'icebreaking' || questionType === 'seed' || questionType === 'quiz' || questionType === 'olympic';
 
     let insertResult;
     if (isSeedType) {
@@ -602,7 +602,7 @@ router.get('/:id/related-tree', async (req, res) => {
     // ⚠️ user_questions와 seed_questions는 서로 다른 테이블이라 id가 우연히 같을 수 있음.
     // type을 명시하지 않으면 엉뚱한 테이블의 질문이 부모/자식으로 잘못 엮일 수 있어서 반드시 구분해야 함.
     const questionType = req.query.type || 'user_question';
-    const isSeedType = questionType === 'icebreaking' || questionType === 'seed' || questionType === 'quiz';
+    const isSeedType = questionType === 'icebreaking' || questionType === 'seed' || questionType === 'quiz' || questionType === 'olympic';
     const rootWhere = isSeedType
       ? 'uq.related_seed_question_id = $1'
       : 'uq.parent_question_id = $1';
@@ -637,7 +637,7 @@ router.get('/:id/related', async (req, res) => {
     const { id } = req.params;
     const { type } = req.query;
 
-    const isSeedType = type === 'icebreaking' || type === 'seed' || type === 'quiz';
+    const isSeedType = type === 'icebreaking' || type === 'seed' || type === 'quiz' || type === 'olympic';
 
     const whereClause = isSeedType
       ? 'uq.related_seed_question_id = $1'
@@ -718,7 +718,7 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
     }
 
     // 테이블 결정
-    const isSeed = ['icebreaking', 'seed', 'quiz'].includes(questionType);
+    const isSeed = ['icebreaking', 'seed', 'quiz', 'olympic'].includes(questionType);
     const tableName = isSeed ? 'seed_questions' : 'user_questions';
 
     await client.query('BEGIN');
@@ -818,7 +818,7 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
 
         if (todayCount < 6) {
           // 원래 질문 내용 조회
-          const isSeedQ2 = ['icebreaking', 'seed', 'quiz'].includes(questionType);
+          const isSeedQ2 = ['icebreaking', 'seed', 'quiz', 'olympic'].includes(questionType);
           let interestQText = '';
           let interestQId = null;
           try {
@@ -865,7 +865,7 @@ router.delete('/:id/reaction', authenticateToken, async (req, res) => {
     const userId = req.user.id || req.user.userId;
     const questionType = req.query.type || 'user_question';
 
-    const isSeed = ['icebreaking', 'seed', 'quiz'].includes(questionType);
+    const isSeed = ['icebreaking', 'seed', 'quiz', 'olympic'].includes(questionType);
     const tableName = isSeed ? 'seed_questions' : 'user_questions';
 
     await client.query('BEGIN');
