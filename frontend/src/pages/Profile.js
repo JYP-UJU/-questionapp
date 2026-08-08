@@ -70,7 +70,10 @@ function Profile() {
         logKeywordEvent('search_click', engine, questionText);
         const url = engine === 'naver'
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(questionText)}`
-            : `https://www.google.com/search?q=${encodeURIComponent(questionText)}`;
+            // 구글은 쇼핑/유튜브가 상위에 뜨는 경향이 있어서, 설명 위주 사이트로 살짝 유도
+            : `https://www.google.com/search?q=${encodeURIComponent(
+                `${questionText} (site:namu.wiki OR site:wikipedia.org OR site:sciencetimes.co.kr)`
+              )}`;
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
@@ -165,20 +168,20 @@ function Profile() {
                     }}>닉네임 변경</button>
                 </div>
 
-                {/* 최근 1주일 관심사 진단 + AI 탐구 유도 */}
+                {/* 최근 15일(2주) 관심사 진단 + 탐구 유도 */}
                 <div className="profile-section">
                     <h2 className="section-title">🔮 당신의 성향은요</h2>
                     {keywordsLoading ? (
                         <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
                     ) : keywords?.insufficientData ? (
                         <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>
-                            최근 1주일 동안은 활동이 없었어요. 질문을 써보거나 관심있음을 눌러보세요!
+                            최근 15일 동안은 활동이 없었어요. 질문을 써보거나 관심있음을 눌러보세요!
                         </div>
                     ) : (
                         <div>
-                            {/* 진단 문구 - 키워드는 클릭하면 앱 내 검색으로 이동 */}
-                            <p style={{ fontSize: '15px', color: '#333', lineHeight: 1.6, margin: '0 0 10px' }}>
-                                최근 1주일 활동에서는 주로{' '}
+                            {/* 진단 문구 + 힌트를 한 문단으로 - 키워드는 클릭하면 앱 내 검색으로 이동 */}
+                            <p style={{ fontSize: '15px', color: '#333', lineHeight: 1.6, margin: '0 0 16px' }}>
+                                최근 15일 활동에서는 주로{' '}
                                 {(keywords?.keywords || []).map((kw, i) => (
                                     <React.Fragment key={i}>
                                         <span
@@ -190,10 +193,10 @@ function Profile() {
                                         {i < (keywords?.keywords?.length || 0) - 1 ? ', ' : ''}
                                     </React.Fragment>
                                 ))}
-                                에 관심이 많았네요.
-                            </p>
-                            <p style={{ fontSize: '12px', color: '#aaa', margin: '0 0 16px' }}>
-                                (키워드를 누르면 물음송이 안에서 바로 검색돼요)
+                                에 관심이 많았어요.{' '}
+                                <span style={{ fontSize: '12px', color: '#aaa' }}>
+                                    (클릭하면 물음송이의 질문 검색 결과를 볼 수 있어요.)
+                                </span>
                             </p>
 
                             <p style={{ fontSize: '13px', color: '#888', margin: '0 0 12px' }}>
@@ -203,45 +206,49 @@ function Profile() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
                                 {(keywords?.questions || []).map((q, i) => (
                                     <div key={i} style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px',
                                         background: '#f8f9ff', border: '1px solid #e5e7eb',
                                         borderRadius: '10px', padding: '10px 12px'
                                     }}>
-                                        <div style={{ fontSize: '14px', color: '#333', lineHeight: 1.4, marginBottom: '8px' }}>{q}</div>
-                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                        <span style={{ flex: 1, fontSize: '14px', color: '#333', lineHeight: 1.4 }}>{q}</span>
+                                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                                             <button
                                                 onClick={() => handleCopy(q, i)}
                                                 style={{
-                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: 'none',
+                                                    padding: '6px 8px', borderRadius: '8px', border: 'none',
                                                     background: copiedIndex === i ? '#16a34a' : '#6b84c4',
-                                                    color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                                                    color: 'white', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                                                    whiteSpace: 'nowrap'
                                                 }}
                                             >
-                                                {copiedIndex === i ? '복사됨!' : '📋 복사'}
+                                                {copiedIndex === i ? '✓' : '📋 복사'}
                                             </button>
                                             <button
                                                 onClick={() => handleSearchClick(q, 'google')}
                                                 style={{
-                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: '1px solid #e5e7eb',
-                                                    background: 'white', color: '#333', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                                                    padding: '6px 8px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                                                    background: 'white', color: '#333', fontSize: '11px', fontWeight: 700,
+                                                    cursor: 'pointer', whiteSpace: 'nowrap'
                                                 }}
                                             >
-                                                🔍 구글에서 찾기
+                                                🔍 구글
                                             </button>
                                             <button
                                                 onClick={() => handleSearchClick(q, 'naver')}
                                                 style={{
-                                                    flex: 1, padding: '7px 4px', borderRadius: '8px', border: '1px solid #e5e7eb',
-                                                    background: 'white', color: '#03c75a', fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                                                    padding: '6px 8px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                                                    background: 'white', color: '#03c75a', fontSize: '11px', fontWeight: 700,
+                                                    cursor: 'pointer', whiteSpace: 'nowrap'
                                                 }}
                                             >
-                                                🔍 네이버에서 찾기
+                                                🔍 네이버
                                             </button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* 토글형 AI 활용 팁 - 기본은 접혀있음, 길게 늘어놓지 않기 위해 */}
+                            {/* 토글형 팁 - 기본은 접혀있음, 길게 늘어놓지 않기 위해 */}
                             <button
                                 onClick={() => setShowTips(v => !v)}
                                 style={{

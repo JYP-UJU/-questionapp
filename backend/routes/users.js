@@ -323,10 +323,11 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
       return res.json({ ...cached.rows[0].keywords, generatedAt: cached.rows[0].generated_at, cached: true });
     }
 
-    // 2. 재료 모으기: 최근 7일 활동만 - 질문+관련질문 / 관심있음 / 남긴 의견, 네 범주를 하나로 합쳐서 사용
+    // 2. 재료 모으기: 최근 15일(2주) 고정 기간 - 질문+관련질문 / 관심있음 / 남긴 의견, 네 범주를 하나로 합쳐서 사용
+    //    기간을 매번 다르게 적응시키지 않고 15일로 고정 — 연구 데이터 해석 시 일관성 유지 목적
     const myQuestions = await pool.query(
       `SELECT title FROM user_questions
-       WHERE user_id = $1 AND is_deleted = false AND created_at >= NOW() - INTERVAL '7 days'
+       WHERE user_id = $1 AND is_deleted = false AND created_at >= NOW() - INTERVAL '15 days'
        ORDER BY created_at DESC LIMIT 40`,
       [userId]
     );
@@ -339,14 +340,14 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
        LEFT JOIN seed_questions sq ON qr.question_id = sq.id
          AND qr.question_type IN ('seed', 'quiz', 'icebreaking')
        WHERE qr.user_id = $1 AND qr.reaction_type = 'like'
-         AND qr.created_at >= NOW() - INTERVAL '7 days'
+         AND qr.created_at >= NOW() - INTERVAL '15 days'
        ORDER BY qr.created_at DESC LIMIT 40`,
       [userId]
     );
 
     const opinionResult = await pool.query(
       `SELECT qo.opinion FROM question_opinions qo
-       WHERE qo.user_id = $1 AND qo.created_at >= NOW() - INTERVAL '7 days'
+       WHERE qo.user_id = $1 AND qo.created_at >= NOW() - INTERVAL '15 days'
        ORDER BY qo.created_at DESC LIMIT 40`,
       [userId]
     );
@@ -355,7 +356,7 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
     const likedTitles = likedResult.rows.map(r => r.title).filter(Boolean);
     const opinionTexts = opinionResult.rows.map(r => r.opinion).filter(Boolean);
 
-    // 최근 7일 활동이 전혀 없으면 API 호출 없이 바로 안내 메시지
+    // 최근 15일 활동이 전혀 없으면 API 호출 없이 바로 안내 메시지
     if (myTitles.length === 0 && likedTitles.length === 0 && opinionTexts.length === 0) {
       const empty = { keywords: [], questions: [], insufficientData: true };
       return res.json({ ...empty, generatedAt: new Date().toISOString(), cached: false });
@@ -369,9 +370,9 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'AI 키워드 기능이 아직 설정되지 않았어요' });
     }
 
-    // 3. Claude API 호출 — (1) 최근 1주일 관심사를 대표하는 키워드 3개, (2) 그 관심사를 이어서
+    // 3. Claude API 호출 — (1) 최근 2주 관심사를 대표하는 키워드 3개, (2) 그 관심사를 이어서
     //    AI 챗봇에 그대로 복사해 물어볼 수 있는 질문 3개, 이렇게 두 가지를 한 번에 요청
-    const prompt = `다음은 한 학생이 과학 질문 앱에서 최근 7일 동안 활동한 기록입니다.
+    const prompt = `다음은 한 학생이 과학 질문 앱에서 최근 15일 동안 활동한 기록입니다.
 
 [학생이 쓴 질문/관련질문 제목]
 ${myTitles.length > 0 ? myTitles.map(t => `- ${t}`).join('\n') : '(없음)'}
@@ -384,7 +385,7 @@ ${opinionTexts.length > 0 ? opinionTexts.map(t => `- ${t}`).join('\n') : '(없�
 
 이 세 가지를 모두 합쳐서 하나의 활동 기록으로 보고, 아래 두 가지를 만들어줘.
 
-(1) keywords: 이 학생이 최근 1주일 동안 관심 가진 것을 대표하는 짧은 한국어 키워드나 짧은 구 3개. 특정 교과 분류명(물리/화학/생물/지구과학 등)이 아니라 실제 흥미로운 주제/개념 단위로. 각 8자 이내. "~에 관심이 많았네요"라는 문장 뒤에 자연스럽게 이어붙일 수 있는 명사(구) 형태로.
+(1) keywords: 이 학생이 최근 2주 동안 관심 가진 것을 대표하는 짧은 한국어 키워드나 짧은 구 3개. 특정 교과 분류명(물리/화학/생물/지구과학 등)이 아니라 실제 흥미로운 주제/개념 단위로. 각 8자 이내. "~에 관심이 많았어요"라는 문장 뒤에 자연스럽게 이어붙일 수 있는 명사(구) 형태로.
 
 (2) questions: 이 관심사를 이어서 Claude/ChatGPT/Copilot 같은 AI 챗봇 채팅창에 그대로 복사해 붙여넣고 물어볼 수 있는 구체적인 질문 문장 3개.
 지켜야 할 것:

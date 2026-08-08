@@ -137,7 +137,12 @@ router.get('/with-status', authenticateToken, async (req, res) => {
       ? 'RANDOM()'
       : `${engagementExpr} DESC, q.latest_activity DESC`;
     const search = (req.query.search || '').trim();
-    const searchPattern = search ? `%${search}%` : null;
+    // 검색어를 단어 단위로 쪼개서 하나라도 포함되면 걸리게 (AI가 만든 키워드는
+    // 질문 제목에 그대로 안 박혀있는 "개념어"인 경우가 많아서, 전체 구문 일치보다
+    // 단어 단위 매칭이 실제로 관련 있는 질문을 더 잘 찾아줌)
+    const searchTokens = search
+      ? [...new Set(search.split(/[\s,]+/).filter(Boolean))].map(t => `%${t}%`)
+      : null;
 
     const result = await pool.query(
       `SELECT
@@ -242,10 +247,10 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
        ) q
-       WHERE $7::text IS NULL OR q.title ILIKE $7::text OR q.content ILIKE $7::text
+       WHERE $7::text[] IS NULL OR q.title ILIKE ANY($7::text[]) OR q.content ILIKE ANY($7::text[])
        ORDER BY ${orderClause}
        LIMIT $5 OFFSET $6`,
-      [userId, userId, userId, userId, limit, offset, searchPattern]
+      [userId, userId, userId, userId, limit, offset, searchTokens]
     );
 
     // 전체 개수도 함께 반환 (프론트에서 "더보기" 버튼 표시 여부 판단용)
@@ -264,8 +269,8 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking'))
        ) t
-       WHERE $1::text IS NULL OR t.title ILIKE $1::text OR t.content ILIKE $1::text`,
-      [searchPattern]
+       WHERE $1::text[] IS NULL OR t.title ILIKE ANY($1::text[]) OR t.content ILIKE ANY($1::text[])`,
+      [searchTokens]
     );
     const total = parseInt(countResult.rows[0].total);
 
