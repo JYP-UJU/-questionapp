@@ -70,10 +70,8 @@ function Profile() {
         logKeywordEvent('search_click', engine, questionText);
         const url = engine === 'naver'
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(questionText)}`
-            // 구글은 쇼핑/유튜브가 상위에 뜨는 경향이 있어서, 설명 위주 사이트로 살짝 유도
-            : `https://www.google.com/search?q=${encodeURIComponent(
-                `${questionText} (site:namu.wiki OR site:wikipedia.org OR site:sciencetimes.co.kr)`
-              )}`;
+            // 구글은 필터가 아니라 힌트어만 살짝 붙임 (필터는 0건 위험 있어서 지난번에 되돌림)
+            : `https://www.google.com/search?q=${encodeURIComponent(questionText + ' 원리 이유')}`;
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
@@ -199,8 +197,11 @@ function Profile() {
                                 </span>
                             </p>
 
-                            <p style={{ fontSize: '13px', color: '#888', margin: '0 0 12px' }}>
+                            <p style={{ fontSize: '13px', color: '#888', margin: '0 0 4px' }}>
                                 이 질문으로 한번 더 찾아볼 수도 있어요.
+                            </p>
+                            <p style={{ fontSize: '11px', color: '#bbb', margin: '0 0 12px' }}>
+                                (구글은 원리·이유 중심으로 찾아드려요)
                             </p>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
@@ -224,16 +225,6 @@ function Profile() {
                                                 {copiedIndex === i ? '✓' : '📋 복사'}
                                             </button>
                                             <button
-                                                onClick={() => handleSearchClick(q, 'google')}
-                                                style={{
-                                                    padding: '6px 8px', borderRadius: '8px', border: '1px solid #e5e7eb',
-                                                    background: 'white', color: '#333', fontSize: '11px', fontWeight: 700,
-                                                    cursor: 'pointer', whiteSpace: 'nowrap'
-                                                }}
-                                            >
-                                                🔍 구글
-                                            </button>
-                                            <button
                                                 onClick={() => handleSearchClick(q, 'naver')}
                                                 style={{
                                                     padding: '6px 8px', borderRadius: '8px', border: '1px solid #e5e7eb',
@@ -242,6 +233,16 @@ function Profile() {
                                                 }}
                                             >
                                                 🔍 네이버
+                                            </button>
+                                            <button
+                                                onClick={() => handleSearchClick(q, 'google')}
+                                                style={{
+                                                    padding: '6px 8px', borderRadius: '8px', border: '1px solid #e5e7eb',
+                                                    background: 'white', color: '#333', fontSize: '11px', fontWeight: 700,
+                                                    cursor: 'pointer', whiteSpace: 'nowrap'
+                                                }}
+                                            >
+                                                🔍 구글
                                             </button>
                                         </div>
                                     </div>
