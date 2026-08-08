@@ -39,6 +39,46 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
+// ===== 질문올림픽 결과 표 (사용자 x 라운드) =====
+// 세로 한 행 = 완주 1회. 16강/8강은 문항 id 번호만, 4강/결승/우승은 문항 텍스트를 보여줌
+router.get('/olympic-table', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { user_id, order = 'desc' } = req.query;
+    const orderDir = order === 'asc' ? 'ASC' : 'DESC';
+    const userFilter = user_id ? `AND u.id = ${parseInt(user_id)}` : '';
+
+    const result = await pool.query(`
+      SELECT
+        os.id AS session_id,
+        os.user_id,
+        u.username,
+        os.created_at,
+        os.winner_question_id,
+        os.winner_question_text,
+        os.winner_subject,
+        -- 16강: 처음 노출된 16개 문항 id (선택 여부 상관없이 전부)
+        array_agg(DISTINCT r.question_id) FILTER (WHERE r.round_number = 0) AS round16_ids,
+        -- 8강: 16강에서 선택되어 8강에 오른 문항 id
+        array_agg(DISTINCT r.question_id) FILTER (WHERE r.round_number = 0 AND r.selected = true) AS round8_ids,
+        -- 4강: 8강에서 선택되어 4강에 오른 문항 텍스트
+        array_agg(DISTINCT r.question_text) FILTER (WHERE r.round_number = 1 AND r.selected = true) AS round4_texts,
+        -- 결승(2강): 4강에서 선택되어 결승에 오른 문항 텍스트
+        array_agg(DISTINCT r.question_text) FILTER (WHERE r.round_number = 2 AND r.selected = true) AS final2_texts
+      FROM olympic_sessions os
+      JOIN users u ON os.user_id = u.id
+      LEFT JOIN olympic_rounds r ON r.session_id = os.id
+      WHERE 1=1 ${userFilter}
+      GROUP BY os.id, u.username, os.user_id, os.created_at, os.winner_question_id, os.winner_question_text, os.winner_subject
+      ORDER BY os.created_at ${orderDir}
+    `);
+
+    res.json({ sessions: result.rows });
+  } catch (err) {
+    console.error('올림픽 표 조회 오류:', err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 // ===== 전체 활동 피드 (정렬 가능) =====
 router.get('/activities', authenticateToken, requireAdmin, async (req, res) => {
   try {

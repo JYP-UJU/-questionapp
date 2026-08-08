@@ -223,6 +223,22 @@ function WeeklyReport() {
             </div>
 
             <div className="wr-content">
+                {/* ===== 이주의 영웅 TOP 3 ===== */}
+                {weeklyHeroes.length > 0 && (
+                    <div className="stats-card" style={{background:'linear-gradient(135deg, #fff7e6, #fff1cc)'}}>
+                        <h3>🏆 이주의 영웅</h3>
+                        <div style={{display:'flex', flexDirection:'column', gap:'8px', marginTop:'8px'}}>
+                            {weeklyHeroes.map((h, i) => (
+                                <div key={i} style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                    <span style={{fontSize:'20px'}}>{['🥇','🥈','🥉'][i]}</span>
+                                    <span style={{flex:1, fontWeight:600, color:'#333'}}>{h.name}</span>
+                                    <span style={{color:'#f59e0b', fontWeight:700}}>{h.songi}송이</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* ===== 최근 15일 관심사 브리핑 (프로필에서 이동해옴) ===== */}
                 <div className="stats-card">
                     <h3>🔮 당신의 성향은요</h3>
@@ -253,11 +269,8 @@ function WeeklyReport() {
                                 </span>
                             </p>
 
-                            <p style={{ fontSize: '13px', color: '#888', margin: '0 0 4px' }}>
+                            <p style={{ fontSize: '13px', color: '#888', margin: '0 0 12px' }}>
                                 이 질문으로 한번 더 찾아볼 수도 있어요.
-                            </p>
-                            <p style={{ fontSize: '11px', color: '#bbb', margin: '0 0 12px' }}>
-                                (구글은 원리·이유 중심으로 찾아드려요)
                             </p>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
@@ -335,22 +348,6 @@ function WeeklyReport() {
                         </div>
                     )}
                 </div>
-
-                {/* ===== 이주의 영웅 TOP 3 ===== */}
-                {weeklyHeroes.length > 0 && (
-                    <div className="stats-card" style={{background:'linear-gradient(135deg, #fff7e6, #fff1cc)'}}>
-                        <h3>🏆 이주의 영웅</h3>
-                        <div style={{display:'flex', flexDirection:'column', gap:'8px', marginTop:'8px'}}>
-                            {weeklyHeroes.map((h, i) => (
-                                <div key={i} style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                                    <span style={{fontSize:'20px'}}>{['🥇','🥈','🥉'][i]}</span>
-                                    <span style={{flex:1, fontWeight:600, color:'#333'}}>{h.name}</span>
-                                    <span style={{color:'#f59e0b', fontWeight:700}}>{h.songi}송이</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
 
                 {/* ===== 돌아보기 ===== */}
                 <div className="reflection-card">

@@ -103,6 +103,7 @@ function Admin() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('activities'); // 'activities' | 'users' | 'reward_claims' | 'sessions'
   const [activities, setActivities] = useState([]);
+  const [olympicTable, setOlympicTable] = useState([]);
   const [users, setUsers] = useState([]);
   const [claims, setClaims] = useState([]);
   const [sessionsSummary, setSessionsSummary] = useState([]);
@@ -128,10 +129,20 @@ function Admin() {
   const loadActivities = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { type: typeFilter, order };
-      if (selectedUser) params.user_id = selectedUser.id;
-      const res = await api.get('/admin/activities', { params });
-      setActivities(res.data.activities || []);
+      if (typeFilter === 'olympic') {
+        // 질문올림픽은 카드 목록이 아니라 표(사용자 x 라운드)로 따로 보여줌
+        const params = { order };
+        if (selectedUser) params.user_id = selectedUser.id;
+        const res = await api.get('/admin/olympic-table', { params });
+        setOlympicTable(res.data.sessions || []);
+        setActivities([]);
+      } else {
+        const params = { type: typeFilter, order };
+        if (selectedUser) params.user_id = selectedUser.id;
+        const res = await api.get('/admin/activities', { params });
+        setActivities(res.data.activities || []);
+        setOlympicTable([]);
+      }
     } catch (err) {
       if (err.response?.status === 403) {
         alert('관리자 권한이 없어요');
@@ -213,6 +224,9 @@ function Admin() {
     try {
       const res = await api.delete('/admin/activity', { params: { type, id } });
       setActivities(prev => prev.filter(a => !(a.id === id && a.activity_type === type)));
+      if (type === 'olympic') {
+        setOlympicTable(prev => prev.filter(s => s.session_id !== id));
+      }
       alert(res.data?.message || '삭제 완료');
     } catch (err) {
       alert('삭제 실패');
@@ -350,6 +364,54 @@ function Admin() {
           {/* 활동 목록 */}
           {loading ? (
             <div style={styles.loading}>로딩 중...</div>
+          ) : typeFilter === 'olympic' ? (
+            /* 질문올림픽은 카드 대신 표(사용자 x 라운드)로 */
+            <div style={{ overflowX: 'auto' }}>
+              {olympicTable.length === 0 ? (
+                <div style={styles.empty}>완주 기록이 없어요</div>
+              ) : (
+                <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f3f4f6', textAlign: 'left' }}>
+                      {['사용자', '시각', '16강 (번호)', '8강 (번호)', '4강', '결승(2강)', '우승(1강)', ''].map((h, i) => (
+                        <th key={i} style={{ padding: '8px 10px', borderBottom: '2px solid #e5e7eb', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {olympicTable.map((s) => (
+                      <tr key={s.session_id} style={{ borderBottom: '1px solid #f0f0f0', verticalAlign: 'top' }}>
+                        <td style={{ padding: '8px 10px', fontWeight: 700, whiteSpace: 'nowrap' }}>{s.username}</td>
+                        <td style={{ padding: '8px 10px', color: '#888', whiteSpace: 'nowrap' }}>{formatDate(s.created_at)}</td>
+                        <td style={{ padding: '8px 10px', color: '#666', minWidth: 140 }}>
+                          {(s.round16_ids || []).filter(x => x !== null).sort((a,b)=>a-b).join(', ') || '-'}
+                        </td>
+                        <td style={{ padding: '8px 10px', color: '#666', minWidth: 100 }}>
+                          {(s.round8_ids || []).filter(x => x !== null).sort((a,b)=>a-b).join(', ') || '-'}
+                        </td>
+                        <td style={{ padding: '8px 10px', minWidth: 180 }}>
+                          {(s.round4_texts || []).filter(Boolean).map((t, i) => (
+                            <div key={i} style={{ marginBottom: 2 }}>· {t}</div>
+                          ))}
+                        </td>
+                        <td style={{ padding: '8px 10px', minWidth: 180 }}>
+                          {(s.final2_texts || []).filter(Boolean).map((t, i) => (
+                            <div key={i} style={{ marginBottom: 2 }}>· {t}</div>
+                          ))}
+                        </td>
+                        <td style={{ padding: '8px 10px', minWidth: 180, fontWeight: 700, color: '#f97316' }}>
+                          {s.winner_question_text}
+                          {s.winner_subject && <span style={{ marginLeft: 6, fontSize: 11, color: '#aaa', fontWeight: 400 }}>({s.winner_subject})</span>}
+                        </td>
+                        <td style={{ padding: '8px 10px' }}>
+                          <button style={styles.deleteBtn} onClick={() => handleDelete('olympic', s.session_id)}>삭제</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
           ) : (
             <div style={styles.list}>
               {activities.length === 0 && <div style={styles.empty}>활동 내역이 없어요</div>}
