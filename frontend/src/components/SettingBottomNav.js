@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../services/api';
 
 function SettingBottomNav() {
     const navigate = useNavigate();
@@ -10,10 +11,51 @@ function SettingBottomNav() {
     const journalLabel = isWeekly ? '월간일지' : '주간일지';
     const journalPath = isWeekly ? '/monthly-report' : '/weekly-report';
 
+    // ===== 일지 작성 여부 확인 (BottomNav.js와 동일한 기준: 주간=목요일부터, 월간=25일부터) =====
+    const [reflectionStatus, setReflectionStatus] = useState({ weeklyDone: true, monthlyDone: true });
+    const [weeklyCutoffReached, setWeeklyCutoffReached] = useState(false);
+    const [monthlyCutoffReached, setMonthlyCutoffReached] = useState(false);
+
+    useEffect(() => {
+        const now = new Date();
+
+        const dayOfWeek = now.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + mondayOffset);
+        monday.setHours(0, 0, 0, 0);
+
+        const monthFirst = new Date(now.getFullYear(), now.getMonth(), 1);
+        monthFirst.setHours(0, 0, 0, 0);
+
+        const mondayBasedIdx = (dayOfWeek + 6) % 7; // 월=0 ... 일=6
+        const weeklyReached = mondayBasedIdx >= 3; // 목,금,토,일
+        const monthlyReached = now.getDate() >= 25;
+        setWeeklyCutoffReached(weeklyReached);
+        setMonthlyCutoffReached(monthlyReached);
+
+        if (!weeklyReached && !monthlyReached) return;
+
+        api.get('/reports/reflection-status', {
+            params: { weekStart: monday.toISOString(), monthStart: monthFirst.toISOString() }
+        }).then(res => setReflectionStatus(res.data))
+          .catch(err => console.error('일지 작성 상태 확인 오류:', err));
+    }, []);
+
+    const settingBadge =
+        (weeklyCutoffReached && !reflectionStatus.weeklyDone) ||
+        (monthlyCutoffReached && !reflectionStatus.monthlyDone);
+
+    // 토글 버튼이 가리키는 대상(지금 안 보고 있는 쪽) 기준으로 뱃지 판단
+    const journalBadge = isWeekly
+        ? (monthlyCutoffReached && !reflectionStatus.monthlyDone)   // 지금 주간페이지 → 링크는 월간
+        : (weeklyCutoffReached && !reflectionStatus.weeklyDone);    // 지금 그 외(월간 등) → 링크는 주간
+
     const menus = [
         {
             path: '/setting',
             label: '나의공간',
+            showBadge: settingBadge,
             icon: (active) => (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="8" r="3.5"/>
@@ -38,6 +80,7 @@ function SettingBottomNav() {
         {
             path: journalPath,
             label: journalLabel,
+            showBadge: journalBadge,
             icon: (active) => (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="4" width="18" height="18" rx="2"/>
@@ -136,8 +179,21 @@ function SettingBottomNav() {
                             alignItems: 'center',
                             gap: '3px',
                             transition: 'all 0.2s',
+                            position: 'relative',
                         }}
                     >
+                        {menu.showBadge && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '2px',
+                                right: '6px',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: '#ef4444',
+                                border: '1.5px solid white',
+                            }} />
+                        )}
                         {menu.icon(isActive)}
                         <span style={{
                             fontSize: '11px',
