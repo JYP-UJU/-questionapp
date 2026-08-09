@@ -62,6 +62,9 @@ app.get('/', (req, res) => {
 });
 const path = require('path');
 
+// 연구 참여 동의서 6종 (public/consent 폴더에 넣어두면 /consent/파일명.html 로 접근 가능)
+app.use('/consent', express.static(path.join(__dirname, 'public', 'consent')));
+
 app.get('/consent/student', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'student_info.html'));
 });
