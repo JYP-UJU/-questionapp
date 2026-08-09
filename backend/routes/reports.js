@@ -721,4 +721,31 @@ router.get('/monthly-leaderboard', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== 주간/월간 일지 작성 여부 확인 (하단 네비 뱃지용, 가벼운 조회 전용) =====
+// weekStart, monthStart는 프론트엔드가 로컬 시간 기준으로 계산해서 넘겨줌
+// (서버에서 직접 "오늘"을 계산하면 타임존 어긋남 위험이 있어 피함)
+router.get('/reflection-status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const { weekStart, monthStart } = req.query;
+
+    if (!weekStart || !monthStart) {
+      return res.status(400).json({ message: 'weekStart, monthStart가 필요합니다' });
+    }
+
+    const [weeklyResult, monthlyResult] = await Promise.all([
+      pool.query('SELECT id FROM weekly_reflections WHERE user_id = $1 AND week_start = $2::date', [userId, weekStart]),
+      pool.query('SELECT id FROM monthly_reflections WHERE user_id = $1 AND month_start = $2::date', [userId, monthStart])
+    ]);
+
+    res.json({
+      weeklyDone: weeklyResult.rows.length > 0,
+      monthlyDone: monthlyResult.rows.length > 0
+    });
+  } catch (error) {
+    console.error('일지 작성 상태 조회 오류:', error);
+    res.status(500).json({ message: '서버 오류가 발생했습니다' });
+  }
+});
+
 module.exports = router;

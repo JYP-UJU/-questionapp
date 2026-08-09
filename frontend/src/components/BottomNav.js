@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../services/api';
 
 const menus = [
     {
@@ -50,6 +51,39 @@ const menus = [
 function BottomNav() {
     const navigate = useNavigate();
     const location = useLocation();
+    const [showJournalBadge, setShowJournalBadge] = useState(false);
+
+    useEffect(() => {
+        const now = new Date();
+
+        // 이번 주 월요일 (WeeklyReport.js의 getWeekRange와 동일한 계산)
+        const dayOfWeek = now.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + mondayOffset);
+        monday.setHours(0, 0, 0, 0);
+
+        // 이번 달 1일 (MonthlyReport.js의 getMonthRange와 동일한 계산)
+        const monthFirst = new Date(now.getFullYear(), now.getMonth(), 1);
+        monthFirst.setHours(0, 0, 0, 0);
+
+        // 기준일: 주간일지는 목요일부터, 월간일지는 25일부터 "아직 안 썼으면" 뱃지 표시
+        const mondayBasedIdx = (dayOfWeek + 6) % 7; // 월=0 ... 일=6
+        const weeklyCutoffReached = mondayBasedIdx >= 3; // 목,금,토,일
+        const monthlyCutoffReached = now.getDate() >= 25;
+
+        if (!weeklyCutoffReached && !monthlyCutoffReached) return; // 확인할 필요 없음
+
+        api.get('/reports/reflection-status', {
+            params: { weekStart: monday.toISOString(), monthStart: monthFirst.toISOString() }
+        }).then(res => {
+            const { weeklyDone, monthlyDone } = res.data;
+            const needsBadge =
+                (weeklyCutoffReached && !weeklyDone) ||
+                (monthlyCutoffReached && !monthlyDone);
+            setShowJournalBadge(needsBadge);
+        }).catch(err => console.error('일지 작성 상태 확인 오류:', err));
+    }, []);
 
     return (
         <nav style={{
@@ -129,8 +163,21 @@ function BottomNav() {
                             alignItems: 'center',
                             gap: '3px',
                             transition: 'all 0.2s',
+                            position: 'relative',
                         }}
                     >
+                        {menu.path === '/setting' && showJournalBadge && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '2px',
+                                right: '6px',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: '#ef4444',
+                                border: '1.5px solid white',
+                            }} />
+                        )}
                         {menu.icon(isActive)}
                         <span style={{
                             fontSize: '11px',
