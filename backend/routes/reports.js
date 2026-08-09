@@ -257,9 +257,30 @@ router.post('/weekly/reflection', authenticateToken, async (req, res) => {
 
     // 이미 작성했는지 확인
     const existing = await pool.query(
-      'SELECT id FROM weekly_reflections WHERE user_id = $1 AND week_start = $2::date',
+      'SELECT id, most_curious_question_id FROM weekly_reflections WHERE user_id = $1 AND week_start = $2::date',
       [userId, weekStart]
     );
+
+    // "가장 궁금했던 것"을 실제 만든질문으로도 등록/동기화
+    // (most_curious_question_id로 연결해두고, 재저장 시엔 새로 만들지 않고 제목만 갱신)
+    let mostCuriousQuestionId = existing.rows[0]?.most_curious_question_id || null;
+    const trimmedMostCurious = (mostCurious || '').trim();
+
+    if (trimmedMostCurious) {
+      if (mostCuriousQuestionId) {
+        await pool.query(
+          `UPDATE user_questions SET title = $1 WHERE id = $2 AND user_id = $3`,
+          [trimmedMostCurious, mostCuriousQuestionId, userId]
+        );
+      } else {
+        // 추가 송이 없이 질문만 생성 (송이는 주간일지 완료 보상에 이미 포함됨)
+        const created = await pool.query(
+          `INSERT INTO user_questions (user_id, title) VALUES ($1, $2) RETURNING id`,
+          [userId, trimmedMostCurious]
+        );
+        mostCuriousQuestionId = created.rows[0].id;
+      }
+    }
 
     if (existing.rows.length > 0) {
       // 업데이트
@@ -267,17 +288,17 @@ router.post('/weekly/reflection', authenticateToken, async (req, res) => {
         `UPDATE weekly_reflections SET 
           most_curious = $1, did_research = $2, research_topic = $3, 
           research_note = $4, fun_friend_question = $5, weekly_feeling = $6,
-          updated_at = NOW()
-         WHERE user_id = $7 AND week_start = $8::date`,
-        [mostCurious, didResearch, researchTopic, researchNote, funFriendQuestion, weeklyFeeling, userId, weekStart]
+          most_curious_question_id = $7, updated_at = NOW()
+         WHERE user_id = $8 AND week_start = $9::date`,
+        [mostCurious, didResearch, researchTopic, researchNote, funFriendQuestion, weeklyFeeling, mostCuriousQuestionId, userId, weekStart]
       );
     } else {
       // 새로 삽입
       await pool.query(
         `INSERT INTO weekly_reflections 
-          (user_id, week_start, most_curious, did_research, research_topic, research_note, fun_friend_question, weekly_feeling)
-         VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8)`,
-        [userId, weekStart, mostCurious, didResearch, researchTopic, researchNote, funFriendQuestion, weeklyFeeling]
+          (user_id, week_start, most_curious, did_research, research_topic, research_note, fun_friend_question, weekly_feeling, most_curious_question_id)
+         VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9)`,
+        [userId, weekStart, mostCurious, didResearch, researchTopic, researchNote, funFriendQuestion, weeklyFeeling, mostCuriousQuestionId]
       );
 
       // 주간 일지 완료 시 새 점수 구조:
