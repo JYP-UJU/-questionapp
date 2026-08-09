@@ -382,7 +382,7 @@ router.get('/monthly', authenticateToken, async (req, res) => {
     } catch(e) { quizCount = 0; }
 
     res.json({
-      period: { start: monthStart, end: monthEnd, label: new Date(monthStart).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' }) },
+      period: { start: monthStart, end: monthEnd, label: new Date(monthStart).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', timeZone: 'Asia/Seoul' }) },
       user: userResult.rows[0],
       stats: {
         questionsCreated: parseInt(questionsResult.rows[0].cnt),

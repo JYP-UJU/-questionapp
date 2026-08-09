@@ -15,6 +15,7 @@ function WeeklyReport() {
     const [mostCurious, setMostCurious] = useState('');
     const [selectedQuestions, setSelectedQuestions] = useState([]);
     const [funFriendQuestion, setFunFriendQuestion] = useState('');
+    const [searchNote, setSearchNote] = useState('');
     const [weeklyFeeling, setWeeklyFeeling] = useState('');
     const [reflectionSaved, setReflectionSaved] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -123,6 +124,7 @@ function WeeklyReport() {
                 setMostCurious(r.most_curious || '');
                 setSelectedQuestions(r.research_topic ? r.research_topic.split('||').filter(Boolean) : []);
                 setFunFriendQuestion(r.fun_friend_question || '');
+                setSearchNote(r.research_note || '');
                 setWeeklyFeeling(r.weekly_feeling || '');
                 setReflectionSaved(true);
                 setEditMode(false);
@@ -130,6 +132,7 @@ function WeeklyReport() {
                 setMostCurious('');
                 setSelectedQuestions([]);
                 setFunFriendQuestion('');
+                setSearchNote('');
                 setWeeklyFeeling('');
                 setReflectionSaved(false);
                 setEditMode(false);
@@ -154,7 +157,7 @@ function WeeklyReport() {
                 mostCurious,
                 didResearch: selectedQuestions.length > 0,
                 researchTopic: selectedQuestions.join('||'),
-                researchNote: '',
+                researchNote: searchNote,
                 funFriendQuestion,
                 weeklyFeeling
             });
@@ -434,19 +437,30 @@ function WeeklyReport() {
                                 );
                             })()
                         )}
+
+                        <div style={{marginTop:'12px'}}>
+                            <label style={{fontSize:'15px'}}>🔎 검색한 내용 중 인상적인 내용이 있나요?</label>
+                            <textarea
+                                value={searchNote}
+                                onChange={e => setSearchNote(e.target.value)}
+                                placeholder="검색한 내용을 내 말로 정리하면 더 오래 기억에 남아요"
+                                rows={2}
+                                maxLength={300}
+                                className="reflection-textarea"
+                                disabled={!isEditable}
+                            />
+                        </div>
                     </div>
 
                     <div className="reflection-group">
                         <label>
                             👥 친구 질문 중 기억에 남는 게 있었어요?{' '}
                             <span style={{fontSize:'11px', background:'#e5e7eb', color:'#666', padding:'2px 7px', borderRadius:'10px', marginLeft:'4px'}}>선택</span>
-                            <br/>
-                            <span style={{fontSize:'12px', color:'#aaa', fontWeight:400}}>굉장한 질문? 이상한 질문? 말도 안 되는 질문도 좋아요</span>
                         </label>
                         <textarea
                             value={funFriendQuestion}
                             onChange={e => setFunFriendQuestion(e.target.value)}
-                            placeholder="친구가 만든 질문 중 기억에 남는 걸 적어보세요"
+                            placeholder="물음송이의 질문 중 굉장한 질문? 이상한 질문? 말도 안 되는 질문 등 인상적인 질문이 있나요?"
                             rows={2}
                             maxLength={300}
                             className="reflection-textarea"
