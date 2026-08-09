@@ -251,7 +251,30 @@ router.get('/with-status', authenticateToken, async (req, res) => {
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic'))
        ) q
-       WHERE $7::text[] IS NULL OR q.title ILIKE ANY($7::text[]) OR q.content ILIKE ANY($7::text[])
+       WHERE $7::text[] IS NULL
+          OR q.title ILIKE ANY($7::text[])
+          OR q.content ILIKE ANY($7::text[])
+          -- 의견(댓글) 텍스트 안에 검색어가 있어도 걸리게
+          OR EXISTS (
+               SELECT 1 FROM question_opinions qo
+               WHERE qo.question_id = q.id AND qo.question_type = q.question_source
+                 AND qo.opinion ILIKE ANY($7::text[])
+             )
+          -- 이 질문에 달린 관련질문 제목 안에 검색어가 있어도 걸리게
+          OR (
+               q.question_source = 'user_question' AND EXISTS (
+                 SELECT 1 FROM user_questions rq
+                 WHERE rq.parent_question_id = q.id AND rq.is_deleted = false
+                   AND rq.title ILIKE ANY($7::text[])
+               )
+             )
+          OR (
+               q.question_source = 'quiz' AND EXISTS (
+                 SELECT 1 FROM user_questions rq
+                 WHERE rq.related_seed_question_id = q.id AND rq.is_deleted = false
+                   AND rq.title ILIKE ANY($7::text[])
+               )
+             )
        ORDER BY ${orderClause}
        LIMIT $5 OFFSET $6`,
       [userId, userId, userId, userId, limit, offset, searchTokens]
@@ -260,20 +283,41 @@ router.get('/with-status', authenticateToken, async (req, res) => {
     // 전체 개수도 함께 반환 (프론트에서 "더보기" 버튼 표시 여부 판단용)
     const countResult = await pool.query(
       `SELECT COUNT(*) as total FROM (
-         SELECT uq.id, uq.title, uq.content
+         SELECT uq.id, uq.title, uq.content, 'user_question' as question_source
          FROM user_questions uq
          WHERE uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL AND uq.is_deleted = false
 
          UNION ALL
 
-         SELECT sq.id, sq.question as title, sq.category as content
+         SELECT sq.id, sq.question as title, sq.category as content, 'quiz' as question_source
          FROM seed_questions sq
          WHERE
            EXISTS(SELECT 1 FROM question_opinions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic'))
            OR EXISTS(SELECT 1 FROM user_questions WHERE related_seed_question_id = sq.id AND is_deleted = false)
            OR EXISTS(SELECT 1 FROM question_reactions WHERE question_id = sq.id AND question_type IN ('quiz', 'seed', 'icebreaking', 'olympic'))
        ) t
-       WHERE $1::text[] IS NULL OR t.title ILIKE ANY($1::text[]) OR t.content ILIKE ANY($1::text[])`,
+       WHERE $1::text[] IS NULL
+          OR t.title ILIKE ANY($1::text[])
+          OR t.content ILIKE ANY($1::text[])
+          OR EXISTS (
+               SELECT 1 FROM question_opinions qo
+               WHERE qo.question_id = t.id AND qo.question_type = t.question_source
+                 AND qo.opinion ILIKE ANY($1::text[])
+             )
+          OR (
+               t.question_source = 'user_question' AND EXISTS (
+                 SELECT 1 FROM user_questions rq
+                 WHERE rq.parent_question_id = t.id AND rq.is_deleted = false
+                   AND rq.title ILIKE ANY($1::text[])
+               )
+             )
+          OR (
+               t.question_source = 'quiz' AND EXISTS (
+                 SELECT 1 FROM user_questions rq
+                 WHERE rq.related_seed_question_id = t.id AND rq.is_deleted = false
+                   AND rq.title ILIKE ANY($1::text[])
+               )
+             )`,
       [searchTokens]
     );
     const total = parseInt(countResult.rows[0].total);
