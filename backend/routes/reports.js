@@ -436,19 +436,38 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
     const { monthStart, mostCurious, didResearch, researchTopic, researchNote, monthlyFeeling } = req.body;
 
     const existing = await pool.query(
-      'SELECT id FROM monthly_reflections WHERE user_id = $1 AND month_start = $2::date',
+      'SELECT id, most_curious_question_id FROM monthly_reflections WHERE user_id = $1 AND month_start = $2::date',
       [userId, monthStart]
     );
 
+    // "가장 궁금했던 것"을 실제 만든질문으로도 등록/동기화 (주간일지와 동일한 방식)
+    let mostCuriousQuestionId = existing.rows[0]?.most_curious_question_id || null;
+    const trimmedMostCurious = (mostCurious || '').trim();
+
+    if (trimmedMostCurious) {
+      if (mostCuriousQuestionId) {
+        await pool.query(
+          `UPDATE user_questions SET title = $1 WHERE id = $2 AND user_id = $3`,
+          [trimmedMostCurious, mostCuriousQuestionId, userId]
+        );
+      } else {
+        const created = await pool.query(
+          `INSERT INTO user_questions (user_id, title) VALUES ($1, $2) RETURNING id`,
+          [userId, trimmedMostCurious]
+        );
+        mostCuriousQuestionId = created.rows[0].id;
+      }
+    }
+
     if (existing.rows.length > 0) {
       await pool.query(
-        `UPDATE monthly_reflections SET most_curious=$1, did_research=$2, research_topic=$3, research_note=$4, monthly_feeling=$5, updated_at=NOW() WHERE user_id=$6 AND month_start=$7::date`,
-        [mostCurious, didResearch, researchTopic, researchNote, monthlyFeeling, userId, monthStart]
+        `UPDATE monthly_reflections SET most_curious=$1, did_research=$2, research_topic=$3, research_note=$4, monthly_feeling=$5, most_curious_question_id=$6, updated_at=NOW() WHERE user_id=$7 AND month_start=$8::date`,
+        [mostCurious, didResearch, researchTopic, researchNote, monthlyFeeling, mostCuriousQuestionId, userId, monthStart]
       );
     } else {
       await pool.query(
-        `INSERT INTO monthly_reflections (user_id, month_start, most_curious, did_research, research_topic, research_note, monthly_feeling) VALUES ($1, $2::date, $3, $4, $5, $6, $7)`,
-        [userId, monthStart, mostCurious, didResearch, researchTopic, researchNote, monthlyFeeling]
+        `INSERT INTO monthly_reflections (user_id, month_start, most_curious, did_research, research_topic, research_note, monthly_feeling, most_curious_question_id) VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8)`,
+        [userId, monthStart, mostCurious, didResearch, researchTopic, researchNote, monthlyFeeling, mostCuriousQuestionId]
       );
       // 월간 일지 완료 시 새 점수 구조 (주간과 동일한 원리):
       // Q1(mostCurious, 항상 필수) = 3점
