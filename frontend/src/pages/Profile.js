@@ -10,8 +10,6 @@ function Profile() {
     const [data, setData] = useState(null);
     const [exchangeStatus, setExchangeStatus] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [showUsernameModal, setShowUsernameModal] = useState(false);
-    const [newUsername, setNewUsername] = useState('');
     const [claimName, setClaimName] = useState('');
     const [claimPhone, setClaimPhone] = useState('');
     const [claimSubmitted, setClaimSubmitted] = useState(false);
@@ -39,22 +37,6 @@ function Profile() {
             console.error('프로필 로드 오류:', err);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleUsernameUpdate = async () => {
-        if (!newUsername.trim()) {
-            alert('닉네임을 입력해주세요');
-            return;
-        }
-        try {
-            await api.put('/users/me', { username: newUsername });
-            alert('닉네임이 변경되었어요! 🎉');
-            setShowUsernameModal(false);
-            setNewUsername('');
-            loadProfile();
-        } catch (err) {
-            alert(err.response?.data?.error || '닉네임 변경에 실패했어요');
         }
     };
 
@@ -107,10 +89,6 @@ function Profile() {
                         <div className="profile-joined">가입일 {formatDate(user?.created_at)}</div>
                         <div className="profile-songi">🌸 총 {parseFloat(user?.songi_count || 0).toFixed(1)}송이 획득</div>
                     </div>
-                    <button className="edit-username-btn" onClick={() => {
-                        setNewUsername(user?.username || '');
-                        setShowUsernameModal(true);
-                    }}>닉네임 변경</button>
                 </div>
 
                 {/* 활동 통계 */}
@@ -314,27 +292,6 @@ function Profile() {
                 </div>
 
             </div>
-
-            {/* 닉네임 변경 모달 */}
-            {showUsernameModal && (
-                <div className="modal-overlay" onClick={() => setShowUsernameModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>👤 닉네임 변경</h3>
-                        <input
-                            type="text"
-                            placeholder="새 닉네임 (3자 이상)"
-                            value={newUsername}
-                            onChange={e => setNewUsername(e.target.value)}
-                            maxLength={20}
-                            className="modal-input"
-                        />
-                        <div className="modal-buttons">
-                            <button className="modal-cancel" onClick={() => setShowUsernameModal(false)}>취소</button>
-                            <button className="modal-confirm" onClick={handleUsernameUpdate}>변경하기</button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <SettingBottomNav />
         </div>
