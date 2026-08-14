@@ -16,9 +16,6 @@ function Setting() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    const [showProfileModal, setShowProfileModal] = useState(false);
-    const [newUsername, setNewUsername] = useState('');
-
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
@@ -74,25 +71,6 @@ function Setting() {
             } else {
                 alert('비밀번호 변경에 실패했어요');
             }
-        }
-    };
-
-    const handleProfileUpdate = async () => {
-        if (!newUsername.trim()) {
-            alert('닉네임을 입력해주세요');
-            return;
-        }
-
-        try {
-            await api.put('/users/me', {
-                username: newUsername
-            });
-            alert('닉네임이 변경되었어요! 🎉');
-            setShowProfileModal(false);
-            setNewUsername('');
-            loadUserInfo();
-        } catch (err) {
-            alert('닉네임 변경에 실패했어요');
         }
     };
 
@@ -173,12 +151,6 @@ function Setting() {
                         <span className="menu-label">로그아웃</span>
                         <span className="menu-desc">다음에 또 만나요</span>
                     </button>
-                    <button className="menu-btn account-btn"
-                        onClick={() => window.open('https://open.kakao.com/o/sglH1SIi', '_blank', 'noopener')}>
-                        <span className="menu-icon">💬</span>
-                        <span className="menu-label">도움이 필요해요</span>
-                        <span className="menu-desc">아이디/비번, 문의하기</span>
-                    </button>
                     <button className="menu-btn delete-btn" onClick={() => setShowDeleteModal(true)}>
                         <span className="menu-icon">❌</span>
                         <span className="menu-label">회원탈퇴</span>
@@ -200,6 +172,12 @@ function Setting() {
                     <p>© 2026 물음송이 (Question Blossom)</p>
                     <p>과학적 호기심을 꽃피우는 질문 플랫폼 🌸</p>
                     <p className="made-by">made by Claude & PIO</p>
+                    <p>
+                        <a href="https://open.kakao.com/o/sglH1SIi" target="_blank" rel="noopener noreferrer"
+                            style={{ color: '#999', fontSize: '12px', textDecoration: 'underline' }}>
+                            💬 아이디/비밀번호 문의 (오픈채팅)
+                        </a>
+                    </p>
                 </div>
             </div>
 
@@ -232,27 +210,6 @@ function Setting() {
                         <div className="modal-buttons">
                             <button className="modal-cancel" onClick={() => setShowPasswordModal(false)}>취소</button>
                             <button className="modal-confirm" onClick={handlePasswordChange}>변경하기</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* 프로필 변경 모달 */}
-            {showProfileModal && (
-                <div className="modal-overlay" onClick={() => setShowProfileModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>👤 닉네임 변경</h3>
-                        <input
-                            type="text"
-                            placeholder="새 닉네임"
-                            value={newUsername}
-                            onChange={e => setNewUsername(e.target.value)}
-                            maxLength={20}
-                            className="modal-input"
-                        />
-                        <div className="modal-buttons">
-                            <button className="modal-cancel" onClick={() => setShowProfileModal(false)}>취소</button>
-                            <button className="modal-confirm" onClick={handleProfileUpdate}>변경하기</button>
                         </div>
                     </div>
                 </div>
