@@ -70,6 +70,16 @@ app.use('/consent', express.static(path.join(__dirname, 'public', 'consent')));
 // 랜딩 페이지 + 안내 페이지 (public/landing 폴더에 넣어두면 /land/파일명.html 로 접근 가능)
 app.use('/land', express.static(path.join(__dirname, 'public', 'landing')));
 
+// 짧은 링크 별칭 (안내 문구/문자 발송 시 이 짧은 경로로 안내하세요)
+app.get('/g', (req, res) => res.redirect('/land/muleumsongi-guide.html'));      // 안내 페이지
+app.get('/l', (req, res) => res.redirect('/land/muleumsongi-landing.html'));    // 랜딩 페이지
+app.get('/c1', (req, res) => res.redirect('/consent/1_consent_minor.html'));               // 미성년자 동의
+app.get('/c2', (req, res) => res.redirect('/consent/2_consent_minor_interview.html'));     // 미성년자 인터뷰 동의
+app.get('/c3', (req, res) => res.redirect('/consent/3_consent_guardian.html' + (req.query.code ? ('?code=' + req.query.code) : ''))); // 보호자 동의
+app.get('/c4', (req, res) => res.redirect('/consent/4_consent_guardian_interview.html' + (req.query.code ? ('?code=' + req.query.code) : ''))); // 보호자 인터뷰 동의
+app.get('/c5', (req, res) => res.redirect('/consent/5_consent_adult.html'));               // 성인 동의
+app.get('/c6', (req, res) => res.redirect('/consent/6_consent_adult_interview.html'));     // 성인 인터뷰 동의
+
 app.get('/consent/student', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'student_info.html'));
 });
