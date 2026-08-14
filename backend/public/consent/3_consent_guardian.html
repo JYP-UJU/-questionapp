@@ -44,6 +44,10 @@
   .check-label { font-size: 14px; line-height: 1.6; color: #333; }
   .submit-btn { display: block; width: 100%; padding: 16px; background: #00838f; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; text-align: center; margin-top: 16px; cursor:pointer; transition:opacity .2s ease; }
   .submit-btn.disabled { opacity:.4; cursor:not-allowed; pointer-events:none; }
+  .submit-error { margin-top:10px; font-size:12.5px; color:#c62828; text-align:center; }
+  .submit-success { margin-top:16px; text-align:center; background:#e0f4f7; border:1.5px dashed #00838f; border-radius:12px; padding:20px; }
+  .submit-success-title { font-size:15px; font-weight:700; color:#00696f; margin-bottom:8px; }
+  .submit-success-body { font-size:13px; color:#555; line-height:1.7; }
 </style>
 </head>
 <body>
@@ -138,21 +142,21 @@
     <p style="font-size:13px;color:#888;margin-bottom:16px;">아래 정보를 입력하신 후 동의 여부를 선택해 주세요. * 표시 항목은 필수 입력 사항입니다.</p>
     <div class="form-group">
       <label class="form-label">보호자 성명<span class="required">*</span></label>
-      <input class="form-input" type="text" placeholder="보호자 성함을 입력해 주세요">
+      <input class="form-input" type="text" id="guardianName" placeholder="보호자 성함을 입력해 주세요">
     </div>
     <div class="form-group">
       <label class="form-label">보호자 전화번호<span class="required">*</span></label>
-      <input class="form-input" type="tel" placeholder="010-0000-0000">
+      <input class="form-input" type="tel" id="guardianPhone" placeholder="010-0000-0000">
       <div class="form-hint">보호자 확인을 위해 사용됩니다.</div>
     </div>
     <div class="form-group">
       <label class="form-label">이메일 주소<span class="required">*</span></label>
-      <input class="form-input" type="email" placeholder="이메일 주소를 입력해 주세요">
+      <input class="form-input" type="email" id="guardianEmail" placeholder="이메일 주소를 입력해 주세요">
       <div class="form-hint">동의서 사본을 받으실 이메일 주소를 입력해 주세요.</div>
     </div>
     <div class="form-group">
       <label class="form-label">자녀 성명<span class="required">*</span></label>
-      <input class="form-input" type="text" placeholder="자녀 성함을 입력해 주세요">
+      <input class="form-input" type="text" id="childName" placeholder="자녀 성함을 입력해 주세요">
     </div>
     <div class="form-group">
       <label class="form-label">자녀 인증코드<span class="required">*</span></label>
@@ -189,7 +193,7 @@
 </script>
 
 <div style="text-align:center; padding:24px 16px 32px; font-size:11px; color:#9aa79a; font-family:'IBM Plex Mono', monospace;">
-  Created by Claude &amp; PIO
+  Created by Claude &amp; PIO (2026.08.14)
 </div>
 
 <script>
@@ -197,8 +201,10 @@
   var items = document.querySelectorAll('.check-item');
   var boxes = document.querySelectorAll('.checkbox');
   var submitBtn = document.querySelector('.submit-btn');
+  var consentBox = document.querySelector('.consent-box');
   if(!submitBtn) return;
   submitBtn.classList.add('disabled');
+
   function updateSubmit(){
     var allChecked = Array.prototype.every.call(boxes, function(b){ return b.classList.contains('checked'); });
     submitBtn.classList.toggle('disabled', !allChecked);
@@ -209,10 +215,73 @@
       updateSubmit();
     });
   });
+
+  function showError(msg){
+    var existing = consentBox.querySelector('.submit-error');
+    if(existing) existing.remove();
+    var p = document.createElement('div');
+    p.className = 'submit-error';
+    p.textContent = msg;
+    submitBtn.insertAdjacentElement('afterend', p);
+  }
+
   submitBtn.addEventListener('click', function(){
-    if(submitBtn.classList.contains('disabled')) return;
-    window.location.href = 'https://queapp.up.railway.app';
+    if(submitBtn.classList.contains('disabled') || submitBtn.dataset.loading === '1') return;
+
+    var name = document.getElementById('guardianName').value.trim();
+    var phone = document.getElementById('guardianPhone').value.trim();
+    var email = document.getElementById('guardianEmail').value.trim();
+    var childName = document.getElementById('childName').value.trim();
+    var code = document.getElementById('studentCode').value.trim();
+
+    if(!name || !phone || !email || !childName || !code){
+      showError('필수 입력 항목(* 표시)을 모두 채워주세요.');
+      return;
+    }
+
+    submitBtn.dataset.loading = '1';
+    var originalText = submitBtn.textContent;
+    submitBtn.textContent = '처리 중...';
+
+    var checks = Array.prototype.map.call(boxes, function(b){ return b.classList.contains('checked'); });
+
+    fetch('/api/consent/guardian-submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: code,
+        checks: checks,
+        contact_name: name,
+        contact_phone: phone,
+        contact_email: email,
+        student_name: childName
+      })
+    })
+    .then(function(r){
+      if(!r.ok) throw new Error('요청 실패');
+      return r.json();
+    })
+    .then(function(){
+      showSuccess();
+    })
+    .catch(function(){
+      showError('오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
+      submitBtn.textContent = originalText;
+      submitBtn.dataset.loading = '0';
+    });
   });
+
+  function showSuccess(){
+    var wrap = document.createElement('div');
+    wrap.className = 'submit-success';
+    wrap.innerHTML =
+      '<div class="submit-success-title">\uC81C\uCD9C\uC774 \uC644\uB8CC\uB410\uC5B4\uC694</div>' +
+      '<div class="submit-success-body">\uC18C\uC911\uD55C \uB3D9\uC758 \uAC10\uC0AC\uD569\uB2C8\uB2E4. \uC790\uB140\uAC00 \uC544\uC9C1 \uC571\uC5D0 \uAC00\uC785\uD558\uC9C0 \uC54A\uC558\uB2E4\uBA74, \uC544\uB798 \uC548\uB0B4\uB97C \uCC38\uACE0\uD574 \uC791\uC131\uD574 \uC8FC\uC138\uC694.<br>\uC774 \uCC3D\uC740 \uC774\uC81C \uB2EB\uC73C\uC154\uB3C4 \uB3FC\uC694.</div>';
+    var existingErr = consentBox.querySelector('.submit-error');
+    if(existingErr) existingErr.remove();
+    submitBtn.remove();
+    consentBox.appendChild(wrap);
+  }
 })();
 </script>
 </body>
