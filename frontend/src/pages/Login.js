@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authAPI, setToken } from '../services/api';
 import './Auth.css';
 
 function Login() {
-    const [isLogin, setIsLogin] = useState(true);
+    const [searchParams] = useSearchParams();
+    // URL에 ?tab=signup 이 붙어 있으면 회원가입 탭을 기본으로 보여줌
+    const [isLogin, setIsLogin] = useState(searchParams.get('tab') !== 'signup');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [grade, setGrade] = useState('');
@@ -145,12 +147,12 @@ function Login() {
                             <div className="auth-research-notice">
                                 <p>이 앱은 과학 질문 연구를 위해 개발되었습니다.</p>
                                 <a
-                                    href="https://meticulous-enchantment-production-f653.up.railway.app/consent/student"
+                                    href="https://meticulous-enchantment-production-f653.up.railway.app/land/muleumsongi-landing.html#join"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="auth-research-link"
                                 >
-                                    연구 참여 안내 →
+                                    참여 안내 및 동의서 보기 →
                                 </a>
                             </div>
 
