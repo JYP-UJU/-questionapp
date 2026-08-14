@@ -275,7 +275,7 @@ router.post('/weekly/reflection', authenticateToken, async (req, res) => {
       } else {
         // 추가 송이 없이 질문만 생성 (송이는 주간일지 완료 보상에 이미 포함됨)
         const created = await pool.query(
-          `INSERT INTO user_questions (user_id, title) VALUES ($1, $2) RETURNING id`,
+          `INSERT INTO user_questions (user_id, title, content) VALUES ($1, $2, '') RETURNING id`,
           [userId, trimmedMostCurious]
         );
         mostCuriousQuestionId = created.rows[0].id;
@@ -452,7 +452,7 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
         );
       } else {
         const created = await pool.query(
-          `INSERT INTO user_questions (user_id, title) VALUES ($1, $2) RETURNING id`,
+          `INSERT INTO user_questions (user_id, title, content) VALUES ($1, $2, '') RETURNING id`,
           [userId, trimmedMostCurious]
         );
         mostCuriousQuestionId = created.rows[0].id;
