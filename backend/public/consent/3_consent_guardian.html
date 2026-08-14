@@ -46,9 +46,9 @@
   .submit-btn { display: block; width: 100%; padding: 16px; background: #00838f; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; text-align: center; margin-top: 16px; cursor:pointer; transition:opacity .2s ease; }
   .submit-btn.disabled { opacity:.4; cursor:not-allowed; pointer-events:none; }
   .submit-error { margin-top:10px; font-size:12.5px; color:#c62828; text-align:center; }
-  .submit-success { margin-top:16px; text-align:center; background:#e0f4f7; border:1.5px dashed #00838f; border-radius:12px; padding:20px; }
-  .submit-success-title { font-size:15px; font-weight:700; color:#00696f; margin-bottom:8px; }
-  .submit-success-body { font-size:13px; color:#555; line-height:1.7; }
+  .submit-success { margin-top:16px; text-align:center; background:#e0f4f7; border:1.5px dashed #00838f; border-radius:12px; padding:28px 20px; }
+  .submit-success-title { font-size:20px; font-weight:700; color:#00696f; margin-bottom:10px; }
+  .submit-success-body { font-size:16px; color:#555; line-height:1.7; }
 </style>
 </head>
 <body>
@@ -175,7 +175,7 @@
     <div class="check-item"><div class="checkbox"></div><span class="check-label">5. 나는 담당 연구자, 목포대학교 생명윤리심의위원회가 연구의 실태 조사를 위해 필요한 경우 연구 자료를 열람할 수 있음에 동의합니다.</span></div>
     <div class="check-item"><div class="checkbox"></div><span class="check-label">6. 나는 언제라도 자녀의 연구 참여를 철회할 수 있고, 이러한 결정이 어떠한 불이익도 되지 않을 것임을 이해합니다.</span></div>
     <div class="check-item"><div class="checkbox"></div><span class="check-label">7. 나는 연구 종료 후 3년간 자료가 보관된 후 안전하게 폐기될 것임을 알고 있습니다.</span></div>
-    <div class="check-item"><div class="checkbox"></div><span class="check-label">8. 나는 연구 참여 도중 발생할 수 있는 피해 및 분쟁 시 연구책임자(010-9755-9655)에게 연락할 수 있음을 알고 있습니다.</span></div>
+    <div class="check-item"><div class="checkbox"></div><span class="check-label">8. 나는 연구 참여 도중 발생할 수 있는 피해 및 분쟁 시 연구책임자(que.jypark@gmail.com)에게 연락할 수 있음을 알고 있습니다.</span></div>
     <div class="submit-btn">동의하고 가입하기 →</div>
   </div>
 </div>
@@ -276,8 +276,8 @@
     var wrap = document.createElement('div');
     wrap.className = 'submit-success';
     wrap.innerHTML =
-      '<div class="submit-success-title">\uC81C\uCD9C\uC774 \uC644\uB8CC\uB410\uC5B4\uC694</div>' +
-      '<div class="submit-success-body">\uC18C\uC911\uD55C \uB3D9\uC758 \uAC10\uC0AC\uD569\uB2C8\uB2E4. \uC790\uB140\uAC00 \uC544\uC9C1 \uC571\uC5D0 \uAC00\uC785\uD558\uC9C0 \uC54A\uC558\uB2E4\uBA74, \uC544\uB798 \uC548\uB0B4\uB97C \uCC38\uACE0\uD574 \uC791\uC131\uD574 \uC8FC\uC138\uC694.<br>\uC774 \uCC3D\uC740 \uC774\uC81C \uB2EB\uC73C\uC154\uB3C4 \uB3FC\uC694.</div>';
+      '<div class="submit-success-title">\uAC10\uC0AC\uD569\uB2C8\uB2E4</div>' +
+      '<div class="submit-success-body">\uC774 \uCC3D\uC744 \uB2EB\uC73C\uC154\uB3C4 \uB429\uB2C8\uB2E4.</div>';
     var existingErr = consentBox.querySelector('.submit-error');
     if(existingErr) existingErr.remove();
     submitBtn.remove();
