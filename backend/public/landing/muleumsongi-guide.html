@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>물음송이 — 이렇게 작동해요</title>
+<meta name="description" content="회원가입부터 질문 올리기, 질문올림픽, 퀴즈, 송이 모으기까지 — 물음송이가 어떻게 작동하는지 한눈에 보세요.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper: #EDF1E2;
+    --paper-card: #F7F6ED;
+    --ink: #24301F;
+    --ink-soft: #4B5A44;
+    --moss: #3F6B4A;
+    --moss-deep: #26402C;
+    --amber: #D9A441;
+    --amber-deep: #B9832A;
+    --coral: #C1666B;
+    --rose-deep: #5C333C;
+    --line: rgba(36,48,31,0.14);
+    --radius: 18px;
+  }
+  *{ box-sizing: border-box; }
+  html{ scroll-behavior: smooth; }
+  body{
+    margin:0; background: var(--paper); color: var(--ink);
+    font-family: 'Noto Sans KR', sans-serif; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  h1,h2,h3{ font-family: 'Gowun Batang', serif; color: var(--moss-deep); margin: 0; letter-spacing: -0.01em; }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+  a{ color: inherit; }
+  .wrap{ max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{ padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .topbar .wrap{ display:flex; align-items:center; justify-content:space-between; }
+  .brand{ font-family:'Gowun Batang', serif; font-size:18px; color: var(--moss-deep); text-decoration:none; display:flex; align-items:center; gap:8px; }
+  .brand .dot{ width:8px; height:8px; border-radius:50%; background: var(--amber); display:inline-block; }
+  .back-link{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color: var(--ink-soft); text-decoration:none;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .back-link:hover{ color: var(--moss-deep); }
+
+  /* ---------- HERO ---------- */
+  .hero{ padding: 56px 0 40px; text-align:center; }
+  .eyebrow{
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--moss); display:inline-flex; align-items:center; gap:8px; margin-bottom:12px;
+  }
+  .eyebrow::before{ content:""; width:6px; height:6px; border-radius:50%; background: var(--amber); display:inline-block; }
+  .hero h1{ font-size: clamp(28px, 4.6vw, 44px); line-height: 1.3; }
+  .hero h1 em{ font-style:normal; color: var(--coral); }
+  .hero .sub{ margin: 18px auto 0; font-size:15.5px; color: var(--ink-soft); max-width: 46ch; }
+  .hero .sub b{ color: var(--ink); font-weight:500; }
+
+  /* ---------- STEPS ---------- */
+  .steps{ padding: 20px 0 60px; }
+  .step{
+    display:grid; grid-template-columns: 1fr 1.15fr; gap: 36px; align-items:center;
+    padding: 46px 0; border-bottom: 1px solid var(--line);
+  }
+  .step:last-child{ border-bottom:none; }
+  .step:nth-child(even){ direction: rtl; }
+  .step:nth-child(even) > *{ direction: ltr; }
+  .step-num{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color: var(--amber-deep); font-weight:700;
+    letter-spacing:0.1em; margin-bottom:8px; display:block;
+  }
+  .step h2{ font-size:23px; line-height:1.4; margin-bottom:10px; }
+  .step h2 .qword{ color: var(--coral); }
+  .step p{ font-size:14.5px; color: var(--ink-soft); margin:0 0 6px; }
+  .step .hook{
+    margin-top:14px; display:inline-block; font-size:13px; font-weight:700; color: var(--moss-deep);
+    background: rgba(63,107,74,0.09); border-radius: 999px; padding: 7px 14px;
+  }
+  .shot-frame{
+    background: var(--paper-card); border:1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; display:flex; justify-content:center; align-items:center;
+    box-shadow: 0 14px 30px -18px rgba(38,64,44,0.35);
+  }
+  .shot-frame img{
+    width:100%; max-width: 300px; height:auto; border-radius: 12px;
+    border:1px solid var(--line); display:block;
+  }
+  @media (max-width: 760px){
+    .step, .step:nth-child(even){ grid-template-columns: 1fr; direction: ltr; }
+    .step{ padding: 34px 0; }
+    .shot-frame img{ max-width: 260px; }
+  }
+
+  /* ---------- CLOSING CTA ---------- */
+  .final{ padding: 10px 0 60px; text-align:center; }
+  .final-card{
+    background: var(--moss-deep); border-radius: 20px; padding: 42px 28px; color: var(--paper);
+  }
+  .final-card h2{ color: var(--paper); font-size:24px; margin-bottom:10px; }
+  .final-card p{ color: rgba(237,241,226,0.82); font-size:14.5px; margin: 0 auto 22px; max-width: 42ch; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:13px 26px; border-radius:999px;
+    font-size:14.5px; font-weight:700; text-decoration:none; transition:transform .15s ease, box-shadow .15s ease;
+    border:1.5px solid transparent;
+  }
+  .btn:hover{ transform: translateY(-2px); }
+  .btn-primary{ background: var(--amber); color: var(--rose-deep); box-shadow: 0 8px 18px -8px rgba(0,0,0,0.35); }
+  .btn-ghost-light{ background: transparent; border-color: rgba(237,241,226,0.4); color: var(--paper); }
+  .btn-ghost-light:hover{ background: rgba(237,241,226,0.1); }
+  .final-cta-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+
+  footer{ padding: 20px 0 30px; }
+  footer .wrap{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; border-top:1px solid var(--line); padding-top:18px; }
+  footer .fname{ font-family:'Gowun Batang', serif; font-size:16px; color: var(--moss-deep); }
+  footer .fmeta{ font-size:11.5px; color: var(--ink-soft); font-family:'IBM Plex Mono', monospace; text-align:right; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="./muleumsongi-landing.html"><span class="dot"></span>물음송이</a>
+    <a class="back-link" href="./muleumsongi-landing.html">← 소개 페이지로</a>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">물음송이는 이렇게 작동해요</div>
+    <h1>질문 하나가 <em>대화</em>가 되는 과정,<br>화면으로 보여드릴게요</h1>
+    <p class="sub">가입은 30초, 시작은 질문 하나면 충분해요.<br><b>실제 화면</b>을 따라가며 물음송이가 어떻게 흘러가는지 확인해 보세요.</p>
+  </div>
+</section>
+
+<section class="steps">
+  <div class="wrap">
+
+    <div class="step">
+      <div>
+        <span class="step-num">STEP 1</span>
+        <h2>학년만 고르면 <span class="qword">가입 끝</span></h2>
+        <p>아이디와 비밀번호, 학년만 선택하면 준비 완료예요. 복잡한 절차 없이 바로 질문 여정을 시작할 수 있어요.</p>
+        <span class="hook">⏱️ 30초면 충분해요</span>
+      </div>
+      <div class="shot-frame"><img src="./guide_assets/01_signup.png" alt="회원가입 화면" loading="lazy"></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <span class="step-num">STEP 2</span>
+        <h2>가입하자마자 뜨는 <span class="qword">질문 쓰기</span> 화면</h2>
+        <p>"자연을 보며 궁금했던 게 있나요?" 같은 질문에 답하듯, 궁금한 것과 왜 궁금했는지를 자유롭게 적어보세요.</p>
+        <span class="hook">🌸 질문 하나 올리면 +5 송이</span>
+      </div>
+      <div class="shot-frame"><img src="./guide_assets/02_write.png" alt="질문 쓰기 화면" loading="lazy"></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <span class="step-num">STEP 3</span>
+        <h2>질문끼리 겨루는 <span class="qword">질문올림픽</span></h2>
+        <p>여러 질문 카드 중에서 가장 마음에 드는 걸 골라 나가요. 토너먼트처럼 라운드를 거치며 어떤 질문이 더 궁금한지 겨뤄봐요.</p>
+        <span class="hook">🏅 나의 호기심 취향이 드러나요</span>
+      </div>
+      <div class="shot-frame"><img src="./guide_assets/03_olympic.png" alt="질문올림픽 화면" loading="lazy"></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <span class="step-num">STEP 4</span>
+        <h2>가장 그럴듯한 설명 찾기, <span class="qword">퀴즈</span></h2>
+        <p>정답을 맞히는 게 아니라, "가장 그럴듯한 설명"을 골라보는 퀴즈예요. 과학적으로 생각하는 감각을 자연스럽게 길러줘요.</p>
+        <span class="hook">🎯 다양한 분야의 질문이 매주 바뀌어요</span>
+      </div>
+      <div class="shot-frame"><img src="./guide_assets/04_quiz.png" alt="퀴즈 화면" loading="lazy"></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <span class="step-num">STEP 5</span>
+        <h2>모두의 질문이 모이는 <span class="qword">꼬리에 꼬리를 무는 질문들</span></h2>
+        <p>다른 참여자들이 올린 질문을 둘러보고, 관심있음/없음으로 반응하거나 의견을 남기고, 궁금한 질문을 저장할 수 있어요.</p>
+        <span class="hook">💬 같은 궁금증을 가진 친구를 만나요</span>
+      </div>
+      <div class="shot-frame"><img src="./guide_assets/05_feed.png" alt="꼬리에 꼬리를 무는 질문들 화면" loading="lazy"></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <span class="step-num">STEP 6</span>
+        <h2>내가 쌓아온 질문, <span class="qword">내 활동</span>에서 한눈에</h2>
+        <p>내가 올린 질문과 저장해둔 질문들을 모아볼 수 있어요. 그동안 어떤 것들이 궁금했는지 돌아보는 재미가 있어요.</p>
+        <span class="hook">📚 나만의 질문 기록장</span>
+      </div>
+      <div class="shot-frame"><img src="./guide_assets/06_activity.png" alt="내 활동 화면" loading="lazy"></div>
+    </div>
+
+    <div class="step">
+      <div>
+        <span class="step-num">STEP 7</span>
+        <h2>쌓인 <span class="qword">송이</span>는 상품권으로</h2>
+        <p>질문하고, 퀴즈 풀고, 일지를 쓸 때마다 송이가 쌓여요. 일정 기준을 채우면 소정의 상품권으로 교환할 수 있어요.</p>
+        <span class="hook">🎁 2주마다 약 1,000원 상당의 보상</span>
+      </div>
+      <div class="shot-frame"><img src="./guide_assets/07_profile1.png" alt="내 프로필 - 나의 활동 화면" loading="lazy"></div>
+    </div>
+
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <div class="final-card">
+      <h2>이제, 첫 질문을 남겨볼까요?</h2>
+      <p>당장 답하지 못해도 괜찮아요. 궁금했던 그 무엇이라도 질문해 보세요.</p>
+      <div class="final-cta-row">
+        <a class="btn btn-primary" href="./muleumsongi-landing.html#join">지금 참여하기</a>
+        <a class="btn btn-ghost-light" href="./muleumsongi-landing.html">소개 페이지로 돌아가기</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fname">물음송이</div>
+    <div class="fmeta">
+      목포대학교 문화와자연유산연구소 박지영<br>
+      문의 <a href="mailto:que.jypark@gmail.com">que.jypark@gmail.com</a><br>
+      <span style="font-size:10px;color:#9aa79a;">Created by Claude &amp; PIO</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
