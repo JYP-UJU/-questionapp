@@ -219,6 +219,19 @@ function Login() {
                     <button type="submit" disabled={loading} className="auth-button">
                         {loading ? '로딩 중...' : (isLogin ? '로그인' : '회원가입')}
                     </button>
+
+                    {isLogin && (
+                        <p style={{ textAlign: 'center', marginTop: '14px', fontSize: '13px' }}>
+                            <a
+                                href="https://open.kakao.com/o/sglH1SIi"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: '#888', textDecoration: 'underline' }}
+                            >
+                                아이디/비밀번호를 잊으셨나요?
+                            </a>
+                        </p>
+                    )}
                 </form>
             </div>
         </div>
