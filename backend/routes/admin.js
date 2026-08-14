@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../middleware/auth');
+const bcrypt = require('bcryptjs');
 
 // 관리자 확인 미들웨어
 const requireAdmin = async (req, res, next) => {
@@ -35,6 +36,38 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
     res.json({ users: result.rows });
   } catch (err) {
     console.error('관리자 사용자 목록 오류:', err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// ===== 비밀번호 초기화 (오픈채팅으로 요청 들어온 걸 관리자가 처리) =====
+// 새 비밀번호를 관리자가 직접 입력해서 즉시 반영. 확인용으로 username도 같이 받아 오삭제 방지.
+router.put('/users/:id/reset-password', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    const { newPassword, confirmUsername } = req.body;
+
+    if (!newPassword || newPassword.length < 4) {
+      return res.status(400).json({ error: '새 비밀번호는 4글자 이상이어야 합니다' });
+    }
+
+    const userRes = await pool.query('SELECT id, username FROM users WHERE id = $1', [targetId]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+    const targetUser = userRes.rows[0];
+
+    // 프론트에서 화면에 표시된 username을 그대로 넘겨받아 대조 (엉뚱한 계정 초기화 방지)
+    if (confirmUsername && confirmUsername !== targetUser.username) {
+      return res.status(400).json({ error: '확인 문구(닉네임)가 일치하지 않습니다' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, targetId]);
+
+    res.json({ message: `'${targetUser.username}' 비밀번호가 초기화되었습니다` });
+  } catch (err) {
+    console.error('비밀번호 초기화 오류:', err);
     res.status(500).json({ error: '서버 오류' });
   }
 });

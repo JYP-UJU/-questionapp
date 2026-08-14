@@ -173,6 +173,12 @@ function Setting() {
                         <span className="menu-label">로그아웃</span>
                         <span className="menu-desc">다음에 또 만나요</span>
                     </button>
+                    <button className="menu-btn account-btn"
+                        onClick={() => window.open('https://open.kakao.com/o/sglH1SIi', '_blank', 'noopener')}>
+                        <span className="menu-icon">💬</span>
+                        <span className="menu-label">도움이 필요해요</span>
+                        <span className="menu-desc">아이디/비번, 문의하기</span>
+                    </button>
                     <button className="menu-btn delete-btn" onClick={() => setShowDeleteModal(true)}>
                         <span className="menu-icon">❌</span>
                         <span className="menu-label">회원탈퇴</span>

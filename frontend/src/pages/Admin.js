@@ -125,6 +125,11 @@ function Admin() {
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [deletingUser, setDeletingUser] = useState(false);
 
+  // 비밀번호 초기화 모달 (오픈채팅으로 요청 들어온 걸 처리)
+  const [resetPwModal, setResetPwModal] = useState(null); // { userId, username }
+  const [resetPwValue, setResetPwValue] = useState('');
+  const [resettingPw, setResettingPw] = useState(false);
+
 
   const loadActivities = useCallback(async () => {
     setLoading(true);
@@ -273,6 +278,28 @@ function Admin() {
       alert(err.response?.data?.error || '삭제에 실패했습니다');
     } finally {
       setDeletingUser(false);
+    }
+  };
+
+  // 비밀번호 초기화 (오픈채팅으로 학생이 요청하면 관리자가 여기서 처리)
+  const handleResetPassword = async () => {
+    if (!resetPwValue || resetPwValue.length < 4) {
+      alert('새 비밀번호는 4글자 이상이어야 해요');
+      return;
+    }
+    try {
+      setResettingPw(true);
+      const res = await api.put(`/admin/users/${resetPwModal.userId}/reset-password`, {
+        newPassword: resetPwValue,
+        confirmUsername: resetPwModal.username
+      });
+      alert(res.data?.message || '비밀번호가 초기화되었어요');
+      setResetPwModal(null);
+      setResetPwValue('');
+    } catch (err) {
+      alert(err.response?.data?.error || '초기화에 실패했습니다');
+    } finally {
+      setResettingPw(false);
     }
   };
 
@@ -489,6 +516,12 @@ function Admin() {
                           setTab('activities');
                         }}>활동 보기</button>
                       {!u.is_admin && (
+                        <button style={styles.resetPwBtn}
+                          onClick={() => setResetPwModal({ userId: u.id, username: u.username })}>
+                          🔑 비번 초기화
+                        </button>
+                      )}
+                      {!u.is_admin && (
                         <button style={styles.deductBtn}
                           onClick={() => setDeductModal({ userId: u.id, username: u.username })}>
                           송이 회수
@@ -598,6 +631,28 @@ function Admin() {
         </div>
       )}
 
+      {/* 비밀번호 초기화 모달 - 오픈채팅으로 학생이 요청하면 여기서 처리 */}
+      {resetPwModal && (
+        <div style={styles.overlay} onClick={() => { setResetPwModal(null); setResetPwValue(''); }}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{margin: '0 0 8px', fontSize: 16}}>🔑 비밀번호 초기화 — {resetPwModal.username}</h3>
+            <p style={{margin: '0 0 14px', fontSize: 13, color: '#666', lineHeight: 1.5}}>
+              오픈채팅으로 본인 확인 후 새 비밀번호를 정해서 여기 입력하고, 학생에게 채팅으로 그대로 알려주세요.
+            </p>
+            <input style={styles.modalInput} type="text" minLength={4}
+              placeholder="새 비밀번호 (4자 이상)"
+              value={resetPwValue} onChange={e => setResetPwValue(e.target.value)} />
+            <div style={{display:'flex', gap:8, marginTop:4}}>
+              <button style={styles.cancelBtn}
+                onClick={() => { setResetPwModal(null); setResetPwValue(''); }}>취소</button>
+              <button style={styles.confirmBtn} disabled={resettingPw} onClick={handleResetPassword}>
+                {resettingPw ? '처리 중...' : '초기화하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 계정 완전 삭제 모달 - 되돌릴 수 없음! 아이디를 정확히 입력해야 삭제됨 */}
       {deleteUserModal && (
         <div style={styles.overlay} onClick={() => { setDeleteUserModal(null); setDeleteConfirmInput(''); }}>
@@ -676,6 +731,7 @@ const styles = {
   userDate: { fontSize: 11, color: '#bbb' },
   userActions: { display: 'flex', gap: 6 },
   feedBtn: { background: '#eff3ff', color: '#6b84c4', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
+  resetPwBtn: { background: '#fef9c3', color: '#a16207', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
   deductBtn: { background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
   deleteUserBtn: { background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
 
