@@ -35,11 +35,14 @@
   .consent-box { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
   .consent-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; padding-bottom: 10px; border-bottom: 2px solid #b2ebf2; }
   .consent-subtitle { font-size: 12px; color: #888; margin-bottom: 16px; padding-top: 4px; }
-  .check-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f5f5f5; }
+  .check-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f5f5f5; cursor:pointer; }
   .check-item:last-of-type { border-bottom: none; }
-  .checkbox { width: 20px; height: 20px; border-radius: 4px; border: 2px solid #00696f; flex-shrink: 0; margin-top: 1px; }
+  .checkbox { width: 20px; height: 20px; border-radius: 4px; border: 2px solid #00696f; flex-shrink: 0; margin-top: 1px; position:relative; cursor:pointer; transition: background .15s ease, border-color .15s ease; }
+  .checkbox.checked { background:#00696f; }
+  .checkbox.checked::after { content:"✓"; position:absolute; top:50%; left:50%; transform:translate(-50%,-52%); color:#fff; font-size:13px; font-weight:700; line-height:1; }
   .check-label { font-size: 14px; line-height: 1.6; color: #333; }
-  .submit-btn { display: block; width: 100%; padding: 16px; background: #00696f; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; text-align: center; margin-top: 16px; }
+  .submit-btn { display: block; width: 100%; padding: 16px; background: #00696f; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; text-align: center; margin-top: 16px; cursor:pointer; transition:opacity .2s ease; }
+  .submit-btn.disabled { opacity:.4; cursor:not-allowed; pointer-events:none; }
   .decline-btn { display: block; width: 100%; padding: 14px; background: #fff; color: #888; border: 1.5px solid #ddd; border-radius: 12px; font-size: 15px; font-weight: 600; text-align: center; margin-top: 10px; }
 </style>
 </head>
@@ -141,6 +144,34 @@
       codeInput.readOnly = true;
     }
   }
+</script>
+
+<div style="text-align:center; padding:24px 16px 32px; font-size:11px; color:#9aa79a; font-family:'IBM Plex Mono', monospace;">
+  Created by Claude &amp; PIO
+</div>
+
+<script>
+(function(){
+  var items = document.querySelectorAll('.check-item');
+  var boxes = document.querySelectorAll('.checkbox');
+  var submitBtn = document.querySelector('.submit-btn');
+  if(!submitBtn) return;
+  submitBtn.classList.add('disabled');
+  function updateSubmit(){
+    var allChecked = Array.prototype.every.call(boxes, function(b){ return b.classList.contains('checked'); });
+    submitBtn.classList.toggle('disabled', !allChecked);
+  }
+  items.forEach(function(item, idx){
+    item.addEventListener('click', function(){
+      boxes[idx].classList.toggle('checked');
+      updateSubmit();
+    });
+  });
+  submitBtn.addEventListener('click', function(){
+    if(submitBtn.classList.contains('disabled')) return;
+    window.location.href = 'https://queapp.up.railway.app';
+  });
+})();
 </script>
 </body>
 </html>
