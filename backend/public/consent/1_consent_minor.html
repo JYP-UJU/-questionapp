@@ -210,6 +210,15 @@
     margin-top: 16px;
   cursor:pointer; transition:opacity .2s ease; }
   .submit-btn.disabled { opacity:.4; cursor:not-allowed; pointer-events:none; }
+
+  .code-result { margin-top:16px; text-align:center; background:#f1f8f2; border:1.5px dashed #4caf50; border-radius:12px; padding:20px; }
+  .code-result-title { font-size:14px; font-weight:700; color:#2e7d32; margin-bottom:10px; }
+  .code-box { font-size:28px; font-weight:800; letter-spacing:4px; color:#1b5e20; background:#fff; border-radius:10px; padding:12px; margin-bottom:10px; }
+  .code-hint { font-size:12.5px; color:#666; line-height:1.6; margin-bottom:14px; }
+  .share-btn { display:block; width:100%; padding:14px; background:#4caf50; color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .share-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .copy-hint { margin-top:10px; font-size:12px; color:#2e7d32; }
+  .submit-error { margin-top:10px; font-size:12.5px; color:#c62828; text-align:center; }
 </style>
 </head>
 <body>
@@ -301,7 +310,7 @@
     </div>
     <div class="guardian-box">
       만 18세 미만이라면 보호자(부모님)의 동의도 필요해요.<br>
-      회원가입 완료 후 화면에 뜨는 <strong>인증코드</strong>와 부모님 동의서 링크를 함께 전달해 주세요.
+      아래 동의 절차를 마치면 <strong>고유 인증코드</strong>가 발급돼요. 코드가 담긴 링크를 부모님께 전달해 주시면 부모님 동의서에 자동으로 연결돼요.
     </div>
   </div>
 
@@ -350,8 +359,10 @@
   var items = document.querySelectorAll('.check-item');
   var boxes = document.querySelectorAll('.checkbox');
   var submitBtn = document.querySelector('.submit-btn');
+  var consentBox = document.querySelector('.consent-box');
   if(!submitBtn) return;
   submitBtn.classList.add('disabled');
+
   function updateSubmit(){
     var allChecked = Array.prototype.every.call(boxes, function(b){ return b.classList.contains('checked'); });
     submitBtn.classList.toggle('disabled', !allChecked);
@@ -362,10 +373,78 @@
       updateSubmit();
     });
   });
+
+  function showError(msg){
+    var existing = consentBox.querySelector('.submit-error');
+    if(existing) existing.remove();
+    var p = document.createElement('div');
+    p.className = 'submit-error';
+    p.textContent = msg;
+    submitBtn.insertAdjacentElement('afterend', p);
+  }
+
   submitBtn.addEventListener('click', function(){
-    if(submitBtn.classList.contains('disabled')) return;
-    window.location.href = 'https://queapp.up.railway.app';
+    if(submitBtn.classList.contains('disabled') || submitBtn.dataset.loading === '1') return;
+    submitBtn.dataset.loading = '1';
+    var originalText = submitBtn.textContent;
+    submitBtn.textContent = '처리 중...';
+
+    var checks = Array.prototype.map.call(boxes, function(b){ return b.classList.contains('checked'); });
+
+    fetch('/api/consent/minor-submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checks: checks })
+    })
+    .then(function(r){
+      if(!r.ok) throw new Error('요청 실패');
+      return r.json();
+    })
+    .then(function(data){
+      showCodeResult(data.code);
+    })
+    .catch(function(){
+      showError('오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
+      submitBtn.textContent = originalText;
+      submitBtn.dataset.loading = '0';
+    });
   });
+
+  function showCodeResult(code){
+    var guardianUrl = window.location.origin + '/consent/3_consent_guardian.html?code=' + encodeURIComponent(code);
+    var wrap = document.createElement('div');
+    wrap.className = 'code-result';
+    wrap.innerHTML =
+      '<div class="code-result-title">\u2705 \uB3D9\uC758 \uC644\uB8CC! \uB098\uC758 \uC778\uC99D\uCF54\uB4DC</div>' +
+      '<div class="code-box">' + code + '</div>' +
+      '<div class="code-hint">\uC774 \uCF54\uB4DC\uB294 \uBD80\uBAA8\uB2D8 \uB3D9\uC758\uC11C\uC640 \uC5F0\uACB0\uB3FC\uC694. \uC544\uB798 \uBC84\uD2BC\uC73C\uB85C \uBD80\uBAA8\uB2D8\uAED8 \uC804\uB2EC\uD574 \uC8FC\uC138\uC694.</div>' +
+      '<button class="share-btn" type="button">\uD83D\uDCE4 \uBD80\uBAA8\uB2D8\uAED8 \uC804\uB2EC\uD558\uAE30</button>' +
+      '<div class="copy-hint" style="display:none;">\uB9C1\uD06C\uAC00 \uBCF5\uC0AC\uB410\uC5B4\uC694. \uCE74\uCE74\uC624\uD1A1\uC774\uB098 \uBB38\uC790\uB85C \uBD99\uC5EC\uB123\uC5B4 \uBCF4\uB0B4\uC8FC\uC138\uC694!</div>';
+    submitBtn.remove();
+    var existingErr = consentBox.querySelector('.submit-error');
+    if(existingErr) existingErr.remove();
+    consentBox.appendChild(wrap);
+
+    var shareBtn = wrap.querySelector('.share-btn');
+    var copyHint = wrap.querySelector('.copy-hint');
+    shareBtn.addEventListener('click', function(){
+      if(navigator.share){
+        navigator.share({
+          title: '\uBB3C\uC74C\uC1A1\uC774 \uBCF4\uD638\uC790 \uB3D9\uC758\uC11C',
+          text: '\uBB3C\uC74C\uC1A1\uC774 \uC5F0\uAD6C \uCC38\uC5EC\uB97C \uC704\uD55C \uBCF4\uD638\uC790 \uB3D9\uC758\uC11C\uC608\uC694. \uC544\uB798 \uB9C1\uD06C\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694.',
+          url: guardianUrl
+        }).catch(function(){});
+      } else if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(guardianUrl).then(function(){
+          copyHint.style.display = 'block';
+        }).catch(function(){
+          window.prompt('\uC544\uB798 \uB9C1\uD06C\uB97C \uBCF5\uC0AC\uD574\uC11C \uBD80\uBAA8\uB2D8\uAED8 \uC804\uB2EC\uD574 \uC8FC\uC138\uC694', guardianUrl);
+        });
+      } else {
+        window.prompt('\uC544\uB798 \uB9C1\uD06C\uB97C \uBCF5\uC0AC\uD574\uC11C \uBD80\uBAA8\uB2D8\uAED8 \uC804\uB2EC\uD574 \uC8FC\uC138\uC694', guardianUrl);
+      }
+    });
+  }
 })();
 </script>
 </body>

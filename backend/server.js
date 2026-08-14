@@ -27,6 +27,7 @@ const adminRoutes = require('./routes/admin');
 const olympicRoutes = require('./routes/olympic');
 const notificationsRoutes = require('./routes/notifications');
 const sessionsRoutes = require('./routes/sessions');
+const consentRoutes = require('./routes/consent');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionsRoutes);
@@ -41,6 +42,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/olympic', olympicRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/sessions', sessionsRoutes);
+app.use('/api/consent', consentRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {
