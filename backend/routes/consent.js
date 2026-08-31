@@ -13,8 +13,75 @@
 
 const express = require('express');
 const router = express.Router();
+const nodemailer = require('nodemailer');
 
 const pool = require('../db');
+
+// --- 이메일 발송 설정 (Gmail 앱 비밀번호 사용) ---
+// Railway 환경변수에 GMAIL_USER, GMAIL_APP_PASSWORD 등록 필요
+const mailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD
+  }
+});
+
+// 보호자 동의서(3_consent_guardian.html)의 8개 항목 원문 (이메일에 그대로 인용)
+const GUARDIAN_CONSENT_ITEMS = [
+  '나는 이 설명서를 읽었으며, 연구의 목적과 절차에 대해 충분히 이해하였습니다.',
+  '나는 위험과 이득에 관하여 설명을 들었으며, 나의 질문에 만족할 만한 답변을 얻었습니다.',
+  '나는 자녀의 연구 참여에 자발적으로 동의합니다.',
+  '나는 연구 과정에서 수집된 자녀의 정보를 현행 법률과 목포대학교 생명윤리심의위원회 규정이 허용하는 범위 내에서 연구자가 수집하고 처리하는 데 동의합니다.',
+  '나는 담당 연구자, 목포대학교 생명윤리심의위원회가 연구의 실태 조사를 위해 필요한 경우 연구 자료를 열람할 수 있음에 동의합니다.',
+  '나는 언제라도 자녀의 연구 참여를 철회할 수 있고, 이러한 결정이 어떠한 불이익도 되지 않을 것임을 이해합니다.',
+  '나는 연구 종료 후 3년간 자료가 보관된 후 안전하게 폐기될 것임을 알고 있습니다.',
+  '나는 연구 참여 도중 발생할 수 있는 피해 및 분쟁 시 연구책임자(que.jypark@gmail.com)에게 연락할 수 있음을 알고 있습니다.'
+];
+
+// 제출된 동의서 내용을 텍스트로 정리해서 보호자 이메일로 발송
+// 발송 실패해도 던지지 않고 콘솔에만 남김 (동의서 저장 자체를 막으면 안 되므로)
+async function sendGuardianConfirmationEmail({ to, contact_name, student_name, contact_phone, checks }) {
+  if (!to) return;
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.error('[consent] GMAIL_USER/GMAIL_APP_PASSWORD 환경변수가 설정되지 않아 이메일을 보내지 못했습니다.');
+    return;
+  }
+
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}. ${now.getMonth() + 1}. ${now.getDate()}.`;
+
+  const itemsText = GUARDIAN_CONSENT_ITEMS
+    .map((text, i) => `${i + 1}. [${checks[i] ? '동의함' : '미동의'}] ${text}`)
+    .join('\n');
+
+  const bodyText =
+`${contact_name} 보호자님, 물음송이 연구 참여 동의서 제출이 확인되었습니다.
+
+■ 제출 정보
+- 자녀 성명: ${student_name || '-'}
+- 보호자 연락처: ${contact_phone || '-'}
+- 제출 일시: ${dateStr}
+
+■ 동의 항목 (연구대상자 동의서)
+${itemsText}
+
+이 이메일은 제출하신 동의서 사본으로, 보관용으로 저장해 두시기 바랍니다.
+문의사항은 연구책임자(박지영, que.jypark@gmail.com)에게 연락해 주세요.
+
+- 물음송이 연구팀 -`;
+
+  try {
+    await mailTransporter.sendMail({
+      from: `"물음송이 연구팀" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: '[물음송이] 보호자 동의서 제출 확인',
+      text: bodyText
+    });
+  } catch (err) {
+    console.error('[consent] 확인 이메일 발송 실패:', err.message);
+  }
+}
 
 // --- db 연결 모듈이 따로 없는 경우, 위 줄을 지우고 아래 주석을 해제해서 쓰세요 ---
 // const { Pool } = require('pg');
@@ -86,6 +153,15 @@ router.post('/guardian-submit', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       ['guardian', code || null, JSON.stringify(checks), contact_name || null, contact_phone || null, contact_email || null, student_name || null]
     );
+
+    // 확인 이메일 발송 (실패해도 제출 자체는 성공으로 응답)
+    sendGuardianConfirmationEmail({
+      to: contact_email,
+      contact_name,
+      student_name,
+      contact_phone,
+      checks
+    });
 
     res.json({ ok: true });
   } catch (err) {

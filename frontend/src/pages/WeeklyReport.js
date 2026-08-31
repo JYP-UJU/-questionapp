@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './WeeklyReport.css';
-import SettingBottomNav from '../components/SettingBottomNav';
+import BottomNav from '../components/BottomNav';
 import NotificationBell from '../components/NotificationBell';
 
 function WeeklyReport() {
@@ -666,7 +666,7 @@ function WeeklyReport() {
         내 프로필에서 확인하기 →
     </button>
 </div>
-            <SettingBottomNav />
+            <BottomNav />
         </div>
     );
 }

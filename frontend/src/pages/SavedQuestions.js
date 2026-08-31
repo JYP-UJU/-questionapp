@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import './SavedQuestions.css';
-import SettingBottomNav from '../components/SettingBottomNav';
+import BottomNav from '../components/BottomNav';
 import TopHeader from '../components/TopHeader';
 import OpinionModal from '../components/OpinionModal';
 import RelatedModal from '../components/RelatedModal';
@@ -175,7 +175,7 @@ function SavedQuestions() {
         }, 50);
     };
 
-    // 제거 (담기 해제)
+    // 제거 (담기 해제) - 실제로 saved_questions에 저장된 항목에만 사용
     const handleRemove = async (savedId) => {
         try {
             await api.delete(`/saved/${savedId}`);
@@ -184,6 +184,30 @@ function SavedQuestions() {
             alert('제거에 실패했습니다');
         }
     };
+
+    // "내가 올린 질문" 카드는 saved_questions에 실제 저장된 게 아니라
+    // /saved 조회 시 합성된 가짜 savedId(my_ 접두사)를 갖고 있어서 handleRemove가 항상 실패했음.
+    // 이 경우엔 실제 질문 삭제(DELETE /questions/:id)를 호출해야 함.
+    const handleDeleteMyQuestion = async (questionId) => {
+        const ok = window.confirm(
+            '이 질문을 지울까요?\n\n질문을 올릴 때 받았던 5송이도 함께 반납돼요.'
+        );
+        if (!ok) return;
+
+        try {
+            const res = await api.delete(`/questions/${questionId}`);
+            alert(res.data?.message || '질문을 지웠어요');
+            setSavedQuestions(prev => prev.filter(q =>
+                !(q.questionId === questionId && q.questionType === 'my_question')
+            ));
+        } catch (err) {
+            alert(err.response?.data?.error || '삭제에 실패했어요');
+        }
+    };
+
+    // saved/opinion/liked 조회 결과 중 실제 saved_questions 행이 아니라
+    // 화면 표시용으로 합성된 항목인지 여부 (savedId가 my_/op_/like_ 접두사인 경우)
+    const isSyntheticSaved = (savedId) => typeof savedId === 'string' && /^(my_|op_|like_)/.test(savedId);
 
     const handleReaction = async (questionId, reactionType) => {
         try {
@@ -607,13 +631,23 @@ function SavedQuestions() {
                                                 <span className="btn-icon">❓</span>
                                                 <span className="btn-label">관련질문</span>
                                             </button>
-                                            <button
-                                                className="action-btn remove-btn"
-                                                onClick={() => handleRemove(saved.savedId)}
-                                            >
-                                                <span className="btn-icon">🚫</span>
-                                                <span className="btn-label">제거</span>
-                                            </button>
+                                            {saved.questionType === 'my_question' ? (
+                                                <button
+                                                    className="action-btn remove-btn"
+                                                    onClick={() => handleDeleteMyQuestion(saved.questionId)}
+                                                >
+                                                    <span className="btn-icon">🚫</span>
+                                                    <span className="btn-label">제거</span>
+                                                </button>
+                                            ) : !isSyntheticSaved(saved.savedId) ? (
+                                                <button
+                                                    className="action-btn remove-btn"
+                                                    onClick={() => handleRemove(saved.savedId)}
+                                                >
+                                                    <span className="btn-icon">🚫</span>
+                                                    <span className="btn-label">제거</span>
+                                                </button>
+                                            ) : null}
                                         </div>
 
                                     </div>
@@ -662,7 +696,7 @@ function SavedQuestions() {
                 />
             )}
 
-            <SettingBottomNav />
+            <BottomNav />
         </div>
     );
 }
