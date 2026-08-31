@@ -20,6 +20,44 @@ function Test() {
         "일상 속 과학 질문을 적어보아요!"
     ];
 
+    // 질문 등록 후 보여줄 피드백 문구
+    // - rare: 비슷한 질문이 거의 없을 때 (독창성 강조)
+    // - resonant: 비슷한 질문이 많을 때 (공감/연결 강조)
+    // - typeTag: 매칭 개수가 애매할 때, 질문 문장 자체의 특징으로 판단
+    const RARE_MESSAGES = [
+        '이 질문을 처음 물어보셨어요!',
+        '아직 아무도 이렇게 물어본 적 없어요',
+        '독특한 시각이 돋보여요',
+        '나만의 궁금증이네요, 멋져요',
+    ];
+    const RESONANT_MESSAGES = (n) => [
+        `${n}명이 비슷한 궁금증을 갖고 있어요`,
+        '많은 친구들도 이 질문을 궁금해했어요',
+        '공감가는 질문이에요',
+        '너와 같은 생각을 한 친구들이 있어요',
+    ];
+    const TYPE_MESSAGES = {
+        why: '왜 그런지 궁금해하는 질문이네요',
+        how: '어떻게 되는지 궁금해하는 질문이네요',
+        whatif: '만약에로 시작하는 상상력 넘치는 질문이에요!',
+        observation: '관찰에서 나온 질문이네요!',
+    };
+    const FALLBACK_MESSAGES = ['멋진 질문이에요', '좋은 질문이에요'];
+
+    const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    // matchCount(비슷한 질문 개수)와 typeTag로 보여줄 문구 하나를 고른다
+    const getFeedbackMessage = (feedback) => {
+        if (!feedback) return pickRandom(FALLBACK_MESSAGES);
+        const { matchCount = 0, typeTag } = feedback;
+
+        if (matchCount === 0) return pickRandom(RARE_MESSAGES);
+        if (matchCount >= 3) return pickRandom(RESONANT_MESSAGES(matchCount));
+        // 애매한 구간(1~2개)은 질문 유형 문구로 대체
+        if (typeTag && TYPE_MESSAGES[typeTag]) return TYPE_MESSAGES[typeTag];
+        return pickRandom(FALLBACK_MESSAGES);
+    };
+
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [thumbnail, setThumbnail] = useState(
@@ -87,8 +125,9 @@ function Test() {
         setLoading(true);
         setError('');
         try {
-            await questionsAPI.create(title, content, thumbnail);
-            alert('질문 등록! 5송이 획득!');
+            const res = await questionsAPI.create(title, content, thumbnail);
+            const feedbackLine = getFeedbackMessage(res.data?.feedback);
+            alert(`${feedbackLine}\n+5송이 획득!`);
             navigate('/questions'); // ✅ /saved → /questions 로 변경
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to post question');

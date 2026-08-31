@@ -44,10 +44,34 @@ router.post('/', authenticateToken, async (req, res) => {
 
     await client.query('BEGIN');
 
+    // 피드백 메시지용 신호 계산 (등록 전 기존 질문들과 비교)
+    // 1) 비슷한 질문이 몇 개나 이미 있는지 (키워드 단위 매칭, /with-status 검색과 같은 방식)
+    const titleTokens = [...new Set(
+      (title || '').split(/[\s,.?!]+/).filter(t => t.length >= 2)
+    )].map(t => `%${t}%`);
+
+    let matchCount = 0;
+    if (titleTokens.length > 0) {
+      const matchResult = await client.query(
+        `SELECT COUNT(*) FROM user_questions
+         WHERE is_deleted = false
+           AND (title ILIKE ANY($1::text[]) OR content ILIKE ANY($1::text[]))`,
+        [titleTokens]
+      );
+      matchCount = parseInt(matchResult.rows[0].count, 10) || 0;
+    }
+
+    // 2) 질문 문장 자체의 유형 (빈도와 무관하게 키워드만으로 판단)
+    let typeTag = null;
+    if (/왜/.test(title)) typeTag = 'why';
+    else if (/어떻게|원리/.test(title)) typeTag = 'how';
+    else if (/만약|라면/.test(title)) typeTag = 'whatif';
+    else if (content && content.trim().length > 0) typeTag = 'observation';
+
     // 질문 저장 (관련질문인 경우 parent_question_id 포함)
     const result = await client.query(
-      `INSERT INTO user_questions (user_id, title, content, thumbnail_url, parent_question_id) 
-       VALUES ($1, $2, $3, $4, $5) 
+      `INSERT INTO user_questions (user_id, title, content, thumbnail_url, parent_question_id)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id, title, content, thumbnail_url, parent_question_id, created_at`,
       [userId, title, content, thumbnail_url, parent_question_id || null]
     );
@@ -79,7 +103,8 @@ router.post('/', authenticateToken, async (req, res) => {
       message: '질문이 등록되었습니다! 5송이를 획득했어요 🌸',
       question,
       songi_count: userResult.rows[0].songi_count,
-      songi_earned: 5
+      songi_earned: 5,
+      feedback: { matchCount, typeTag }
     });
 
   } catch (error) {
