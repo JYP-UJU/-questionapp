@@ -23,16 +23,35 @@ const menus = [
         )
     },
     {
-        path: '/create',
-        label: '질문쓰기',
-        isCenter: true,
-    },
-    {
         path: '/questions',
         label: '질문들',
         icon: (active) => (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+        )
+    },
+    {
+        path: '/create',
+        label: '질문쓰기',
+        isCenter: true,
+    },
+    {
+        path: '/saved',
+        label: '내활동',
+        icon: (active) => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/>
+            </svg>
+        )
+    },
+    {
+        path: '/weekly-report',
+        label: '주간일지',
+        icon: (active) => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="17" rx="2"/>
+                <path d="M16 2v4M8 2v4M3 10h18"/>
             </svg>
         )
     },
@@ -156,7 +175,7 @@ function BottomNav() {
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            padding: '4px 8px',
+                            padding: '4px 3px',
                             borderRadius: '10px',
                             display: 'flex',
                             flexDirection: 'column',
@@ -166,7 +185,7 @@ function BottomNav() {
                             position: 'relative',
                         }}
                     >
-                        {menu.path === '/setting' && showJournalBadge && (
+                        {menu.path === '/weekly-report' && showJournalBadge && (
                             <span style={{
                                 position: 'absolute',
                                 top: '2px',
@@ -180,9 +199,10 @@ function BottomNav() {
                         )}
                         {menu.icon(isActive)}
                         <span style={{
-                            fontSize: '11px',
+                            fontSize: '10px',
                             fontWeight: isActive ? '700' : '400',
                             color: isActive ? '#3b82f6' : '#aaa',
+                            whiteSpace: 'nowrap',
                         }}>
                             {menu.label}
                         </span>
