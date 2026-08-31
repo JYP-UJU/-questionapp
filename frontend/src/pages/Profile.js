@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import SettingBottomNav from '../components/SettingBottomNav';
+import BottomNav from '../components/BottomNav';
 import NotificationBell from '../components/NotificationBell';
 import './Profile.css';
 
@@ -293,7 +293,7 @@ function Profile() {
 
             </div>
 
-            <SettingBottomNav />
+            <BottomNav />
         </div>
     );
 }
