@@ -150,15 +150,14 @@ router.get('/with-status', authenticateToken, async (req, res) => {
     //       'recent' (최신 활동순 - 인기 가중치 없이 순수 최신순)
     const sortParam = req.query.sort;
     const sort = sortParam === 'random' ? 'random' : sortParam === 'recent' ? 'recent' : 'engagement';
+    // opinion_count / related_count는 아래 SELECT 목록에서 이미 한 번 계산되는 값이라
+    // (컬럼 별칭으로) 그대로 재사용함 - 여기서 서브쿼리를 다시 써버리면 행마다 똑같은
+    // 집계를 두 번(SELECT용 한 번, 정렬용 한 번) 계산하게 돼서 목록 조회가 불필요하게 느려짐.
+    // PostgreSQL은 ORDER BY에서 SELECT 목록의 별칭을 그대로 참조할 수 있음.
     const engagementExpr = `(
       COALESCE(q.likes_count,0) + COALESCE(q.dislikes_count,0)
-      + (SELECT COUNT(*) FROM question_opinions WHERE question_id = q.id AND question_type = q.question_source)
-      + (CASE
-           WHEN q.question_source = 'user_question' THEN
-             (SELECT COUNT(*) FROM user_questions WHERE parent_question_id = q.id AND is_deleted = false)
-           ELSE
-             COALESCE((SELECT related_count FROM seed_questions WHERE id = q.id), 0)
-         END)
+      + opinion_count
+      + related_count
     )`;
     const orderClause = sort === 'random'
       ? 'RANDOM()'
