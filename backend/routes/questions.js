@@ -62,10 +62,10 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // 2) 질문 문장 자체의 유형 (빈도와 무관하게 키워드만으로 판단)
+    // "왜"/"어떻게" 같은 키워드는 오탐이 많아서(그냥 흔한 말버릇인 경우가 대부분) 뺐음.
+    // "만약/라면"(가정형)과 이유 칸을 채웠는지(관찰형)만 판단.
     let typeTag = null;
-    if (/왜/.test(title)) typeTag = 'why';
-    else if (/어떻게|원리/.test(title)) typeTag = 'how';
-    else if (/만약|라면/.test(title)) typeTag = 'whatif';
+    if (/만약|라면/.test(title)) typeTag = 'whatif';
     else if (content && content.trim().length > 0) typeTag = 'observation';
 
     // 질문 저장 (관련질문인 경우 parent_question_id 포함)
