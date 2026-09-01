@@ -67,44 +67,59 @@ function Login() {
         setAgreed(false);
     };
 
-    // 회원가입 성공 후: 폼 대신 코드 전달 안내 화면을 보여줌
+    // 회원가입 성공 후: 폼 대신 완료 안내 화면을 보여줌
+    // - 미성년(초/중/고): 부모님 동의서용 코드 전달 안내
+    // - 성인(대학): 부모-자녀 매칭용 코드라 필요 없으므로 코드 안내 없이 바로 시작
     if (signupCode) {
+        const isAdult = grade === '대학';
         return (
             <div className="auth-container">
                 <div className="auth-box">
                     <h1 className="auth-title">🌱 물음송이</h1>
                     <p className="auth-subtitle">가입이 완료됐어요!</p>
 
-                    <div style={{
-                        background: '#f0fdf4', border: '2px solid #86efac',
-                        borderRadius: '14px', padding: '24px 20px', margin: '20px 0',
-                        textAlign: 'center'
-                    }}>
-                        <p style={{ fontSize: '14px', color: '#333', marginBottom: '14px', lineHeight: 1.6 }}>
-                            이 코드를 <strong>부모님께 전달</strong>해주세요.<br/>
-                            부모님 동의서 작성 시 필요해요.
-                        </p>
+                    {isAdult ? (
                         <div style={{
-                            fontSize: '32px', fontWeight: 800, letterSpacing: '4px',
-                            color: '#16a34a', background: '#fff', border: '2px dashed #86efac',
-                            borderRadius: '10px', padding: '14px', marginBottom: '12px'
+                            background: '#f0fdf4', border: '2px solid #86efac',
+                            borderRadius: '14px', padding: '24px 20px', margin: '20px 0',
+                            textAlign: 'center'
                         }}>
-                            {signupCode}
+                            <p style={{ fontSize: '14px', color: '#333', lineHeight: 1.6 }}>
+                                참여해주셔서 감사해요.<br/>바로 시작해보세요!
+                            </p>
                         </div>
-                        <button
-                            onClick={handleCopyCode}
-                            style={{
-                                padding: '10px 20px', border: 'none', borderRadius: '8px',
-                                background: '#16a34a', color: '#fff', fontWeight: 700,
-                                fontSize: '14px', cursor: 'pointer'
-                            }}
-                        >
-                            {codeCopied ? '복사됐어요! ✓' : '코드 복사하기'}
-                        </button>
-                        <p style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>
-                            설정 &gt; 내 코드 다시 보기에서 언제든 확인할 수 있어요.
-                        </p>
-                    </div>
+                    ) : (
+                        <div style={{
+                            background: '#f0fdf4', border: '2px solid #86efac',
+                            borderRadius: '14px', padding: '24px 20px', margin: '20px 0',
+                            textAlign: 'center'
+                        }}>
+                            <p style={{ fontSize: '14px', color: '#333', marginBottom: '14px', lineHeight: 1.6 }}>
+                                이 코드를 <strong>부모님께 전달</strong>해주세요.<br/>
+                                부모님 동의서 작성 시 필요해요.
+                            </p>
+                            <div style={{
+                                fontSize: '32px', fontWeight: 800, letterSpacing: '4px',
+                                color: '#16a34a', background: '#fff', border: '2px dashed #86efac',
+                                borderRadius: '10px', padding: '14px', marginBottom: '12px'
+                            }}>
+                                {signupCode}
+                            </div>
+                            <button
+                                onClick={handleCopyCode}
+                                style={{
+                                    padding: '10px 20px', border: 'none', borderRadius: '8px',
+                                    background: '#16a34a', color: '#fff', fontWeight: 700,
+                                    fontSize: '14px', cursor: 'pointer'
+                                }}
+                            >
+                                {codeCopied ? '복사됐어요! ✓' : '코드 복사하기'}
+                            </button>
+                            <p style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>
+                                설정 &gt; 내 코드 다시 보기에서 언제든 확인할 수 있어요.
+                            </p>
+                        </div>
+                    )}
 
                     <button
                         onClick={handleContinueAfterSignup}
