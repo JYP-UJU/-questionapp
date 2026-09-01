@@ -130,6 +130,11 @@ function Admin() {
   const [resetPwValue, setResetPwValue] = useState('');
   const [resettingPw, setResettingPw] = useState(false);
 
+  // 관리자 메세지 보내기 모달 (한 명 또는 전체)
+  const [messageModal, setMessageModal] = useState(null); // { userId, username } - userId가 null이면 전체 사용자
+  const [messageText, setMessageText] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+
 
   const loadActivities = useCallback(async () => {
     setLoading(true);
@@ -300,6 +305,28 @@ function Admin() {
       alert(err.response?.data?.error || '초기화에 실패했습니다');
     } finally {
       setResettingPw(false);
+    }
+  };
+
+  // 관리자 메세지 보내기 (한 명 또는 전체) - 기존 알림함에 그대로 뜸
+  const handleSendMessage = async () => {
+    if (!messageText.trim()) {
+      alert('메세지 내용을 입력해주세요');
+      return;
+    }
+    try {
+      setSendingMessage(true);
+      const res = await api.post('/admin/message', {
+        userId: messageModal.userId,
+        message: messageText.trim()
+      });
+      alert(res.data?.message || '메세지를 보냈어요');
+      setMessageModal(null);
+      setMessageText('');
+    } catch (err) {
+      alert(err.response?.data?.error || '메세지 전송에 실패했습니다');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -485,6 +512,10 @@ function Admin() {
               value={userFilter}
               onChange={e => setUserFilter(e.target.value)}
             />
+            <button style={styles.broadcastBtn}
+              onClick={() => setMessageModal({ userId: null, username: '전체 사용자' })}>
+              📢 전체 사용자에게 메세지 보내기
+            </button>
           </div>
 
           {loading ? (
@@ -515,6 +546,12 @@ function Admin() {
                           setSelectedUser(u);
                           setTab('activities');
                         }}>활동 보기</button>
+                      {!u.is_admin && (
+                        <button style={styles.messageBtn}
+                          onClick={() => setMessageModal({ userId: u.id, username: u.username })}>
+                          💌 메세지
+                        </button>
+                      )}
                       {!u.is_admin && (
                         <button style={styles.resetPwBtn}
                           onClick={() => setResetPwModal({ userId: u.id, username: u.username })}>
@@ -653,6 +690,30 @@ function Admin() {
         </div>
       )}
 
+      {/* 관리자 메세지 보내기 모달 - 알림함에 그대로 뜸 */}
+      {messageModal && (
+        <div style={styles.overlay} onClick={() => { setMessageModal(null); setMessageText(''); }}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{margin: '0 0 8px', fontSize: 16}}>💌 메세지 보내기 — {messageModal.username}</h3>
+            <p style={{margin: '0 0 14px', fontSize: 13, color: '#666', lineHeight: 1.5}}>
+              {messageModal.userId
+                ? '이 사용자의 알림함으로 메세지가 전달돼요.'
+                : '관리자 계정을 제외한 모든 사용자의 알림함으로 메세지가 전달돼요.'}
+            </p>
+            <textarea style={styles.modalTextarea} rows={4}
+              placeholder="보낼 메세지를 입력하세요"
+              value={messageText} onChange={e => setMessageText(e.target.value)} />
+            <div style={{display:'flex', gap:8, marginTop:4}}>
+              <button style={styles.cancelBtn}
+                onClick={() => { setMessageModal(null); setMessageText(''); }}>취소</button>
+              <button style={styles.sendBtn} disabled={sendingMessage} onClick={handleSendMessage}>
+                {sendingMessage ? '보내는 중...' : '보내기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 계정 완전 삭제 모달 - 되돌릴 수 없음! 아이디를 정확히 입력해야 삭제됨 */}
       {deleteUserModal && (
         <div style={styles.overlay} onClick={() => { setDeleteUserModal(null); setDeleteConfirmInput(''); }}>
@@ -734,13 +795,17 @@ const styles = {
   resetPwBtn: { background: '#fef9c3', color: '#a16207', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
   deductBtn: { background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
   deleteUserBtn: { background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
+  messageBtn: { background: '#dbeafe', color: '#1d4ed8', border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, cursor: 'pointer', fontWeight: 600 },
+  broadcastBtn: { marginTop: 8, width: '100%', padding: '9px 12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
 
   // 모달
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 },
   modal: { background: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 320 },
   modalInput: { width: '100%', padding: '10px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', marginBottom: 10, fontFamily: 'inherit', outline: 'none' },
+  modalTextarea: { width: '100%', padding: '10px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', marginBottom: 10, fontFamily: 'inherit', outline: 'none', resize: 'vertical' },
   cancelBtn: { flex: 1, padding: 10, background: '#f3f4f6', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', color: '#666' },
   confirmBtn: { flex: 1, padding: 10, background: '#dc2626', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: 'white' },
+  sendBtn: { flex: 1, padding: 10, background: '#3b82f6', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: 'white' },
 };
 
 export default Admin;

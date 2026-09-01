@@ -8,6 +8,7 @@ const typeIcon = (type) => {
         case 'reaction': return '💛';
         case 'opinion': return '💬';
         case 'followup': return '❓';
+        case 'admin': return '📢';
         default: return '🔔';
     }
 };

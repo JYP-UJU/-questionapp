@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 
+const weeklyIcon = (active) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="17" rx="2"/>
+        <path d="M16 2v4M8 2v4M3 10h18"/>
+    </svg>
+);
+
+const monthlyIcon = (active) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="17" rx="2"/>
+        <path d="M16 2v4M8 2v4M3 10h18"/>
+        <path d="M7 14h.01M12 14h.01M17 14h.01M7 18h.01M12 18h.01"/>
+    </svg>
+);
+
 const menus = [
     {
         path: '/olympic',
@@ -46,14 +61,10 @@ const menus = [
         )
     },
     {
+        key: 'journal',
         path: '/weekly-report',
         label: '주간일지',
-        icon: (active) => (
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? '#3b82f6' : '#aaa'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="17" rx="2"/>
-                <path d="M16 2v4M8 2v4M3 10h18"/>
-            </svg>
-        )
+        icon: weeklyIcon,
     },
     {
         path: '/setting',
@@ -71,6 +82,9 @@ function BottomNav() {
     const navigate = useNavigate();
     const location = useLocation();
     const [showJournalBadge, setShowJournalBadge] = useState(false);
+    // 주간일지 작성 화면에서는 하단의 "주간일지" 자리가 "월간일지"로, 그 반대도 마찬가지로 바뀜
+    const isOnWeekly = location.pathname === '/weekly-report';
+    const isOnMonthly = location.pathname === '/monthly-report';
 
     useEffect(() => {
         const now = new Date();
@@ -121,13 +135,21 @@ function BottomNav() {
             zIndex: 100,
             borderTop: '1px solid #e5e7eb',
         }}>
-            {menus.map((menu) => {
+            {menus.map((rawMenu) => {
+                // 주간일지 화면에서는 이 자리가 "월간일지"로, 월간일지 화면에서는 "주간일지"로 바뀜
+                const menu = rawMenu.key === 'journal'
+                    ? (isOnWeekly
+                        ? { ...rawMenu, path: '/monthly-report', label: '월간일지', icon: monthlyIcon }
+                        : isOnMonthly
+                            ? { ...rawMenu, path: '/weekly-report', label: '주간일지', icon: weeklyIcon }
+                            : rawMenu)
+                    : rawMenu;
                 const isActive = location.pathname === menu.path;
 
                 if (menu.isCenter) {
                     return (
                         <button
-                            key={menu.path}
+                            key={rawMenu.key || rawMenu.path}
                             onClick={() => navigate(menu.path)}
                             style={{
                                 background: 'none',
@@ -171,7 +193,7 @@ function BottomNav() {
 
                 return (
                     <button
-                        key={menu.path}
+                        key={rawMenu.key || rawMenu.path}
                         onClick={() => navigate(menu.path)}
                         style={{
                             background: 'none',
@@ -189,7 +211,7 @@ function BottomNav() {
                             minWidth: 0,
                         }}
                     >
-                        {menu.path === '/weekly-report' && showJournalBadge && (
+                        {rawMenu.key === 'journal' && showJournalBadge && (
                             <span style={{
                                 position: 'absolute',
                                 top: '2px',

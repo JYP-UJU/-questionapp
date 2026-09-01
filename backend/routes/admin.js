@@ -552,4 +552,40 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
   }
 });
 
+// ===== 관리자 메세지 보내기 (특정 사용자 1명 또는 전체) =====
+// 알림(notifications) 테이블을 그대로 재사용해서 type='admin'으로 저장 -> 기존 알림함/벨에 그대로 뜸
+router.post('/message', authenticateToken, requireAdmin, async (req, res) => {
+  const { userId, message } = req.body;
+  const text = (message || '').trim();
+  if (!text) {
+    return res.status(400).json({ error: '메세지 내용을 입력해주세요' });
+  }
+
+  try {
+    if (userId) {
+      // 한 명에게만
+      await pool.query(
+        `INSERT INTO notifications (user_id, type, message) VALUES ($1, 'admin', $2)`,
+        [userId, text]
+      );
+      return res.json({ message: '메세지를 보냈어요' });
+    }
+
+    // 전체 사용자에게 (관리자 계정은 제외)
+    const usersRes = await pool.query(
+      'SELECT id FROM users WHERE is_admin IS NOT TRUE'
+    );
+    for (const u of usersRes.rows) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, type, message) VALUES ($1, 'admin', $2)`,
+        [u.id, text]
+      );
+    }
+    res.json({ message: `${usersRes.rows.length}명에게 메세지를 보냈어요` });
+  } catch (err) {
+    console.error('관리자 메세지 발송 오류:', err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 module.exports = router;
