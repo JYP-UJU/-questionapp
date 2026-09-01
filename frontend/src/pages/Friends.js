@@ -510,6 +510,7 @@ function Friends() {
 
     if (loading) return (
         <div className="friends-container">
+            {showConfetti && <ConfettiBurst />}
             <div className="loading">질문을 불러오는 중...</div>
         </div>
     );

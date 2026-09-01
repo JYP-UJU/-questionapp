@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { questionsAPI } from '../services/api';
+import { questionsAPI, getToken } from '../services/api';
 import './Test.css';
 import BottomNav from '../components/BottomNav';
 import TopHeader from '../components/TopHeader';
+import FirstLoginGuide from '../components/FirstLoginGuide';
+
+// 토큰 안의 userId만 가볍게 꺼내옴 (서버 검증용이 아니라 "이 계정이 안내를 봤는지" 로컬 저장 키로만 씀)
+function getUserIdFromToken() {
+    try {
+        const token = getToken();
+        if (!token) return null;
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.userId || payload.id || null;
+    } catch {
+        return null;
+    }
+}
 
 function Test() {
     const randomDefaultImages = [
@@ -66,6 +79,22 @@ function Test() {
     const [error, setError] = useState('');
     const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
     const navigate = useNavigate();
+
+    // 첫 로그인 안내(사용법) - 계정별로 한 번만, "다음에 또 보기"를 고르면 다음 로그인 때 다시 뜸
+    const [showGuide, setShowGuide] = useState(false);
+    useEffect(() => {
+        const userId = getUserIdFromToken();
+        if (!userId) return;
+        const seen = localStorage.getItem(`guideSeen_${userId}`);
+        if (!seen) setShowGuide(true);
+    }, []);
+    const handleCloseGuide = (seeAgainNextTime) => {
+        const userId = getUserIdFromToken();
+        if (userId && !seeAgainNextTime) {
+            localStorage.setItem(`guideSeen_${userId}`, 'true');
+        }
+        setShowGuide(false);
+    };
 
     const searchThumbnails = async (keyword) => {
         if (!keyword) return;
@@ -144,6 +173,7 @@ function Test() {
 
     return (
         <div className="create-container">
+            {showGuide && <FirstLoginGuide onClose={handleCloseGuide} />}
             <TopHeader
                 icon="✏️"
                 title="내 질문하기"
