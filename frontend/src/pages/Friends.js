@@ -7,6 +7,7 @@ import TopHeader from '../components/TopHeader';
 import OpinionModal from '../components/OpinionModal';
 import RelatedModal from '../components/RelatedModal';
 import ConfettiBurst from '../components/ConfettiBurst';
+import PostActivityGuide from '../components/PostActivityGuide';
 
 function Friends() {
     const [questions, setQuestions] = useState([]);
@@ -37,6 +38,11 @@ function Friends() {
     const [justPostedId, setJustPostedId] = useState(location.state?.justPostedId ?? null);
     // 질문을 올리고 막 이 화면에 도착했을 때만 1~2초 폭죽 효과 (노란 배경 강조는 justPostedId가 계속 담당)
     const [showConfetti, setShowConfetti] = useState(!!location.state?.justPostedId);
+    // 아직 활동이 낯선 초반(질문 5번째까지)에만, 질문을 올린 직후 활동 안내 섹션을 보여줌.
+    // justPostedId가 "더보기"로 해제되면 이 안내 섹션도 함께 사라짐.
+    const [showActivityGuide] = useState(
+        !!location.state?.justPostedId && (location.state?.myQuestionCount ?? 999) <= 5
+    );
 
     useEffect(() => {
         if (!showConfetti) return;
@@ -514,6 +520,9 @@ function Friends() {
             <TopHeader icon="💬" title="꼬리에 꼬리를 무는 질문들" messages={[]} />
 
             <div className="friends-content">
+                {justPostedId && showActivityGuide && (
+                    <PostActivityGuide questionTitle={location.state?.justPostedTitle} />
+                )}
                 <div className="instruction instruction-animated">
                     {friendsMessages[currentMessageIndex]}
                 </div>

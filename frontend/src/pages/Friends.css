@@ -4,6 +4,15 @@
     padding: 8px 20px !important;
 }
 
+/* 질문 등록 직후 활동 안내 섹션(PostActivityGuide)의 질문올림픽 버튼 색상 - 나의공간 menu-btn 계열에 없던 색 추가 */
+.olympic-btn {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+}
+
+.olympic-btn:hover {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+}
+
 .friends-container {
     min-height: 100vh;
     background: linear-gradient(135deg, #87CEEB 0%, #98D8C8 100%);

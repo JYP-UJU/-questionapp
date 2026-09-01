@@ -97,6 +97,14 @@ router.post('/', authenticateToken, async (req, res) => {
       [userId]
     );
 
+    // 지금까지 이 사용자가 올린 (최상위) 질문 총 개수 - 신규 사용자 활동 안내 노출 여부 판단용
+    // (관리자 페이지의 question_count 집계와 동일 기준: 관련질문/시드 제외)
+    const myQuestionCountResult = await client.query(
+      `SELECT COUNT(*) FROM user_questions
+       WHERE user_id = $1 AND parent_question_id IS NULL AND related_seed_question_id IS NULL`,
+      [userId]
+    );
+
     await client.query('COMMIT');
 
     res.status(201).json({
@@ -104,7 +112,8 @@ router.post('/', authenticateToken, async (req, res) => {
       question,
       songi_count: userResult.rows[0].songi_count,
       songi_earned: 5,
-      feedback: { matchCount, typeTag }
+      feedback: { matchCount, typeTag },
+      myQuestionCount: parseInt(myQuestionCountResult.rows[0].count, 10) || 0
     });
 
   } catch (error) {
