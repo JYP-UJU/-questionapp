@@ -139,6 +139,8 @@ function BottomNav() {
                                 gap: '2px',
                                 position: 'relative',
                                 top: '-14px',
+                                flex: '1 1 0',
+                                minWidth: 0,
                             }}
                         >
                             <div style={{
@@ -183,6 +185,8 @@ function BottomNav() {
                             gap: '3px',
                             transition: 'all 0.2s',
                             position: 'relative',
+                            flex: '1 1 0',
+                            minWidth: 0,
                         }}
                     >
                         {menu.path === '/weekly-report' && showJournalBadge && (

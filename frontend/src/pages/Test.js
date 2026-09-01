@@ -126,7 +126,8 @@ function Test() {
             const res = await questionsAPI.create(title, content, thumbnail);
             const feedbackLine = getFeedbackMessage(res.data?.feedback);
             alert(`${feedbackLine}\n+5송이 획득!`);
-            navigate('/questions'); // ✅ /saved → /questions 로 변경
+            // 방금 올린 질문을 질문들 화면에서 강조 표시하기 위해 id를 함께 전달
+            navigate('/questions', { state: { justPostedId: res.data?.question?.id ?? null } }); // ✅ /saved → /questions 로 변경
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to post question');
         } finally {

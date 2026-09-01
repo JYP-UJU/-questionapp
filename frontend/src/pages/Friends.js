@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import './Friends.css';
 import BottomNav from '../components/BottomNav';
@@ -27,10 +27,13 @@ function Friends() {
     const [allRelated, setAllRelated] = useState({});
 
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
     const highlightParam = searchParams.get('highlight');
     const searchUrlParam = searchParams.get('search') || '';
     const [highlightedId, setHighlightedId] = useState(null); // 반짝임 표시할 id (알림에서 넘어온 id)
+    // 방금 내가 올린 질문 id - 배경을 계속 강조해두다가 "더보기"를 누르면 해제
+    const [justPostedId, setJustPostedId] = useState(location.state?.justPostedId ?? null);
     const cardRefs = useRef({});
     const highlightAttempts = useRef(0);
     const [sortMode, setSortMode] = useState('recent'); // 'engagement' | 'recent' | 'random' - 기본값 최신순
@@ -153,6 +156,7 @@ function Friends() {
 
     const loadMoreQuestions = async () => {
         if (loadingMore) return;
+        setJustPostedId(null); // 질문을 더 불러오면 "방금 올린 질문" 강조는 해제
         try {
             setLoadingMore(true);
             const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
@@ -597,10 +601,16 @@ function Friends() {
                                         cardRefs.current[refKey] = el;
                                     }
                                 }}
-                                style={(highlightedId === q.id && q.question_source !== 'quiz') ? {
-                                    boxShadow: '0 0 0 3px #fbbf24',
-                                    transition: 'box-shadow 0.3s',
-                                } : undefined}
+                                style={
+                                    (highlightedId === q.id && q.question_source !== 'quiz') ? {
+                                        boxShadow: '0 0 0 3px #fbbf24',
+                                        transition: 'box-shadow 0.3s',
+                                    } : (justPostedId === q.id) ? {
+                                        background: '#fff8d6',
+                                        boxShadow: '0 0 0 2px #fde68a',
+                                        transition: 'background 0.3s, box-shadow 0.3s',
+                                    } : undefined
+                                }
                             >
 
                                 {/* 작성자 + 시간 */}
