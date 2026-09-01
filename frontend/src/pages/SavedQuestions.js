@@ -72,19 +72,8 @@ function SavedQuestions() {
                         );
                         const stats = statsRes.data;
 
-                        // 최신 의견 미리보기 (실제 로드해서 정확한 count 사용)
-                        let latestOpinion = null;
-                        let actualOpinionCount = stats.opinionCount || 0;
-                        if (actualOpinionCount > 0) {
-                            try {
-                                const opRes = await api.get(
-                                    `/questions/${q.questionId}/opinions?type=${q.questionType}`
-                                );
-                                const opinions = opRes.data.opinions || [];
-                                latestOpinion = opinions[0] || null;
-                                actualOpinionCount = opinions.length;
-                            } catch (err) {}
-                        }
+                        // 의견은 개수만 먼저 받아오고, 실제 내용은 "의견 보기"를 눌렀을 때만 불러옴 (로딩 속도 개선)
+                        const actualOpinionCount = stats.opinionCount || 0;
 
                         // 관련질문 전체 트리 (1단계, 2단계, 3단계... 전부, 시간순)
                         let relatedTree = [];
@@ -97,19 +86,14 @@ function SavedQuestions() {
                                 // 각 노드마다 반응/의견 정보 채우기
                                 relatedTree = await Promise.all(rawNodes.map(async (node) => {
                                     let nodeLikes = 0, nodeDislikes = 0, nodeReaction = null;
-                                    let nodeOpinionCount = 0, nodeLatestOpinion = null;
+                                    let nodeOpinionCount = 0;
                                     try {
                                         const nodeStats = await api.get(`/questions/${node.id}?type=user_question`);
                                         nodeLikes = nodeStats.data.likesCount || 0;
                                         nodeDislikes = nodeStats.data.dislikesCount || 0;
                                         nodeReaction = nodeStats.data.userReaction || null;
                                         nodeOpinionCount = nodeStats.data.opinionCount || 0;
-                                        if (nodeOpinionCount > 0) {
-                                            try {
-                                                const nodeOpRes = await api.get(`/questions/${node.id}/opinions?type=user_question`);
-                                                nodeLatestOpinion = (nodeOpRes.data.opinions || [])[0] || null;
-                                            } catch (e) {}
-                                        }
+                                        // 의견 내용은 개수만 미리 받고, 실제 내용은 "의견 보기" 클릭 시 불러옴 (로딩 속도 개선)
                                     } catch (e) {}
                                     return {
                                         ...node,
@@ -117,7 +101,6 @@ function SavedQuestions() {
                                         dislikesCount: nodeDislikes,
                                         userReaction: nodeReaction,
                                         opinionCount: nodeOpinionCount,
-                                        latestOpinion: nodeLatestOpinion,
                                     };
                                 }));
                             } catch (err) {}
@@ -134,7 +117,6 @@ function SavedQuestions() {
                             opinionCount: actualOpinionCount,
                             relatedCount: actualRelatedCount,
                             userReaction: stats.userReaction,
-                            latestOpinion,
                             relatedTree,
                             authorUsername: stats.question?.username || null,
                             authorId: stats.question?.user_id ?? null
@@ -347,7 +329,7 @@ function SavedQuestions() {
                     marginTop: '8px',
                 }}>
                     <div className="question-card" style={{
-                        background: node.latestOpinion ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+                        background: (node.opinionCount || 0) > 0 ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
                         border: '1px solid #dbeafe',
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
@@ -362,13 +344,22 @@ function SavedQuestions() {
                             </span>
                         </div>
 
-                        {node.latestOpinion && (
+                        {(node.opinionCount || 0) > 0 && (
                             <div className="preview-section">
-                                <div className="preview-row">
+                                <button
+                                    className="opinion-view-toggle"
+                                    onClick={() => handleToggleOpinions(node.id, 'user_question')}
+                                >
                                     <span className="preview-icon">💬</span>
-                                    <span className="preview-author">{node.latestOpinion.username}:</span>
-                                    <span className="preview-text">{node.latestOpinion.opinion}</span>
-                                </div>
+                                    {expandedOpinions[node.id] ? '▲ 의견 접기' : `의견 ${node.opinionCount}개 보기 ▼`}
+                                </button>
+                                {expandedOpinions[node.id] && (allOpinions[node.id] || []).map((op, i) => (
+                                    <div key={i} className="preview-row preview-row-indent">
+                                        <span className="preview-icon">💬</span>
+                                        <span className="preview-author">{op.username}:</span>
+                                        <span className="preview-text">{op.opinion}</span>
+                                    </div>
+                                ))}
                             </div>
                         )}
 
@@ -395,7 +386,7 @@ function SavedQuestions() {
                                 }}
                             >
                                 <span className="btn-icon">💬</span>
-                                <span className="btn-label">의견</span>
+                                <span className="btn-label">의견쓰기</span>
                             </button>
                             <button
                                 className="action-btn optional-btn"
@@ -542,10 +533,10 @@ function SavedQuestions() {
                                 return (
                                     <React.Fragment key={saved.savedId}>
                                     <div className="question-card" style={{
-                                    background: (saved.latestOpinion || (saved.relatedTree && saved.relatedTree.length > 0))
+                                    background: ((saved.opinionCount || 0) > 0 || (saved.relatedTree && saved.relatedTree.length > 0))
                                         ? 'rgba(239, 246, 255, 0.98)'
                                         : 'rgba(255, 255, 255, 0.92)',
-                                    borderLeft: (saved.latestOpinion || (saved.relatedTree && saved.relatedTree.length > 0))
+                                    borderLeft: ((saved.opinionCount || 0) > 0 || (saved.relatedTree && saved.relatedTree.length > 0))
                                         ? '4px solid #3b82f6'
                                         : 'none'
                                 }}>
@@ -572,23 +563,17 @@ function SavedQuestions() {
                                                 : <div className="question-content">{saved.content}</div>
                                         )}
 
-                                        {/* 의견 미리보기 B방식: 최신 1개 + 토글 */}
-                                        {saved.latestOpinion && (
+                                        {/* 의견 보기: 목록에서는 개수만 표시, 눌렀을 때만 실제 내용을 불러옴 (로딩 속도 개선) */}
+                                        {(saved.opinionCount || 0) > 0 && (
                                             <div className="preview-section">
-                                                <div className="preview-row">
+                                                <button
+                                                    className="opinion-view-toggle"
+                                                    onClick={() => handleToggleOpinions(saved.questionId, saved.questionType)}
+                                                >
                                                     <span className="preview-icon">💬</span>
-                                                    <span className="preview-author">{saved.latestOpinion.username}:</span>
-                                                    <span className="preview-text">{saved.latestOpinion.opinion}</span>
-                                                    {(saved.opinionCount || 0) > 1 && (
-                                                        <button
-                                                            className="preview-toggle-btn"
-                                                            onClick={() => handleToggleOpinions(saved.questionId, saved.questionType)}
-                                                        >
-                                                            {expandedOpinions[saved.questionId] ? '▲ 접기' : `+${saved.opinionCount - 1}개 더 ▼`}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                {expandedOpinions[saved.questionId] && (allOpinions[saved.questionId] || []).slice(1).map((op, i) => (
+                                                    {expandedOpinions[saved.questionId] ? '▲ 의견 접기' : `의견 ${saved.opinionCount}개 보기 ▼`}
+                                                </button>
+                                                {expandedOpinions[saved.questionId] && (allOpinions[saved.questionId] || []).map((op, i) => (
                                                     <div key={i} className="preview-row preview-row-indent">
                                                         <span className="preview-icon">💬</span>
                                                         <span className="preview-author">{op.username}:</span>
@@ -622,7 +607,7 @@ function SavedQuestions() {
                                                 }}
                                             >
                                                 <span className="btn-icon">💬</span>
-                                                <span className="btn-label">의견</span>
+                                                <span className="btn-label">의견쓰기</span>
                                             </button>
                                             <button
                                                 className="action-btn optional-btn"

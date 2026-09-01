@@ -187,6 +187,26 @@
     color: #15803d;
 }
 
+/* 의견 개수만 보여주고 누르면 펼쳐지는 토글 (로딩 속도 개선: 클릭 전에는 내용을 안 불러옴) */
+.opinion-view-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    background: none;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    color: #b45309;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+}
+
+.opinion-view-toggle:hover {
+    color: #92400e;
+}
+
 /* ✅ 5버튼 액션바 (IcebreakingNew 동일) */
 .action-bar {
     display: flex;

@@ -103,19 +103,14 @@ function Friends() {
                 const rawNodes = treeRes.data.relatedTree || [];
                 const relatedTree = await Promise.all(rawNodes.map(async (node) => {
                     let nodeLikes = 0, nodeDislikes = 0, nodeReaction = null;
-                    let nodeOpinionCount = 0, nodeLatestOpinion = null;
+                    let nodeOpinionCount = 0;
                     try {
                         const nodeStats = await api.get(`/questions/${node.id}?type=user_question`);
                         nodeLikes = nodeStats.data.likesCount || 0;
                         nodeDislikes = nodeStats.data.dislikesCount || 0;
                         nodeReaction = nodeStats.data.userReaction || null;
                         nodeOpinionCount = nodeStats.data.opinionCount || 0;
-                        if (nodeOpinionCount > 0) {
-                            try {
-                                const nodeOpRes = await api.get(`/questions/${node.id}/opinions?type=user_question`);
-                                nodeLatestOpinion = (nodeOpRes.data.opinions || [])[0] || null;
-                            } catch (e) {}
-                        }
+                        // 의견 내용은 개수만 미리 받고, 실제 내용은 "의견 보기" 클릭 시 불러옴 (로딩 속도 개선)
                     } catch (e) {}
                     return {
                         ...node,
@@ -123,7 +118,6 @@ function Friends() {
                         dislikesCount: nodeDislikes,
                         userReaction: nodeReaction,
                         opinionCount: nodeOpinionCount,
-                        latestOpinion: nodeLatestOpinion,
                     };
                 }));
                 return { ...q, relatedTree };
@@ -391,7 +385,7 @@ function Friends() {
                         className="question-card"
                         ref={(el) => { if (el && refsMap) refsMap.current[`user_question:${node.id}`] = el; }}
                         style={{
-                            background: node.latestOpinion ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+                            background: (node.opinionCount || 0) > 0 ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
                             border: '1px solid #dbeafe',
                             ...(highlightId === node.id ? { boxShadow: '0 0 0 3px #fbbf24' } : {}),
                         }}>
@@ -407,23 +401,33 @@ function Friends() {
                             </span>
                         </div>
 
-                        {node.latestOpinion && (
+                        {/* 의견 보기: 목록에서는 개수만 표시, 눌렀을 때만 실제 내용을 불러옴 (로딩 속도 개선) */}
+                        {(node.opinionCount || 0) > 0 && (
                             <div className="preview-section">
-                                <div className="preview-row">
+                                <button
+                                    className="opinion-view-toggle"
+                                    onClick={() => handleToggleOpinions(node.id)}
+                                >
                                     <span className="preview-icon">💬</span>
-                                    <span className="preview-author">{node.latestOpinion.username}:</span>
-                                    <span className="preview-text">{node.latestOpinion.opinion}</span>
-                                    {currentUser?.is_admin && (
-                                        <button
-                                            className="preview-toggle-btn"
-                                            style={{ color: '#dc2626' }}
-                                            onClick={() => handleDeleteOpinion(node.latestOpinion.id)}
-                                            title="이 의견 삭제 (관리자)"
-                                        >
-                                            ✕
-                                        </button>
-                                    )}
-                                </div>
+                                    {expandedOpinions[node.id] ? '▲ 의견 접기' : `의견 ${node.opinionCount}개 보기 ▼`}
+                                </button>
+                                {expandedOpinions[node.id] && (allOpinions[node.id] || []).map((op, i) => (
+                                    <div key={i} className="preview-row preview-row-indent">
+                                        <span className="preview-icon">💬</span>
+                                        <span className="preview-author">{op.username}:</span>
+                                        <span className="preview-text">{op.opinion}</span>
+                                        {currentUser?.is_admin && (
+                                            <button
+                                                className="preview-toggle-btn"
+                                                style={{ color: '#dc2626' }}
+                                                onClick={() => handleDeleteOpinion(op.id)}
+                                                title="이 의견 삭제 (관리자)"
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         )}
 
@@ -451,7 +455,7 @@ function Friends() {
                                 }}
                             >
                                 <span className="btn-icon">💬</span>
-                                <span className="btn-label">의견</span>
+                                <span className="btn-label">의견쓰기</span>
                             </button>
                             <button
                                 className="action-btn optional-btn"
@@ -631,33 +635,17 @@ function Friends() {
                                     <div className="question-content">{q.content}</div>
                                 )}
 
-                                {/* 의견 미리보기 */}
-                                {q.latestOpinion && (
+                                {/* 의견 보기: 목록에서는 개수만 표시, 눌렀을 때만 실제 내용을 펼쳐서 보여줌 */}
+                                {(q.opinion_count || 0) > 0 && (
                                     <div className="preview-section">
-                                        <div className="preview-row">
+                                        <button
+                                            className="opinion-view-toggle"
+                                            onClick={() => handleToggleOpinions(q.id)}
+                                        >
                                             <span className="preview-icon">💬</span>
-                                            <span className="preview-author">{q.latestOpinion.username}:</span>
-                                            <span className="preview-text">{q.latestOpinion.opinion}</span>
-                                            {currentUser?.is_admin && (
-                                                <button
-                                                    className="preview-toggle-btn"
-                                                    style={{ color: '#dc2626' }}
-                                                    onClick={() => handleDeleteOpinion(q.latestOpinion.id)}
-                                                    title="이 의견 삭제 (관리자)"
-                                                >
-                                                    ✕
-                                                </button>
-                                            )}
-                                            {q.opinion_count > 1 && (
-                                                <button
-                                                    className="preview-toggle-btn"
-                                                    onClick={() => handleToggleOpinions(q.id)}
-                                                >
-                                                    {expandedOpinions[q.id] ? '▲ 접기' : `+${q.opinion_count - 1}개 더 ▼`}
-                                                </button>
-                                            )}
-                                        </div>
-                                        {expandedOpinions[q.id] && (allOpinions[q.id] || []).slice(1).map((op, i) => (
+                                            {expandedOpinions[q.id] ? '▲ 의견 접기' : `의견 ${q.opinion_count}개 보기 ▼`}
+                                        </button>
+                                        {expandedOpinions[q.id] && (allOpinions[q.id] || []).map((op, i) => (
                                             <div key={i} className="preview-row preview-row-indent">
                                                 <span className="preview-icon">💬</span>
                                                 <span className="preview-author">{op.username}:</span>
@@ -702,7 +690,7 @@ function Friends() {
                                         }}
                                     >
                                         <span className="btn-icon">💬</span>
-                                        <span className="btn-label">의견</span>
+                                        <span className="btn-label">의견쓰기</span>
                                     </button>
                                     <button
                                         className="action-btn optional-btn"
