@@ -37,19 +37,24 @@ function Friends() {
     // 방금 내가 올린 질문 id - 배경을 계속 강조해두다가 "더보기"를 누르면 해제
     const [justPostedId, setJustPostedId] = useState(location.state?.justPostedId ?? null);
     // 질문을 올리고 막 이 화면에 도착했을 때만 1~2초 폭죽 효과 (노란 배경 강조는 justPostedId가 계속 담당)
-    const [showConfetti, setShowConfetti] = useState(!!location.state?.justPostedId);
+    const [showConfetti, setShowConfetti] = useState(false);
     // 아직 활동이 낯선 초반(질문 5번째까지)에만, 질문을 올린 직후 활동 안내 섹션을 보여줌.
     // justPostedId가 "더보기"로 해제되면 이 안내 섹션도 함께 사라짐.
     const [showActivityGuide] = useState(
         !!location.state?.justPostedId && (location.state?.myQuestionCount ?? 999) <= 5
     );
 
+    // 로딩(질문 목록 불러오기)이 끝나서 화면이 실제로 보이는 시점에 맞춰 폭죽을 터뜨림.
+    // (마운트 시점에 바로 타이머를 걸면, 로딩이 오래 걸릴 때 화면이 뜨기도 전에
+    //  1.7초가 지나버려서 정작 내용이 보일 땐 폭죽이 이미 끝나있는 문제가 있었음)
     useEffect(() => {
-        if (!showConfetti) return;
+        if (loading) return;
+        if (!location.state?.justPostedId) return;
+        setShowConfetti(true);
         const timer = setTimeout(() => setShowConfetti(false), 1700);
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [loading]);
     const cardRefs = useRef({});
     const highlightAttempts = useRef(0);
     const [sortMode, setSortMode] = useState('recent'); // 'engagement' | 'recent' | 'random' - 기본값 최신순
@@ -510,7 +515,6 @@ function Friends() {
 
     if (loading) return (
         <div className="friends-container">
-            {showConfetti && <ConfettiBurst />}
             <div className="loading">질문을 불러오는 중...</div>
         </div>
     );
