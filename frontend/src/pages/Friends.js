@@ -6,6 +6,7 @@ import BottomNav from '../components/BottomNav';
 import TopHeader from '../components/TopHeader';
 import OpinionModal from '../components/OpinionModal';
 import RelatedModal from '../components/RelatedModal';
+import ConfettiBurst from '../components/ConfettiBurst';
 
 function Friends() {
     const [questions, setQuestions] = useState([]);
@@ -34,6 +35,15 @@ function Friends() {
     const [highlightedId, setHighlightedId] = useState(null); // 반짝임 표시할 id (알림에서 넘어온 id)
     // 방금 내가 올린 질문 id - 배경을 계속 강조해두다가 "더보기"를 누르면 해제
     const [justPostedId, setJustPostedId] = useState(location.state?.justPostedId ?? null);
+    // 질문을 올리고 막 이 화면에 도착했을 때만 1~2초 폭죽 효과 (노란 배경 강조는 justPostedId가 계속 담당)
+    const [showConfetti, setShowConfetti] = useState(!!location.state?.justPostedId);
+
+    useEffect(() => {
+        if (!showConfetti) return;
+        const timer = setTimeout(() => setShowConfetti(false), 1700);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const cardRefs = useRef({});
     const highlightAttempts = useRef(0);
     const [sortMode, setSortMode] = useState('recent'); // 'engagement' | 'recent' | 'random' - 기본값 최신순
@@ -500,6 +510,7 @@ function Friends() {
 
     return (
         <div className="friends-container">
+            {showConfetti && <ConfettiBurst />}
             <TopHeader icon="💬" title="꼬리에 꼬리를 무는 질문들" messages={[]} />
 
             <div className="friends-content">
