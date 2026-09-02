@@ -75,7 +75,8 @@ app.use('/land', express.static(path.join(__dirname, 'public', 'landing')));
 // 짧은 링크 별칭 (안내 문구/문자 발송 시 이 짧은 경로로 안내하세요)
 app.get('/g', (req, res) => res.redirect('/land/muleumsongi-guide.html'));      // 안내 페이지
 app.get('/l', (req, res) => res.redirect('/land/muleumsongi-landing.html'));    // 랜딩 페이지
-app.get('/i', (req, res) => res.redirect('/land/muleumsongi-invite.html'));     // 초대장(카톡 발송용 링크 모음)
+app.get('/i', (req, res) => res.redirect('/land/muleumsongi-invite.html'));     // 초대장(카톡 발송용 링크 모음, 학부모용)
+app.get('/ik', (req, res) => res.redirect('/land/muleumsongi-invite-kids.html')); // 초대장(초등학생 친구들에게 직접 말 거는 버전)
 app.get('/c1', (req, res) => res.redirect('/consent/1_consent_minor.html'));               // 미성년자 동의
 app.get('/c2', (req, res) => res.redirect('/consent/2_consent_minor_interview.html'));     // 미성년자 인터뷰 동의
 app.get('/c3', (req, res) => res.redirect('/consent/3_consent_guardian.html' + (req.query.code ? ('?code=' + req.query.code) : ''))); // 보호자 동의
