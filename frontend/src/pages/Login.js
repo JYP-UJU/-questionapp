@@ -7,6 +7,9 @@ function Login() {
     const [searchParams] = useSearchParams();
     // URL에 ?tab=signup 이 붙어 있으면 회원가입 탭을 기본으로 보여줌
     const [isLogin, setIsLogin] = useState(searchParams.get('tab') !== 'signup');
+    // URL에 ?consentCode=A123 이 붙어 있으면(보호자 동의서용 코드를 먼저 발급받고 온 경우)
+    // 회원가입 시 그 코드를 그대로 link_code로 재사용해서 동의서 제출 기록과 자동으로 연결한다.
+    const consentCodeFromUrl = searchParams.get('consentCode');
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [grade, setGrade] = useState('');
@@ -34,7 +37,7 @@ function Login() {
                 setToken(response.data.token);
                 navigate('/create');   // 로그인 후 첫 화면 = 질문쓰기
             } else {
-                response = await authAPI.signup(username, password, grade);
+                response = await authAPI.signup(username, password, grade, consentCodeFromUrl);
                 setToken(response.data.token);
                 // 바로 이동하지 않고, 부모 전달용 코드를 먼저 보여줌
                 setSignupCode(response.data.user?.link_code || null);

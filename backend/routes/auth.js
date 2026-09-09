@@ -27,7 +27,7 @@ async function generateUniqueLinkCode() {
 // 회원가입
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, grade } = req.body;
+    const { username, password, grade, consentCode } = req.body;
 
     // 유효성 검사
     if (!username || !password) {
@@ -55,8 +55,32 @@ router.post('/register', async (req, res) => {
     // 비밀번호 해싱
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 부모-자녀 매칭용 코드 생성 (가입 시 딱 1번만 생성되고 이후 고정됨)
-    const linkCode = await generateUniqueLinkCode();
+    // 부모-자녀 매칭용 코드 결정
+    // - 미성년자 동의서(1_consent_minor.html)를 먼저 마치고 온 경우, 그때 발급받은 code를
+    //   그대로 link_code로 재사용해서 보호자 동의서 제출(consent_submissions.code)과
+    //   회원가입 계정(users.link_code)이 같은 값으로 자동 연결되도록 한다.
+    // - 코드가 없거나 유효하지 않으면(이미 다른 계정이 쓰고 있거나, 실제 제출 기록이 없으면)
+    //   기존 방식대로 새 코드를 새로 발급한다.
+    let linkCode = null;
+    if (consentCode && typeof consentCode === 'string') {
+      const normalizedCode = consentCode.trim().toUpperCase();
+      if (normalizedCode) {
+        const consentRow = await pool.query(
+          `SELECT 1 FROM consent_submissions WHERE code = $1 AND consent_type = 'minor' LIMIT 1`,
+          [normalizedCode]
+        );
+        const alreadyUsed = await pool.query(
+          'SELECT id FROM users WHERE link_code = $1',
+          [normalizedCode]
+        );
+        if (consentRow.rowCount > 0 && alreadyUsed.rowCount === 0) {
+          linkCode = normalizedCode;
+        }
+      }
+    }
+    if (!linkCode) {
+      linkCode = await generateUniqueLinkCode();
+    }
 
     // 사용자 생성 (grade, link_code 포함, 실명은 더 이상 수집하지 않음)
     const result = await pool.query(
