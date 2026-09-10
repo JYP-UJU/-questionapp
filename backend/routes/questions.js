@@ -85,14 +85,12 @@ router.post('/', authenticateToken, async (req, res) => {
     );
     const songiGranted = grantResult.rowCount > 0;
 
-    // songi_transactions 기록 (실제로 지급된 경우만)
-    if (songiGranted) {
-      await client.query(
-        `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-         VALUES ($1, 5, 'question', $2, $3, $4)`,
-        [userId, '질문 작성', question.id, title]
-      );
-    }
+    // songi_transactions 기록 (관리자는 0송이로 남겨서 활동 이력은 유지)
+    await client.query(
+      `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+       VALUES ($1, $2, 'question', $3, $4, $5)`,
+      [userId, songiGranted ? 5 : 0, '질문 작성', question.id, title]
+    );
 
     // 업데이트된 송이 개수 조회
     const userResult = await client.query(
@@ -496,14 +494,12 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
       console.error('질문 내용 조회 실패 (무시):', e.message);
     }
 
-    // songi_transactions 기록 (실제로 지급된 경우만)
-    if (opinionSongiGranted) {
-      await client.query(
-        `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-         VALUES ($1, 2, 'opinion', '의견 작성', $2, $3)`,
-        [userId, opinionQId, questionText]
-      );
-    }
+    // songi_transactions 기록 (관리자는 0송이로 남겨서 활동 이력은 유지)
+    await client.query(
+      `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+       VALUES ($1, $2, 'opinion', '의견 작성', $3, $4)`,
+      [userId, opinionSongiGranted ? 2 : 0, opinionQId, questionText]
+    );
 
     await client.query('COMMIT');
 
@@ -650,14 +646,12 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
     );
     const relatedSongiGranted = relatedGrantResult.rowCount > 0;
 
-    // songi_transactions 기록 (실제로 지급된 경우만)
-    if (relatedSongiGranted) {
-      await client.query(
-        `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-         VALUES ($1, 5, 'related', '관련질문 작성', $2, $3)`,
-        [userId, newQuestionId, title]
-      );
-    }
+    // songi_transactions 기록 (관리자는 0송이로 남겨서 활동 이력은 유지)
+    await client.query(
+      `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+       VALUES ($1, $2, 'related', '관련질문 작성', $3, $4)`,
+      [userId, relatedSongiGranted ? 5 : 0, newQuestionId, title]
+    );
 
     const userResult = await client.query(
       'SELECT songi_count FROM users WHERE id = $1',
@@ -890,20 +884,24 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
         }
       }
 
-      // 관심있음(like)일 때만 송이 지급 — 하루 최대 6회(=3점) 캡
+      // 관심있음(like)일 때만 송이 지급 — 하루 최대 6회(=3점) 캡 (관리자는 캡과 무관하게 항상 0송이로 기록)
       if (reactionType === 'like') {
+        const adminCheckForInterest = await client.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
+        const isAdminUser = adminCheckForInterest.rows[0]?.is_admin === true;
+
         const today = new Date().toISOString().slice(0, 10);
         const capCheck = await client.query(
           `SELECT COUNT(*) as today_count
            FROM songi_transactions
            WHERE user_id = $1
              AND activity_type = 'interest'
-             AND DATE(created_at) = $2`,
+             AND DATE(created_at) = $2
+             AND amount > 0`,
           [userId, today]
         );
         const todayCount = parseInt(capCheck.rows[0].today_count) || 0;
 
-        if (todayCount < 6) {
+        if (isAdminUser || todayCount < 6) {
           // 원래 질문 내용 조회
           const isSeedQ2 = ['icebreaking', 'seed', 'quiz', 'olympic'].includes(questionType);
           let interestQText = '';
@@ -918,18 +916,20 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
             console.error('질문 내용 조회 실패 (무시):', e.message);
           }
 
-          // 0.5송이 지급 (관리자 계정은 제외)
-          const interestGrantResult = await client.query(
-            'UPDATE users SET songi_count = songi_count + 0.5 WHERE id = $1 AND is_admin IS NOT TRUE',
-            [userId]
-          );
-          if (interestGrantResult.rowCount > 0) {
-            await client.query(
-              `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-               VALUES ($1, 0.5, 'interest', '관심 표시', $2, $3)`,
-              [userId, interestQId, interestQText]
+          // 0.5송이 지급 (관리자 계정은 제외, 기록은 항상 남김)
+          let interestAmount = 0;
+          if (!isAdminUser) {
+            const interestGrantResult = await client.query(
+              'UPDATE users SET songi_count = songi_count + 0.5 WHERE id = $1 AND is_admin IS NOT TRUE',
+              [userId]
             );
+            if (interestGrantResult.rowCount > 0) interestAmount = 0.5;
           }
+          await client.query(
+            `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+             VALUES ($1, $2, 'interest', '관심 표시', $3, $4)`,
+            [userId, interestAmount, interestQId, interestQText]
+          );
         }
       }
       

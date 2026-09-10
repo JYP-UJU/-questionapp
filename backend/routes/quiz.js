@@ -177,19 +177,17 @@ router.post('/submit', authenticateToken, async (req, res) => {
             }
         }
 
-        // 송이 지급 (+4송이, 관리자 계정은 제외)
+        // 송이 지급 (+4송이, 관리자 계정은 제외, 기록은 항상 남김)
         const quizGrantResult = await client.query(
             'UPDATE users SET songi_count = songi_count + 4 WHERE id = $1 AND is_admin IS NOT TRUE',
             [userId]
         );
         const quizSongiGranted = quizGrantResult.rowCount > 0;
-        if (quizSongiGranted) {
-            await client.query(
-                `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
-                 VALUES ($1, 4, 'quiz', '퀴즈 완료')`,
-                [userId]
-            );
-        }
+        await client.query(
+            `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
+             VALUES ($1, $2, 'quiz', '퀴즈 완료')`,
+            [userId, quizSongiGranted ? 4 : 0]
+        );
 
         const userResult = await client.query(
             'SELECT songi_count FROM users WHERE id = $1',

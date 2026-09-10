@@ -132,14 +132,12 @@ router.post('/complete', authenticateToken, async (req, res) => {
     );
     const olympicSongiGranted = olympicGrantResult.rowCount > 0;
 
-    // songi_transactions 기록 (실제로 지급된 경우만; 2주 교환 판정에 필요해서 추가)
-    if (olympicSongiGranted) {
-      await db.query(
-        `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
-         VALUES ($1, 4, 'olympic', '질문올림픽 완료')`,
-        [userId]
-      );
-    }
+    // songi_transactions 기록 (2주 교환 판정에 필요; 관리자는 0송이로 기록해 이력은 유지)
+    await db.query(
+      `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
+       VALUES ($1, $2, 'olympic', '질문올림픽 완료')`,
+      [userId, olympicSongiGranted ? 4 : 0]
+    );
 
     // 5. 현재 송이 잔액 조회
     const userResult = await db.query(
