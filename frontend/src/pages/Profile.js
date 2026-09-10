@@ -15,6 +15,9 @@ function Profile() {
     const [claimSubmitted, setClaimSubmitted] = useState(false);
     const [claimSubmitting, setClaimSubmitting] = useState(false);
 
+    const [showNicknameModal, setShowNicknameModal] = useState(false);
+    const [newNickname, setNewNickname] = useState('');
+
     useEffect(() => {
         loadProfile();
         loadExchangeStatus();
@@ -56,6 +59,32 @@ function Profile() {
         }
     };
 
+    const handleNicknameChange = async () => {
+        const trimmed = newNickname.trim();
+        if (!trimmed) {
+            alert('닉네임을 입력해주세요');
+            return;
+        }
+        if (trimmed.length < 3) {
+            alert('닉네임은 3글자 이상이어야 해요');
+            return;
+        }
+
+        try {
+            await api.put('/users/me', { username: trimmed });
+            alert('닉네임이 변경되었어요! 🌸');
+            setShowNicknameModal(false);
+            setNewNickname('');
+            loadProfile();
+        } catch (err) {
+            if (err.response?.status === 400) {
+                alert(err.response.data?.error || '이미 사용 중인 닉네임이에요');
+            } else {
+                alert('닉네임 변경에 실패했어요');
+            }
+        }
+    };
+
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
         const d = new Date(dateStr);
@@ -89,6 +118,15 @@ function Profile() {
                         <div className="profile-joined">가입일 {formatDate(user?.created_at)}</div>
                         <div className="profile-songi">🌸 총 {parseFloat(user?.songi_count || 0).toFixed(1)}송이 획득</div>
                     </div>
+                    <button
+                        className="edit-username-btn"
+                        onClick={() => {
+                            setNewNickname(user?.username || '');
+                            setShowNicknameModal(true);
+                        }}
+                    >
+                        ✏️ 닉네임 변경
+                    </button>
                 </div>
 
                 {/* 활동 통계 */}
@@ -292,6 +330,26 @@ function Profile() {
                 </div>
 
             </div>
+
+            {/* 닉네임 변경 모달 */}
+            {showNicknameModal && (
+                <div className="modal-overlay" onClick={() => setShowNicknameModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <h3>✏️ 닉네임 변경</h3>
+                        <input
+                            type="text"
+                            placeholder="새 닉네임 (3글자 이상)"
+                            value={newNickname}
+                            onChange={e => setNewNickname(e.target.value)}
+                            className="modal-input"
+                        />
+                        <div className="modal-buttons">
+                            <button className="modal-cancel" onClick={() => setShowNicknameModal(false)}>취소</button>
+                            <button className="modal-confirm" onClick={handleNicknameChange}>변경하기</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <BottomNav />
         </div>

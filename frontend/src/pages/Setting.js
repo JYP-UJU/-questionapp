@@ -16,9 +16,6 @@ function Setting() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    const [showNicknameModal, setShowNicknameModal] = useState(false);
-    const [newNickname, setNewNickname] = useState('');
-
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
@@ -73,32 +70,6 @@ function Setting() {
                 alert('현재 비밀번호가 틀려요');
             } else {
                 alert('비밀번호 변경에 실패했어요');
-            }
-        }
-    };
-
-    const handleNicknameChange = async () => {
-        const trimmed = newNickname.trim();
-        if (!trimmed) {
-            alert('닉네임을 입력해주세요');
-            return;
-        }
-        if (trimmed.length < 3) {
-            alert('닉네임은 3글자 이상이어야 해요');
-            return;
-        }
-
-        try {
-            await api.put('/users/me', { username: trimmed });
-            alert('닉네임이 변경되었어요! 🌸');
-            setShowNicknameModal(false);
-            setNewNickname('');
-            loadUserInfo();
-        } catch (err) {
-            if (err.response?.status === 400) {
-                alert(err.response.data?.error || '이미 사용 중인 닉네임이에요');
-            } else {
-                alert('닉네임 변경에 실패했어요');
             }
         }
     };
@@ -173,15 +144,6 @@ function Setting() {
                         <span className="menu-label">비밀번호 변경</span>
                         <span className="menu-desc">비밀번호 수정</span>
                     </button>
-                    <button className="menu-btn account-btn" onClick={() => {
-                        setNewNickname(user?.username || '');
-                        setShowNicknameModal(true);
-                    }}>
-                        <span className="menu-icon">✏️</span>
-                        <span className="menu-label">닉네임 변경</span>
-                        <span className="menu-desc">현재 {user?.username}</span>
-                    </button>
-
                     {/* 4행: 기타 */}
                     <button className="menu-btn logout-btn" onClick={handleLogout}>
                         <span className="menu-icon">🚪</span>
@@ -247,26 +209,6 @@ function Setting() {
                         <div className="modal-buttons">
                             <button className="modal-cancel" onClick={() => setShowPasswordModal(false)}>취소</button>
                             <button className="modal-confirm" onClick={handlePasswordChange}>변경하기</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* 닉네임 변경 모달 */}
-            {showNicknameModal && (
-                <div className="modal-overlay" onClick={() => setShowNicknameModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h3>✏️ 닉네임 변경</h3>
-                        <input
-                            type="text"
-                            placeholder="새 닉네임 (3글자 이상)"
-                            value={newNickname}
-                            onChange={e => setNewNickname(e.target.value)}
-                            className="modal-input"
-                        />
-                        <div className="modal-buttons">
-                            <button className="modal-cancel" onClick={() => setShowNicknameModal(false)}>취소</button>
-                            <button className="modal-confirm" onClick={handleNicknameChange}>변경하기</button>
                         </div>
                     </div>
                 </div>

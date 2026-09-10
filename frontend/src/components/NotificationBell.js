@@ -52,14 +52,14 @@ function NotificationBell() {
                     fontSize: '10px',
                     fontWeight: '700',
                     borderRadius: '9px',
-                    minWidth: '16px',
+                    minWidth: '18px',
                     height: '16px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     padding: '0 3px',
                 }}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
             )}
         </button>
