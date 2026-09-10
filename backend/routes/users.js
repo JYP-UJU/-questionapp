@@ -210,7 +210,9 @@ router.get('/me/profile-stats', authenticateToken, async (req, res) => {
 });
 
 // 프로필 수정 (닉네임)
+// 변경 이력은 username_history 테이블에 남김 (관리자가 SQL로 직접 조회용, 앱 화면엔 노출 안 함)
 router.put('/me', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
   try {
     const userId = req.user.id || req.user.userId;
     const { username } = req.body;
@@ -223,21 +225,38 @@ router.put('/me', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: '닉네임은 3글자 이상이어야 합니다' });
     }
 
+    await client.query('BEGIN');
+
     // 중복 체크
-    const existing = await pool.query(
+    const existing = await client.query(
       'SELECT id FROM users WHERE username = $1 AND id != $2',
       [username, userId]
     );
 
     if (existing.rows.length > 0) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: '이미 사용 중인 닉네임입니다' });
     }
 
+    // 기존 닉네임 조회 (변경 이력 기록용)
+    const currentResult = await client.query('SELECT username FROM users WHERE id = $1', [userId]);
+    const oldUsername = currentResult.rows[0]?.username;
+
     // 업데이트
-    await pool.query(
+    await client.query(
       'UPDATE users SET username = $1 WHERE id = $2',
       [username, userId]
     );
+
+    // 변경 이력 기록 (실제로 값이 달라진 경우만)
+    if (oldUsername && oldUsername !== username) {
+      await client.query(
+        'INSERT INTO username_history (user_id, old_username, new_username) VALUES ($1, $2, $3)',
+        [userId, oldUsername, username]
+      );
+    }
+
+    await client.query('COMMIT');
 
     res.json({
       message: '닉네임이 변경되었습니다',
@@ -245,8 +264,11 @@ router.put('/me', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* 이미 종료된 경우 무시 */ }
     console.error('프로필 수정 오류:', error);
     res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  } finally {
+    client.release();
   }
 });
 
