@@ -42,11 +42,12 @@ router.post('/', authenticateToken, async (req, res) => {
       [questionId]
     );
 
-    // 1송이 지급
-    await client.query(
-      'UPDATE users SET songi_count = songi_count + 1 WHERE id = $1',
+    // 1송이 지급 (관리자 계정은 제외)
+    const reactionGrantResult = await client.query(
+      'UPDATE users SET songi_count = songi_count + 1 WHERE id = $1 AND is_admin IS NOT TRUE',
       [userId]
     );
+    const reactionSongiGranted = reactionGrantResult.rowCount > 0;
 
     // 질문 작성자 조회
     const questionResult = await client.query(
@@ -78,9 +79,11 @@ router.post('/', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: `${reactionType === 'like' ? '관심있음' : '관심없음'}! 1송이를 획득했어요 🌸`,
+      message: reactionSongiGranted
+        ? `${reactionType === 'like' ? '관심있음' : '관심없음'}! 1송이를 획득했어요 🌸`
+        : `${reactionType === 'like' ? '관심있음' : '관심없음'}!`,
       songi_count: userResult.rows[0].songi_count,
-      songi_earned: 1,
+      songi_earned: reactionSongiGranted ? 1 : 0,
       question_stats: {
         likes_count: question.likes_count,
         dislikes_count: question.dislikes_count

@@ -125,18 +125,21 @@ router.post('/complete', authenticateToken, async (req, res) => {
       }
     }
 
-    // 4. 송이 지급 (+4)
-    await db.query(
-      `UPDATE users SET songi_count = COALESCE(songi_count, 0) + 4 WHERE id = $1`,
+    // 4. 송이 지급 (+4, 관리자 계정은 제외)
+    const olympicGrantResult = await db.query(
+      `UPDATE users SET songi_count = COALESCE(songi_count, 0) + 4 WHERE id = $1 AND is_admin IS NOT TRUE`,
       [userId]
     );
+    const olympicSongiGranted = olympicGrantResult.rowCount > 0;
 
-    // songi_transactions 기록 (기존엔 누락되어 있었음 — 2주 교환 판정에 필요해서 추가)
-    await db.query(
-      `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
-       VALUES ($1, 4, 'olympic', '질문올림픽 완료')`,
-      [userId]
-    );
+    // songi_transactions 기록 (실제로 지급된 경우만; 2주 교환 판정에 필요해서 추가)
+    if (olympicSongiGranted) {
+      await db.query(
+        `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
+         VALUES ($1, 4, 'olympic', '질문올림픽 완료')`,
+        [userId]
+      );
+    }
 
     // 5. 현재 송이 잔액 조회
     const userResult = await db.query(
@@ -147,7 +150,7 @@ router.post('/complete', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       sessionId,
-      songiAwarded: 4,
+      songiAwarded: olympicSongiGranted ? 4 : 0,
       currentSongi,
       message: '올림픽 완주 기록 저장 완료!'
     });

@@ -177,16 +177,19 @@ router.post('/submit', authenticateToken, async (req, res) => {
             }
         }
 
-        // 송이 지급 (+4송이)
-        await client.query(
-            'UPDATE users SET songi_count = songi_count + 4 WHERE id = $1',
+        // 송이 지급 (+4송이, 관리자 계정은 제외)
+        const quizGrantResult = await client.query(
+            'UPDATE users SET songi_count = songi_count + 4 WHERE id = $1 AND is_admin IS NOT TRUE',
             [userId]
         );
-        await client.query(
-            `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
-             VALUES ($1, 4, 'quiz', '퀴즈 완료')`,
-            [userId]
-        );
+        const quizSongiGranted = quizGrantResult.rowCount > 0;
+        if (quizSongiGranted) {
+            await client.query(
+                `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
+                 VALUES ($1, 4, 'quiz', '퀴즈 완료')`,
+                [userId]
+            );
+        }
 
         const userResult = await client.query(
             'SELECT songi_count FROM users WHERE id = $1',
@@ -199,7 +202,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
         res.json({
             correctCount,
             totalCount: responses.length,
-            songiEarned: 4,
+            songiEarned: quizSongiGranted ? 4 : 0,
             currentSongi,
             results,
             savedCount: savedQuestions.length,

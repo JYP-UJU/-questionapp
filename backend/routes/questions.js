@@ -78,18 +78,21 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const question = result.rows[0];
 
-    // 5송이 지급
-    await client.query(
-      'UPDATE users SET songi_count = songi_count + 5 WHERE id = $1',
+    // 5송이 지급 (관리자 계정은 제외)
+    const grantResult = await client.query(
+      'UPDATE users SET songi_count = songi_count + 5 WHERE id = $1 AND is_admin IS NOT TRUE',
       [userId]
     );
+    const songiGranted = grantResult.rowCount > 0;
 
-    // songi_transactions 기록
-    await client.query(
-      `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-       VALUES ($1, 5, 'question', $2, $3, $4)`,
-      [userId, '질문 작성', question.id, title]
-    );
+    // songi_transactions 기록 (실제로 지급된 경우만)
+    if (songiGranted) {
+      await client.query(
+        `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+         VALUES ($1, 5, 'question', $2, $3, $4)`,
+        [userId, '질문 작성', question.id, title]
+      );
+    }
 
     // 업데이트된 송이 개수 조회
     const userResult = await client.query(
@@ -108,10 +111,10 @@ router.post('/', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: '질문이 등록되었습니다! 5송이를 획득했어요 🌸',
+      message: songiGranted ? '질문이 등록되었습니다! 5송이를 획득했어요 🌸' : '질문이 등록되었습니다!',
       question,
       songi_count: userResult.rows[0].songi_count,
-      songi_earned: 5,
+      songi_earned: songiGranted ? 5 : 0,
       feedback: { matchCount, typeTag },
       myQuestionCount: parseInt(myQuestionCountResult.rows[0].count, 10) || 0
     });
@@ -460,11 +463,12 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
       [id, userId, opinion, questionType]
     );
 
-    // 2송이 지급
-    await client.query(
-      'UPDATE users SET songi_count = songi_count + 2 WHERE id = $1',
+    // 2송이 지급 (관리자 계정은 제외)
+    const opinionGrantResult = await client.query(
+      'UPDATE users SET songi_count = songi_count + 2 WHERE id = $1 AND is_admin IS NOT TRUE',
       [userId]
     );
+    const opinionSongiGranted = opinionGrantResult.rowCount > 0;
 
     // 원래 질문 내용 조회 + 작성자에게 알림 (씨드질문은 작성자가 없어서 알림 대상 아님)
     const isSeedQ = ['icebreaking', 'seed', 'quiz', 'olympic'].includes(questionType);
@@ -492,17 +496,19 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
       console.error('질문 내용 조회 실패 (무시):', e.message);
     }
 
-    // songi_transactions 기록
-    await client.query(
-      `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-       VALUES ($1, 2, 'opinion', '의견 작성', $2, $3)`,
-      [userId, opinionQId, questionText]
-    );
+    // songi_transactions 기록 (실제로 지급된 경우만)
+    if (opinionSongiGranted) {
+      await client.query(
+        `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+         VALUES ($1, 2, 'opinion', '의견 작성', $2, $3)`,
+        [userId, opinionQId, questionText]
+      );
+    }
 
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: '의견이 등록되었습니다! 2송이를 획득했어요 🌸',
+      message: opinionSongiGranted ? '의견이 등록되었습니다! 2송이를 획득했어요 🌸' : '의견이 등록되었습니다!',
       opinion: result.rows[0]
     });
 
@@ -637,18 +643,21 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
       }
     }
 
-    // 5송이 지급
-    await client.query(
-      'UPDATE users SET songi_count = songi_count + 5 WHERE id = $1',
+    // 5송이 지급 (관리자 계정은 제외)
+    const relatedGrantResult = await client.query(
+      'UPDATE users SET songi_count = songi_count + 5 WHERE id = $1 AND is_admin IS NOT TRUE',
       [userId]
     );
+    const relatedSongiGranted = relatedGrantResult.rowCount > 0;
 
-    // songi_transactions 기록
-    await client.query(
-      `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-       VALUES ($1, 5, 'related', '관련질문 작성', $2, $3)`,
-      [userId, newQuestionId, title]
-    );
+    // songi_transactions 기록 (실제로 지급된 경우만)
+    if (relatedSongiGranted) {
+      await client.query(
+        `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+         VALUES ($1, 5, 'related', '관련질문 작성', $2, $3)`,
+        [userId, newQuestionId, title]
+      );
+    }
 
     const userResult = await client.query(
       'SELECT songi_count FROM users WHERE id = $1',
@@ -658,10 +667,10 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: '관련질문이 등록되었습니다! 5송이를 획득했어요 🌸',
+      message: relatedSongiGranted ? '관련질문이 등록되었습니다! 5송이를 획득했어요 🌸' : '관련질문이 등록되었습니다!',
       relatedQuestion: insertResult.rows[0],
       songi_count: userResult.rows[0].songi_count,
-      songi_earned: 5
+      songi_earned: relatedSongiGranted ? 5 : 0
     });
 
   } catch (error) {
@@ -909,15 +918,18 @@ router.post('/:id/reaction', authenticateToken, async (req, res) => {
             console.error('질문 내용 조회 실패 (무시):', e.message);
           }
 
-          await client.query(
-            'UPDATE users SET songi_count = songi_count + 0.5 WHERE id = $1',
+          // 0.5송이 지급 (관리자 계정은 제외)
+          const interestGrantResult = await client.query(
+            'UPDATE users SET songi_count = songi_count + 0.5 WHERE id = $1 AND is_admin IS NOT TRUE',
             [userId]
           );
-          await client.query(
-            `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
-             VALUES ($1, 0.5, 'interest', '관심 표시', $2, $3)`,
-            [userId, interestQId, interestQText]
-          );
+          if (interestGrantResult.rowCount > 0) {
+            await client.query(
+              `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+               VALUES ($1, 0.5, 'interest', '관심 표시', $2, $3)`,
+              [userId, interestQId, interestQText]
+            );
+          }
         }
       }
       
