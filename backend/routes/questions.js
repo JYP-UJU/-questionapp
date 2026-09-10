@@ -677,9 +677,12 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
 });
 
 // 관련질문 전체 트리 조회 (1단계, 2단계, 3단계... 전부, 재귀)
-router.get('/:id/related-tree', async (req, res) => {
+// ⚡ 성능: 각 노드의 좋아요/싫어요/의견 개수/내 반응까지 이 쿼리 안에서 한 번에 내려줌
+//    (예전엔 프론트에서 노드마다 /questions/:id를 또 호출해서 N+1이 났었음 — 2026-09-10 개선)
+router.get('/:id/related-tree', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id || req.user.userId;
     // ⚠️ user_questions와 seed_questions는 서로 다른 테이블이라 id가 우연히 같을 수 있음.
     // type을 명시하지 않으면 엉뚱한 테이블의 질문이 부모/자식으로 잘못 엮일 수 있어서 반드시 구분해야 함.
     const questionType = req.query.type || 'user_question';
@@ -690,22 +693,40 @@ router.get('/:id/related-tree', async (req, res) => {
 
     const result = await pool.query(
       `WITH RECURSIVE thread AS (
-         SELECT uq.id, uq.title, uq.content, uq.created_at, uq.parent_question_id, u.username, u.id as user_id
+         SELECT uq.id, uq.title, uq.content, uq.created_at, uq.parent_question_id, u.username, u.id as user_id,
+                uq.likes_count, uq.dislikes_count
          FROM user_questions uq
          JOIN users u ON uq.user_id = u.id
          WHERE ${rootWhere} AND uq.is_deleted = false
 
          UNION ALL
 
-         SELECT child.id, child.title, child.content, child.created_at, child.parent_question_id, u.username, u.id as user_id
+         SELECT child.id, child.title, child.content, child.created_at, child.parent_question_id, u.username, u.id as user_id,
+                child.likes_count, child.dislikes_count
          FROM user_questions child
          JOIN users u ON child.user_id = u.id
          JOIN thread ON child.parent_question_id = thread.id AND child.is_deleted = false
        )
-       SELECT * FROM thread ORDER BY created_at ASC`,
-      [id]
+       SELECT
+         thread.*,
+         (SELECT COUNT(*) FROM question_opinions
+          WHERE question_id = thread.id AND (question_type = 'user_question' OR question_type IS NULL)) as opinion_count,
+         (SELECT reaction_type FROM question_reactions
+          WHERE question_id = thread.id AND user_id = $2 AND question_type = 'user_question') as user_reaction
+       FROM thread
+       ORDER BY created_at ASC`,
+      [id, userId]
     );
-    res.json({ relatedTree: result.rows, rootId: parseInt(id) });
+
+    const relatedTree = result.rows.map(row => ({
+      ...row,
+      likesCount: parseInt(row.likes_count) || 0,
+      dislikesCount: parseInt(row.dislikes_count) || 0,
+      opinionCount: parseInt(row.opinion_count) || 0,
+      userReaction: row.user_reaction || null,
+    }));
+
+    res.json({ relatedTree, rootId: parseInt(id) });
   } catch (error) {
     console.error('관련질문 트리 조회 오류:', error);
     res.status(500).json({ error: '서버 오류가 발생했습니다' });

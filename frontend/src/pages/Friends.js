@@ -114,33 +114,15 @@ function Friends() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [questions, total, loading, loadingMore, highlightParam]);
 
-    // 관련질문 전체 트리(재귀) + 각 노드 통계를 채워서 붙여줌
+    // 관련질문 전체 트리(재귀) 조회 — 각 노드의 좋아요/의견 통계도 이 한 번의 호출에 같이 옴
+    // (2026-09-10: /related-tree가 노드별 통계까지 포함해서 내려주도록 바뀌어서, 노드마다 따로 조회하던 부분 제거함)
     const attachRelatedTrees = async (list) => {
         return Promise.all(list.map(async (q) => {
             if (!q.related_count || q.related_count < 1) return { ...q, relatedTree: [] };
             try {
                 const qType = q.question_source === 'quiz' ? 'quiz' : 'user_question';
                 const treeRes = await api.get(`/questions/${q.id}/related-tree?type=${qType}`);
-                const rawNodes = treeRes.data.relatedTree || [];
-                const relatedTree = await Promise.all(rawNodes.map(async (node) => {
-                    let nodeLikes = 0, nodeDislikes = 0, nodeReaction = null;
-                    let nodeOpinionCount = 0;
-                    try {
-                        const nodeStats = await api.get(`/questions/${node.id}?type=user_question`);
-                        nodeLikes = nodeStats.data.likesCount || 0;
-                        nodeDislikes = nodeStats.data.dislikesCount || 0;
-                        nodeReaction = nodeStats.data.userReaction || null;
-                        nodeOpinionCount = nodeStats.data.opinionCount || 0;
-                        // 의견 내용은 개수만 미리 받고, 실제 내용은 "의견 보기" 클릭 시 불러옴 (로딩 속도 개선)
-                    } catch (e) {}
-                    return {
-                        ...node,
-                        likesCount: nodeLikes,
-                        dislikesCount: nodeDislikes,
-                        userReaction: nodeReaction,
-                        opinionCount: nodeOpinionCount,
-                    };
-                }));
+                const relatedTree = treeRes.data.relatedTree || [];
                 return { ...q, relatedTree };
             } catch (err) {
                 return { ...q, relatedTree: [] };

@@ -76,33 +76,14 @@ function SavedQuestions() {
                         const actualOpinionCount = stats.opinionCount || 0;
 
                         // 관련질문 전체 트리 (1단계, 2단계, 3단계... 전부, 시간순)
+                        // 2026-09-10: /related-tree가 노드별 좋아요/의견 통계까지 같이 내려주도록 바뀌어서,
+                        // 노드마다 따로 조회하던 부분(N+1) 제거함
                         let relatedTree = [];
                         const actualRelatedCount = stats.relatedCount || 0;
                         if (actualRelatedCount > 0) {
                             try {
                                 const treeRes = await api.get(`/questions/${q.questionId}/related-tree?type=${q.questionType}`);
-                                const rawNodes = treeRes.data.relatedTree || [];
-
-                                // 각 노드마다 반응/의견 정보 채우기
-                                relatedTree = await Promise.all(rawNodes.map(async (node) => {
-                                    let nodeLikes = 0, nodeDislikes = 0, nodeReaction = null;
-                                    let nodeOpinionCount = 0;
-                                    try {
-                                        const nodeStats = await api.get(`/questions/${node.id}?type=user_question`);
-                                        nodeLikes = nodeStats.data.likesCount || 0;
-                                        nodeDislikes = nodeStats.data.dislikesCount || 0;
-                                        nodeReaction = nodeStats.data.userReaction || null;
-                                        nodeOpinionCount = nodeStats.data.opinionCount || 0;
-                                        // 의견 내용은 개수만 미리 받고, 실제 내용은 "의견 보기" 클릭 시 불러옴 (로딩 속도 개선)
-                                    } catch (e) {}
-                                    return {
-                                        ...node,
-                                        likesCount: nodeLikes,
-                                        dislikesCount: nodeDislikes,
-                                        userReaction: nodeReaction,
-                                        opinionCount: nodeOpinionCount,
-                                    };
-                                }));
+                                relatedTree = treeRes.data.relatedTree || [];
                             } catch (err) {}
                         }
 
