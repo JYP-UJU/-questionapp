@@ -495,10 +495,11 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
     }
 
     // songi_transactions 기록 (관리자는 0송이로 남겨서 활동 이력은 유지)
+    // question_text에는 원래 질문 제목이 아니라 "내가 실제로 쓴 의견" 내용을 저장 — 송이내역에서 그대로 보여줘야 하니까
     await client.query(
       `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
        VALUES ($1, $2, 'opinion', '의견 작성', $3, $4)`,
-      [userId, opinionSongiGranted ? 2 : 0, opinionQId, questionText]
+      [userId, opinionSongiGranted ? 2 : 0, opinionQId, opinion]
     );
 
     await client.query('COMMIT');

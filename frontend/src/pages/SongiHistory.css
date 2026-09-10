@@ -92,6 +92,17 @@
     border-bottom: none;
 }
 
+.sh-item-linkable:active {
+    background: #f9fafb;
+}
+
+.sh-item-arrow {
+    align-self: center;
+    color: #ccc;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
 .sh-item-left {
     display: flex;
     align-items: flex-start;

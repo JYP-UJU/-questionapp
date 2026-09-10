@@ -17,6 +17,11 @@ const ACTIVITY_LABELS = {
   admin_deduct:   { label: '관리자 조정',    icon: '&#9888;' },
 };
 
+// 이 활동 타입들은 question_id가 항상 실제 내가 쓴 글(user_questions)을 가리켜서,
+// 클릭하면 "질문들" 목록에서 그 글로 스크롤/하이라이트 이동시킬 수 있음.
+// (관심표시는 대상이 퀴즈/씨드 질문일 수도 있어서 목록에서 못 찾을 수 있어 제외)
+const LINKABLE_TYPES = new Set(['question', 'opinion', 'related']);
+
 function groupByDate(transactions) {
   const groups = {};
   transactions.forEach(t => {
@@ -85,8 +90,14 @@ function SongiHistory() {
                 const info = ACTIVITY_LABELS[t.activity_type] || { label: t.activity_type, icon: '&#127800;' };
                 const amountNum = parseFloat(t.amount);
                 const isPlus = amountNum > 0;
+                const isLinkable = LINKABLE_TYPES.has(t.activity_type) && t.question_id;
                 return (
-                  <div key={t.id} className="sh-item">
+                  <div
+                    key={t.id}
+                    className={`sh-item${isLinkable ? ' sh-item-linkable' : ''}`}
+                    style={isLinkable ? { cursor: 'pointer' } : undefined}
+                    onClick={isLinkable ? () => navigate(`/questions?highlight=${t.question_id}`) : undefined}
+                  >
                     <div className="sh-item-left">
                       <span
                         className="sh-icon"
@@ -101,6 +112,7 @@ function SongiHistory() {
                           <span className="sh-item-question">{t.description}</span>
                         )}
                       </div>
+                      {isLinkable && <span className="sh-item-arrow">&#8250;</span>}
                     </div>
                     <span className={`sh-amount ${isPlus ? 'plus' : 'minus'}`}>
                       {isPlus ? '+' : ''}{amountNum.toFixed(1)}
