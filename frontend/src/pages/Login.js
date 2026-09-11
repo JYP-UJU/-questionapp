@@ -43,7 +43,7 @@ function Login() {
                 setSignupCode(response.data.user?.link_code || null);
             }
         } catch (err) {
-            setError(err.response?.data?.message || '오류가 발생했습니다');
+            setError(err.response?.data?.error || '오류가 발생했습니다');
         } finally {
             setLoading(false);
         }
