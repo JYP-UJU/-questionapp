@@ -184,7 +184,7 @@ function Login() {
                                 required
                                 className="auth-input auth-select"
                             >
-                                <option value="">학년 선택</option>
+                                <option value="">학년 선택 *</option>
                                 <optgroup label="초등학교">
                                     <option value="초5">초등학교 5학년</option>
                                     <option value="초6">초등학교 6학년</option>
@@ -208,7 +208,7 @@ function Login() {
 
                     <input
                         type="text"
-                        placeholder="아이디 (닉네임)"
+                        placeholder="아이디 (닉네임) *"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
@@ -216,7 +216,7 @@ function Login() {
                     />
                     <input
                         type="password"
-                        placeholder="비밀번호"
+                        placeholder="비밀번호 *"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -225,34 +225,24 @@ function Login() {
 
                     {/* 이메일 (선택) — 활동 요약이나 상품권 안내를 받고 싶을 때만 입력 */}
                     {!isLogin && (
-                        <>
-                            <input
-                                type="email"
-                                placeholder="이메일 (선택, 나중에 등록해도 돼요)"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="auth-input"
-                            />
-                            <p style={{ fontSize: '12px', color: '#888', margin: '-6px 0 10px 4px' }}>
-                                입력하면 나중에 활동 요약이나 상품권 안내를 이메일로도 받을 수 있어요.
-                            </p>
-                        </>
+                        <input
+                            type="email"
+                            placeholder="이메일"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="auth-input"
+                        />
                     )}
 
                     {/* 전화번호 (선택) */}
                     {!isLogin && (
-                        <>
-                            <input
-                                type="tel"
-                                placeholder="전화번호 (선택, 나중에 등록해도 돼요)"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className="auth-input"
-                            />
-                            <p style={{ fontSize: '12px', color: '#888', margin: '-6px 0 10px 4px' }}>
-                                입력하면 상품권 안내 등 연락이 필요할 때 참고해요.
-                            </p>
-                        </>
+                        <input
+                            type="tel"
+                            placeholder="전화번호"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="auth-input"
+                        />
                     )}
 
                     {/* 동의 체크박스 */}
