@@ -36,7 +36,7 @@ api.interceptors.request.use(
 
 // 인증 API
 export const authAPI = {
-    signup: (username, password, grade, consentCode, email) => api.post('/auth/register', { username, password, grade, consentCode, email }),
+    signup: (username, password, grade, consentCode, email, phone) => api.post('/auth/register', { username, password, grade, consentCode, email, phone }),
     login: (username, password) => api.post('/auth/login', { username, password }),
     getLinkCode: () => api.get('/auth/link-code'),
 };

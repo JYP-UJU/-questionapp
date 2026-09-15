@@ -14,6 +14,7 @@ function Login() {
     const [password, setPassword] = useState('');
     const [grade, setGrade] = useState('');
     const [email, setEmail] = useState(''); // 선택 입력 — 나중에 활동 요약/알림 메일 보낼 때 씀
+    const [phone, setPhone] = useState(''); // 선택 입력
     const [agreed, setAgreed] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -38,7 +39,7 @@ function Login() {
                 setToken(response.data.token);
                 navigate('/create');   // 로그인 후 첫 화면 = 질문쓰기
             } else {
-                response = await authAPI.signup(username, password, grade, consentCodeFromUrl, email);
+                response = await authAPI.signup(username, password, grade, consentCodeFromUrl, email, phone);
                 setToken(response.data.token);
                 // 바로 이동하지 않고, 부모 전달용 코드를 먼저 보여줌
                 setSignupCode(response.data.user?.link_code || null);
@@ -69,6 +70,7 @@ function Login() {
         setPassword('');
         setGrade('');
         setEmail('');
+        setPhone('');
         setAgreed(false);
     };
 
@@ -233,6 +235,22 @@ function Login() {
                             />
                             <p style={{ fontSize: '12px', color: '#888', margin: '-6px 0 10px 4px' }}>
                                 입력하면 나중에 활동 요약이나 상품권 안내를 이메일로도 받을 수 있어요.
+                            </p>
+                        </>
+                    )}
+
+                    {/* 전화번호 (선택) */}
+                    {!isLogin && (
+                        <>
+                            <input
+                                type="tel"
+                                placeholder="전화번호 (선택, 나중에 등록해도 돼요)"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="auth-input"
+                            />
+                            <p style={{ fontSize: '12px', color: '#888', margin: '-6px 0 10px 4px' }}>
+                                입력하면 상품권 안내 등 연락이 필요할 때 참고해요.
                             </p>
                         </>
                     )}

@@ -27,7 +27,7 @@ async function generateUniqueLinkCode() {
 // 회원가입
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, grade, consentCode, email } = req.body;
+    const { username, password, grade, consentCode, email, phone } = req.body;
 
     // 유효성 검사
     if (!username || !password) {
@@ -46,6 +46,11 @@ router.post('/register', async (req, res) => {
     const trimmedEmail = typeof email === 'string' ? email.trim() : '';
     if (trimmedEmail && !trimmedEmail.includes('@')) {
       return res.status(400).json({ error: '이메일 형식이 올바르지 않아요' });
+    }
+    // 전화번호도 선택 입력 — 입력한 경우에만 숫자/하이픈으로만 구성됐는지 정도만 확인
+    const trimmedPhone = typeof phone === 'string' ? phone.trim() : '';
+    if (trimmedPhone && !/^[0-9-]{9,15}$/.test(trimmedPhone)) {
+      return res.status(400).json({ error: '전화번호 형식이 올바르지 않아요' });
     }
 
     // 중복 체크
@@ -87,12 +92,12 @@ router.post('/register', async (req, res) => {
       linkCode = await generateUniqueLinkCode();
     }
 
-    // 사용자 생성 (grade, link_code 포함, 실명은 더 이상 수집하지 않음, email은 선택이라 빈 입력이면 NULL)
+    // 사용자 생성 (grade, link_code 포함, 실명은 더 이상 수집하지 않음, email/phone은 선택이라 빈 입력이면 NULL)
     const result = await pool.query(
-      `INSERT INTO users (username, password_hash, grade, research_agreed, songi_count, link_code, email)
-       VALUES ($1, $2, $3, true, 0, $4, $5)
+      `INSERT INTO users (username, password_hash, grade, research_agreed, songi_count, link_code, email, phone)
+       VALUES ($1, $2, $3, true, 0, $4, $5, $6)
        RETURNING id, username, songi_count, link_code, created_at`,
-      [username, hashedPassword, grade, linkCode, trimmedEmail || null]
+      [username, hashedPassword, grade, linkCode, trimmedEmail || null, trimmedPhone || null]
     );
 
     const user = result.rows[0];
