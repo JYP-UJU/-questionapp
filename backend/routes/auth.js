@@ -27,7 +27,7 @@ async function generateUniqueLinkCode() {
 // 회원가입
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, grade, consentCode } = req.body;
+    const { username, password, grade, consentCode, email } = req.body;
 
     // 유효성 검사
     if (!username || !password) {
@@ -41,6 +41,11 @@ router.post('/register', async (req, res) => {
     }
     if (password.length < 4) {
       return res.status(400).json({ error: '비밀번호는 4글자 이상이어야 합니다' });
+    }
+    // 이메일은 선택 입력 — 입력한 경우에만 아주 기본적인 형식만 확인 (@ 포함 여부)
+    const trimmedEmail = typeof email === 'string' ? email.trim() : '';
+    if (trimmedEmail && !trimmedEmail.includes('@')) {
+      return res.status(400).json({ error: '이메일 형식이 올바르지 않아요' });
     }
 
     // 중복 체크
@@ -82,12 +87,12 @@ router.post('/register', async (req, res) => {
       linkCode = await generateUniqueLinkCode();
     }
 
-    // 사용자 생성 (grade, link_code 포함, 실명은 더 이상 수집하지 않음)
+    // 사용자 생성 (grade, link_code 포함, 실명은 더 이상 수집하지 않음, email은 선택이라 빈 입력이면 NULL)
     const result = await pool.query(
-      `INSERT INTO users (username, password_hash, grade, research_agreed, songi_count, link_code)
-       VALUES ($1, $2, $3, true, 0, $4)
+      `INSERT INTO users (username, password_hash, grade, research_agreed, songi_count, link_code, email)
+       VALUES ($1, $2, $3, true, 0, $4, $5)
        RETURNING id, username, songi_count, link_code, created_at`,
-      [username, hashedPassword, grade, linkCode]
+      [username, hashedPassword, grade, linkCode, trimmedEmail || null]
     );
 
     const user = result.rows[0];

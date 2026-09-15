@@ -500,38 +500,57 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== 상품권 교환 자격 판정 =====
-// 규칙: (1) 누적 송이가 교환 기준(200) 이상
-//       (2) 지금까지 쓴 일지(주간+월간 합쳐서)가 누적 2개 이상 (시점 상관없음)
+// ===== 상품권 교환 자격 판정 (2026-09-14 기준 변경) =====
+// 규칙: (1) 첫 지급(이 계정이 완료된 지급 이력이 없음): 누적 송이 50 이상, 일지 조건 없음
+//       (2) 2번째 지급부터: 직전 지급(완료) 시점 이후로 송이 100 이상 쌓이고,
+//           그 사이 기간에 일지(주간+월간 합쳐서)를 1개 이상 작성
+//       소급 적용 안 함 — 과거 지급 이력은 그대로 두고, "마지막 지급 시점"을 기준으로 판정
 router.get('/exchange-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
-    const EXCHANGE_THRESHOLD = 200;
-    const MIN_JOURNAL_COUNT = 2;
+    const FIRST_PAYOUT_THRESHOLD = 50;
+    const SUBSEQUENT_PAYOUT_THRESHOLD = 100;
+    const MIN_JOURNAL_COUNT = 1;
 
-    // 지금까지 쓴 일지 개수 (주간 + 월간 합산, 기간 제한 없음)
-    const journalResult = await pool.query(
-      `SELECT COUNT(*) as cnt FROM songi_transactions
-       WHERE user_id = $1 AND activity_type IN ('weekly_journal', 'monthly_journal')`,
+    // 이 계정의 가장 최근 완료 지급 내역 (없으면 첫 지급 대상)
+    const lastClaimResult = await pool.query(
+      `SELECT completed_at FROM reward_claims
+       WHERE user_id = $1 AND status = 'completed'
+       ORDER BY completed_at DESC LIMIT 1`,
       [userId]
     );
-    const journalCount = parseInt(journalResult.rows[0].cnt);
+    const lastClaim = lastClaimResult.rows[0];
+    const isFirstPayout = !lastClaim;
+    const threshold = isFirstPayout ? FIRST_PAYOUT_THRESHOLD : SUBSEQUENT_PAYOUT_THRESHOLD;
 
-    // 누적(현재 보유) 송이
+    // 일지 개수: 첫 지급은 조건 자체가 없어서 0 처리, 2번째부터는 직전 지급 이후로 작성한 것만 카운트
+    let journalCount = 0;
+    if (!isFirstPayout) {
+      const journalResult = await pool.query(
+        `SELECT COUNT(*) as cnt FROM songi_transactions
+         WHERE user_id = $1 AND activity_type IN ('weekly_journal', 'monthly_journal')
+           AND created_at > $2`,
+        [userId, lastClaim.completed_at]
+      );
+      journalCount = parseInt(journalResult.rows[0].cnt);
+    }
+
+    // 누적(현재 보유) 송이 — 지급 시 그만큼 차감되는 구조라 "직전 지급 이후 쌓인 양"과 항상 같음
     const userResult = await pool.query('SELECT songi_count FROM users WHERE id = $1', [userId]);
     const lifetimeSongi = parseFloat(userResult.rows[0]?.songi_count || 0);
 
-    const hasSongi = lifetimeSongi >= EXCHANGE_THRESHOLD;
-    const hasJournals = journalCount >= MIN_JOURNAL_COUNT;
+    const hasSongi = lifetimeSongi >= threshold;
+    const hasJournals = isFirstPayout || journalCount >= MIN_JOURNAL_COUNT;
     const eligible = hasSongi && hasJournals;
 
     res.json({
       eligible,
       lifetimeSongi,
-      threshold: EXCHANGE_THRESHOLD,
-      songiNeeded: Math.max(0, EXCHANGE_THRESHOLD - lifetimeSongi),
+      threshold,
+      songiNeeded: Math.max(0, threshold - lifetimeSongi),
       journalCount,
-      minJournalCount: MIN_JOURNAL_COUNT
+      minJournalCount: isFirstPayout ? 0 : MIN_JOURNAL_COUNT,
+      isFirstPayout
     });
   } catch (error) {
     console.error('교환 자격 판정 오류:', error);
@@ -622,7 +641,8 @@ router.put('/reward-claims/:id/complete', authenticateToken, async (req, res) =>
       return res.status(403).json({ error: '관리자 권한이 필요합니다' });
     }
 
-    const EXCHANGE_THRESHOLD = 200;
+    const FIRST_PAYOUT_THRESHOLD = 50;
+    const SUBSEQUENT_PAYOUT_THRESHOLD = 100;
 
     await client.query('BEGIN');
 
@@ -644,6 +664,14 @@ router.put('/reward-claims/:id/complete', authenticateToken, async (req, res) =>
       return res.status(400).json({ error: '이미 지급 완료 처리된 신청이에요' });
     }
     targetUserId = claim.user_id;
+
+    // 이 계정에 이전에 완료된 지급이 있는지로 1차/2차 이후 기준액 판정 (소급 적용 없음)
+    const priorCompletedResult = await client.query(
+      `SELECT 1 FROM reward_claims WHERE user_id = $1 AND status = 'completed' LIMIT 1`,
+      [targetUserId]
+    );
+    const isFirstPayout = priorCompletedResult.rows.length === 0;
+    const EXCHANGE_THRESHOLD = isFirstPayout ? FIRST_PAYOUT_THRESHOLD : SUBSEQUENT_PAYOUT_THRESHOLD;
 
     // 1) 신청 상태를 완료로
     await client.query(
@@ -672,7 +700,7 @@ router.put('/reward-claims/:id/complete', authenticateToken, async (req, res) =>
       await pool.query(
         `INSERT INTO notifications (user_id, type, message, is_read)
          VALUES ($1, 'reward_completed', $2, false)`,
-        [targetUserId, '상품권이 전달되었어요! 200송이가 사용되었어요 🎫']
+        [targetUserId, `상품권이 전달되었어요! ${EXCHANGE_THRESHOLD}송이가 사용되었어요 🎫`]
       );
     } catch (notifyErr) {
       console.error('상품권 지급 알림 생성 오류:', notifyErr);

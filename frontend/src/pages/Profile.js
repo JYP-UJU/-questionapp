@@ -162,7 +162,7 @@ function Profile() {
                     </div>
                 </div>
 
-                {/* 송이 진행도 건전지 바 — 실제 교환 자격(누적 200송이 + 최근2주 주간일지) 기준 */}
+                {/* 송이 진행도 건전지 바 — 실제 교환 자격(1차: 50송이 이상만 / 2차부터: 직전 지급 이후 100송이 + 일지 1개) 기준. threshold/minJournalCount는 /reports/exchange-status가 내려줌 */}
                 <div className="profile-section">
                     <h2 className="section-title">🌸 상품권 교환 진행도</h2>
                     {!exchangeStatus ? (
@@ -262,7 +262,7 @@ function Profile() {
                     ) : (
                         <div className="rewards-empty">
                             <p>아직 상품권 수령 내역이 없어요</p>
-                            <p className="rewards-hint">200송이를 모으면 1,000원 상품권을 받을 수 있어요 🌸</p>
+                            <p className="rewards-hint">{exchangeStatus?.threshold || 50}송이를 모으면 1,000원 상품권을 받을 수 있어요 🌸</p>
                         </div>
                     )}
 
