@@ -562,20 +562,20 @@ router.get('/exchange-status', authenticateToken, async (req, res) => {
 router.post('/claim-reward', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
-    const { name, phone } = req.body;
+    const { name, phone, store } = req.body;
 
-    if (!name || !name.trim() || !phone || !phone.trim()) {
-      return res.status(400).json({ error: '이름과 휴대폰 번호를 모두 입력해주세요' });
+    if (!name || !name.trim() || !phone || !phone.trim() || !store) {
+      return res.status(400).json({ error: '이름, 휴대폰 번호, 편의점을 모두 입력해주세요' });
     }
 
     const userResult = await pool.query('SELECT username, songi_count FROM users WHERE id = $1', [userId]);
     const user = userResult.rows[0];
 
     const insertResult = await pool.query(
-      `INSERT INTO reward_claims (user_id, name, phone, songi_at_claim, status)
-       VALUES ($1, $2, $3, $4, 'pending')
+      `INSERT INTO reward_claims (user_id, name, phone, store, songi_at_claim, status)
+       VALUES ($1, $2, $3, $4, $5, 'pending')
        RETURNING id, created_at`,
-      [userId, name.trim(), phone.trim(), user?.songi_count || 0]
+      [userId, name.trim(), phone.trim(), store, user?.songi_count || 0]
     );
 
     // 관리자 전원에게 알림
@@ -612,7 +612,7 @@ router.get('/reward-claims', authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT rc.id, rc.user_id, u.username, rc.name, rc.phone,
+      `SELECT rc.id, rc.user_id, u.username, rc.name, rc.phone, rc.store,
               rc.songi_at_claim, rc.status, rc.created_at, rc.completed_at
        FROM reward_claims rc
        JOIN users u ON rc.user_id = u.id
