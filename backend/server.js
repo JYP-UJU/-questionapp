@@ -72,6 +72,12 @@ app.use('/consent', express.static(path.join(__dirname, 'public', 'consent')));
 // 랜딩 페이지 + 안내 페이지 (public/landing 폴더에 넣어두면 /land/파일명.html 로 접근 가능)
 app.use('/land', express.static(path.join(__dirname, 'public', 'landing')));
 
+// 소개 영상 (public/videos 폴더에 넣어두면 /videos/파일명.mp4 로 접근 가능)
+app.use('/videos', express.static(path.join(__dirname, 'public', 'videos')));
+
+// QR 안내 PDF 등 인쇄용 문서 (public/docs 폴더에 넣어두면 /docs/파일명.pdf 로 접근 가능)
+app.use('/docs', express.static(path.join(__dirname, 'public', 'docs')));
+
 // 짧은 링크 별칭 (안내 문구/문자 발송 시 이 짧은 경로로 안내하세요)
 app.get('/g', (req, res) => res.redirect('/land/muleumsongi-guide.html'));      // 안내 페이지
 app.get('/l', (req, res) => res.redirect('/land/muleumsongi-landing.html'));    // 랜딩 페이지
