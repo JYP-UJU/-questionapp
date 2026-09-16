@@ -404,7 +404,7 @@ function Admin() {
                 }}>
                 <option value=''>전체 사용자</option>
                 {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.username}</option>
+                  <option key={u.id} value={u.id}>{u.username}{u.grade ? ` (${u.grade})` : ''}</option>
                 ))}
               </select>
               <select style={styles.select} value={order} onChange={e => setOrder(e.target.value)}>
@@ -527,6 +527,7 @@ function Admin() {
                   <div style={styles.userTop}>
                     <div style={styles.userName}>
                       {u.username}
+                      {u.grade && <span style={styles.gradeBadge}>{u.grade}</span>}
                       {u.is_admin && <span style={styles.adminBadge}>관리자</span>}
                     </div>
                     <div style={styles.userSongi}>🌸 {u.songi_count}송이</div>
@@ -603,6 +604,7 @@ function Admin() {
                   <div style={styles.userStats}>
                     <span>👤 {c.name}</span>
                     <span>📞 {c.phone}</span>
+                    {c.store && <span>🏪 {c.store}</span>}
                   </div>
                   <div style={styles.userBottom}>
                     <span style={styles.userDate}>신청 {formatDate(c.created_at)}</span>
@@ -783,6 +785,7 @@ const styles = {
   userTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   userName: { fontSize: 15, fontWeight: 700, color: '#1a1a2e', display: 'flex', alignItems: 'center', gap: 6 },
   adminBadge: { background: '#6b84c4', color: 'white', fontSize: 10, padding: '2px 7px', borderRadius: 10 },
+  gradeBadge: { background: '#e0e7ff', color: '#4338ca', fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 10 },
   pendingBadge: { background: '#dc2626', color: 'white', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '1px 6px', marginLeft: 4 },
   pendingBadgeInline: { background: '#fef3c7', color: '#b45309', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 },
   completedBadge: { background: '#dcfce7', color: '#16a34a', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 },
