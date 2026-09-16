@@ -101,13 +101,20 @@ const ACTIVITY_COLORS = {
 
 function Admin() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState('activities'); // 'activities' | 'users' | 'reward_claims' | 'sessions'
+  const [tab, setTab] = useState('activities'); // 'activities' | 'users' | 'reward_claims' | 'sessions' | 'reminders'
   const [activities, setActivities] = useState([]);
   const [olympicTable, setOlympicTable] = useState([]);
   const [users, setUsers] = useState([]);
   const [claims, setClaims] = useState([]);
   const [sessionsSummary, setSessionsSummary] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // 리마인더 문자 (초등 비활성 대상자)
+  const [reminderCandidates, setReminderCandidates] = useState([]);
+  const [reminderTemplate, setReminderTemplate] = useState(
+    '물음송이는 잘 있어요. 시간 되실 때 둘러보세요. 그만 받고 싶으면 답장 주세요.'
+  );
+  const [reminderBusyId, setReminderBusyId] = useState(null);
 
   // 필터
   const [typeFilter, setTypeFilter] = useState('all');
@@ -212,12 +219,63 @@ function Admin() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const loadReminderCandidates = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/admin/reminder-candidates');
+      setReminderCandidates(res.data.candidates || []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        alert('관리자 권한이 없어요');
+        navigate('/setting');
+      }
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (tab === 'activities') loadActivities();
     else if (tab === 'users') loadUsers();
     else if (tab === 'sessions') loadSessionsSummary();
+    else if (tab === 'reminders') loadReminderCandidates();
     else loadRewardClaims();
-  }, [tab, loadActivities, loadUsers, loadRewardClaims, loadSessionsSummary]);
+  }, [tab, loadActivities, loadUsers, loadRewardClaims, loadSessionsSummary, loadReminderCandidates]);
+
+  // 클립보드 복사 (실패하면 alert로 값을 보여줘서 수동 복사라도 가능하게)
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      window.prompt('아래 내용을 직접 복사해주세요:', text);
+    }
+  };
+
+  const handleReminderSent = async (userId) => {
+    setReminderBusyId(userId);
+    try {
+      await api.post(`/admin/reminder-sent/${userId}`);
+      setReminderCandidates(prev => prev.filter(c => c.id !== userId));
+    } catch (err) {
+      alert('처리 실패');
+    } finally {
+      setReminderBusyId(null);
+    }
+  };
+
+  const handleReminderOptOut = async (userId, username) => {
+    if (!window.confirm(`${username}님을 리마인더 수신거부 처리할까요? (앞으로 이 목록에 다시 안 뜸)`)) return;
+    setReminderBusyId(userId);
+    try {
+      await api.post(`/admin/reminder-opt-out/${userId}`);
+      setReminderCandidates(prev => prev.filter(c => c.id !== userId));
+    } catch (err) {
+      alert('처리 실패');
+    } finally {
+      setReminderBusyId(null);
+    }
+  };
 
   const handleCompleteClaim = async (claimId) => {
     if (!window.confirm('상품권 지급을 완료 처리할까요?')) return;
@@ -346,6 +404,14 @@ function Admin() {
     return `${s}초`;
   };
 
+  const daysAgo = (d) => {
+    if (!d) return '-';
+    const diffMs = Date.now() - new Date(d).getTime();
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (days <= 0) return '오늘';
+    return `${days}일 전`;
+  };
+
   const filteredUsers = users.filter(u =>
     u.username.toLowerCase().includes(userFilter.toLowerCase())
   );
@@ -375,6 +441,13 @@ function Admin() {
         <button style={{...styles.tab, ...(tab === 'sessions' ? styles.tabActive : {})}}
           onClick={() => setTab('sessions')}>
           🕒 접속기록
+        </button>
+        <button style={{...styles.tab, ...(tab === 'reminders' ? styles.tabActive : {})}}
+          onClick={() => setTab('reminders')}>
+          📱 리마인더
+          {reminderCandidates.length > 0 && (
+            <span style={styles.pendingBadge}>{reminderCandidates.length}</span>
+          )}
         </button>
       </div>
 
@@ -643,6 +716,69 @@ function Admin() {
                   </div>
                   <div style={styles.userBottom}>
                     <span style={styles.userDate}>최근 접속 {formatDate(s.last_visit)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== 리마인더 문자 탭 (초등 비활성 대상자 - 2026-09-16 추가) ===== */}
+      {/* 자동 발송은 아니고, 대상자 목록 + 문구를 뽑아주면 피오가 본인 번호로 직접 문자를 보내는 방식 */}
+      {tab === 'reminders' && (
+        <div>
+          <div style={styles.filterBar}>
+            <p style={{margin: '0 0 8px', fontSize: 12, color: '#888', lineHeight: 1.5}}>
+              초5·초6 중 전화번호가 있고, 10일 이상 접속·활동이 없는 학생 목록이에요.
+              번호를 복사해서 직접 문자를 보낸 뒤 '발송완료'를 눌러주세요. 답장으로 그만 받고 싶다고 하면 '수신거부'를 눌러주세요.
+            </p>
+            <textarea style={styles.modalTextarea} rows={3}
+              value={reminderTemplate}
+              onChange={e => setReminderTemplate(e.target.value)} />
+            <button style={styles.broadcastBtn} onClick={() => copyText(reminderTemplate)}>
+              📋 문구 복사
+            </button>
+          </div>
+
+          {loading ? (
+            <div style={styles.loading}>로딩 중...</div>
+          ) : (
+            <div style={styles.list}>
+              {reminderCandidates.length === 0 && (
+                <div style={styles.empty}>지금은 보낼 대상이 없어요</div>
+              )}
+              {reminderCandidates.map(c => (
+                <div key={c.id} style={styles.userItem}>
+                  <div style={styles.userTop}>
+                    <div style={styles.userName}>
+                      {c.username}
+                      {c.grade && <span style={styles.gradeBadge}>{c.grade}</span>}
+                    </div>
+                    <div style={styles.userSongi}>🌸 {c.songi_count}송이</div>
+                  </div>
+                  <div style={styles.userStats}>
+                    <span>📞 {c.phone}</span>
+                    <span>마지막 활동 {daysAgo(c.last_active)}</span>
+                    {c.last_reminder_sent_at && (
+                      <span>지난 리마인더 {daysAgo(c.last_reminder_sent_at)}</span>
+                    )}
+                  </div>
+                  <div style={styles.userBottom}>
+                    <span style={styles.userDate}></span>
+                    <div style={styles.userActions}>
+                      <button style={styles.feedBtn} onClick={() => copyText(c.phone)}>
+                        📞 번호 복사
+                      </button>
+                      <button style={styles.messageBtn} disabled={reminderBusyId === c.id}
+                        onClick={() => handleReminderSent(c.id)}>
+                        ✅ 발송완료
+                      </button>
+                      <button style={styles.deductBtn} disabled={reminderBusyId === c.id}
+                        onClick={() => handleReminderOptOut(c.id, c.username)}>
+                        🚫 수신거부
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

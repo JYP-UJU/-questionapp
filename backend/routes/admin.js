@@ -588,4 +588,65 @@ router.post('/message', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
+// ===== 리마인더 문자 대상자 목록 (2026-09-16 추가) =====
+// 초등학생(초5/초6) 중 전화번호가 있고, 수신거부하지 않았고,
+// 최근 10일간 접속(user_sessions)도 활동(songi_transactions)도 없는 사람.
+// 최근에 이미 리마인더를 보낸 사람은(last_reminder_sent_at 10일 이내) 목록에서 제외.
+router.get('/reminder-candidates', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM (
+        SELECT
+          u.id, u.username, u.grade, u.phone, u.songi_count,
+          u.last_reminder_sent_at,
+          GREATEST(
+            COALESCE(s.last_session, u.created_at),
+            COALESCE(t.last_txn, u.created_at),
+            u.created_at
+          ) AS last_active
+        FROM users u
+        LEFT JOIN (
+          SELECT user_id, MAX(started_at) AS last_session FROM user_sessions GROUP BY user_id
+        ) s ON s.user_id = u.id
+        LEFT JOIN (
+          SELECT user_id, MAX(created_at) AS last_txn FROM songi_transactions GROUP BY user_id
+        ) t ON t.user_id = u.id
+        WHERE u.is_admin IS NOT TRUE
+          AND u.grade IN ('초5', '초6')
+          AND u.phone IS NOT NULL AND u.phone <> ''
+          AND COALESCE(u.sms_opt_out, FALSE) = FALSE
+      ) x
+      WHERE x.last_active < NOW() - INTERVAL '10 days'
+        AND (x.last_reminder_sent_at IS NULL OR x.last_reminder_sent_at < NOW() - INTERVAL '10 days')
+      ORDER BY x.last_active ASC
+    `);
+    res.json({ candidates: result.rows });
+  } catch (err) {
+    console.error('리마인더 대상자 조회 오류:', err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// ===== 리마인더 발송 완료 표시 (피오가 직접 문자를 보낸 뒤 클릭) =====
+router.post('/reminder-sent/:userId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE users SET last_reminder_sent_at = NOW() WHERE id = $1', [req.params.userId]);
+    res.json({ message: '발송완료로 표시했어요' });
+  } catch (err) {
+    console.error('리마인더 발송완료 표시 오류:', err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
+// ===== 리마인더 수신거부 처리 (학생이 답장으로 거부 의사를 밝히면 클릭) =====
+router.post('/reminder-opt-out/:userId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await pool.query('UPDATE users SET sms_opt_out = TRUE WHERE id = $1', [req.params.userId]);
+    res.json({ message: '수신거부로 표시했어요' });
+  } catch (err) {
+    console.error('리마인더 수신거부 처리 오류:', err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 module.exports = router;
