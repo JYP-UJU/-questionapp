@@ -12,6 +12,7 @@ function Profile() {
     const [loading, setLoading] = useState(true);
     const [claimName, setClaimName] = useState('');
     const [claimPhone, setClaimPhone] = useState('');
+    const [claimStore, setClaimStore] = useState('');
     const [claimSubmitted, setClaimSubmitted] = useState(false);
     const [claimSubmitting, setClaimSubmitting] = useState(false);
 
@@ -44,13 +45,13 @@ function Profile() {
     };
 
     const handleClaimSubmit = async () => {
-        if (!claimName.trim() || !claimPhone.trim()) {
-            alert('이름과 휴대폰 번호를 모두 입력해주세요');
+        if (!claimName.trim() || !claimPhone.trim() || !claimStore) {
+            alert('이름, 휴대폰 번호, 편의점을 모두 입력해주세요');
             return;
         }
         setClaimSubmitting(true);
         try {
-            await api.post('/reports/claim-reward', { name: claimName, phone: claimPhone });
+            await api.post('/reports/claim-reward', { name: claimName, phone: claimPhone, store: claimStore });
             setClaimSubmitted(true);
         } catch (err) {
             alert(err.response?.data?.error || '신청에 실패했어요');
@@ -310,6 +311,23 @@ function Profile() {
                                             borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '2px',
                                         }}
                                     />
+                                </div>
+                                <div style={{ marginBottom: '10px' }}>
+                                    <label style={{ fontSize: '12px', color: '#888' }}>편의점 선택</label>
+                                    <select
+                                        value={claimStore}
+                                        onChange={e => setClaimStore(e.target.value)}
+                                        style={{
+                                            width: '100%', boxSizing: 'border-box', padding: '8px 10px',
+                                            borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '2px',
+                                            background: 'white',
+                                        }}
+                                    >
+                                        <option value="">편의점을 선택해주세요</option>
+                                        <option value="CU">CU</option>
+                                        <option value="GS25">GS25</option>
+                                        <option value="세븐일레븐">세븐일레븐</option>
+                                    </select>
                                 </div>
                                 <p style={{ fontSize: '11px', color: '#aaa', margin: '0 0 10px' }}>
                                     이름과 휴대폰 번호는 상품권 전달 외 목적으로 사용하지 않아요.

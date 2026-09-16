@@ -22,8 +22,8 @@ const requireAdmin = async (req, res, next) => {
 router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        u.id, u.username, u.songi_count, u.created_at, u.is_admin,
+      SELECT
+        u.id, u.username, u.grade, u.songi_count, u.created_at, u.is_admin,
         (SELECT COUNT(*) FROM user_questions WHERE user_id = u.id AND parent_question_id IS NULL AND related_seed_question_id IS NULL) as question_count,
         (SELECT COUNT(*) FROM user_questions WHERE user_id = u.id AND (parent_question_id IS NOT NULL OR related_seed_question_id IS NOT NULL)) as related_count,
         (SELECT COUNT(*) FROM question_opinions WHERE user_id = u.id) as opinion_count,
