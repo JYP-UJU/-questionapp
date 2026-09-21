@@ -263,7 +263,7 @@ router.get('/activities', authenticateToken, requireAdmin, async (req, res) => {
       return orderDir === 'DESC' ? -diff : diff;
     });
 
-    res.json({ activities: rows.slice(0, 200) }); // 최대 200개
+    res.json({ activities: rows.slice(0, 300) }); // 최대 300개
   } catch (err) {
     console.error('활동 피드 오류:', err);
     res.status(500).json({ error: '서버 오류' });
