@@ -340,6 +340,7 @@ function SavedQuestions() {
                                         <span className="preview-author">{op.username}:</span>
                                         <span className="preview-text">
                                             {op.opinion}
+                                            {renderHelpful(op)}
                                             {op.username === '물음송이 AI' && (
                                                 <span style={{ display: 'block', fontSize: '11px', color: '#999', marginTop: '2px' }}>
                                                     🤖 AI가 쓴 글이에요. 틀릴 수 있어요.
@@ -437,9 +438,69 @@ function SavedQuestions() {
         }
         try {
             const res = await api.get(`/questions/${questionId}/opinions?type=${questionType}`);
-            setAllOpinions(prev => ({ ...prev, [questionId]: res.data.opinions || [] }));
+            setAllOpinions(prev => ({ ...prev, [questionId]: (res.data.opinions || []).map(o => ({ ...o, qid: questionId })) }));
             setExpandedOpinions(prev => ({ ...prev, [questionId]: true }));
         } catch (err) {}
+    };
+
+    // "도움이 됐어요" (질문 주인이 받은 의견에 누름)
+    const handleHelpful = async (questionId, opinionId) => {
+        try {
+            await api.post(`/questions/opinions/${opinionId}/helpful`);
+            setAllOpinions(prev => ({
+                ...prev,
+                [questionId]: (prev[questionId] || []).map(o => o.id === opinionId ? { ...o, helpful: true } : o)
+            }));
+        } catch (err) {
+            alert(err.response?.data?.error || '눌러지지 않았어요. 잠시 뒤에 다시 해 주세요');
+        }
+    };
+
+    // 내 질문에 달린 물음송이 AI 의견 삭제
+    const handleDeleteAi = async (questionId, opinionId) => {
+        if (!window.confirm('물음송이 AI가 쓴 의견을 지울까요?')) return;
+        try {
+            await api.delete(`/questions/opinions/${opinionId}/ai`);
+            setAllOpinions(prev => ({
+                ...prev,
+                [questionId]: (prev[questionId] || []).filter(o => o.id !== opinionId)
+            }));
+        } catch (err) {
+            alert(err.response?.data?.error || '지우지 못했어요. 잠시 뒤에 다시 해 주세요');
+        }
+    };
+
+    const renderHelpful = (op) => {
+        if (op.can_delete) {
+            return (
+                <span style={{ display: 'block' }}>
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteAi(op.qid, op.id); }}
+                        style={{ marginTop: '6px', padding: '4px 10px', fontSize: '12px', border: '1px solid #ddd', background: 'white', color: '#888', borderRadius: '999px', cursor: 'pointer' }}
+                    >
+                        🗑 AI 의견 지우기
+                    </button>
+                </span>
+            );
+        }
+        if (op.helpful) {
+            return <span style={{ display: 'block', fontSize: '12px', color: '#d97706', marginTop: '4px' }}>💛 도움이 됐어요</span>;
+        }
+        if (op.can_mark) {
+            return (
+                <span style={{ display: 'block' }}>
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleHelpful(op.qid, op.id); }}
+                        style={{ marginTop: '6px', padding: '4px 10px', fontSize: '12px', border: '1px solid #f59e0b', background: '#fffbeb', color: '#b45309', borderRadius: '999px', cursor: 'pointer' }}
+                    >
+                        👍 도움이 됐어요
+                    </button>
+                </span>
+            );
+        }
+        return null;
     };
 
     // 관련질문 토글 (펼치기/접기)
@@ -567,6 +628,7 @@ function SavedQuestions() {
                                                         <span className="preview-author">{op.username}:</span>
                                                         <span className="preview-text">
                                             {op.opinion}
+                                            {renderHelpful(op)}
                                             {op.username === '물음송이 AI' && (
                                                 <span style={{ display: 'block', fontSize: '11px', color: '#999', marginTop: '2px' }}>
                                                     🤖 AI가 쓴 글이에요. 틀릴 수 있어요.

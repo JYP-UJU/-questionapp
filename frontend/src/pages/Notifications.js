@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { notificationsAPI } from '../services/api';
+import api, { notificationsAPI } from '../services/api';
 import BottomNav from '../components/BottomNav';
 
 const typeIcon = (type) => {
@@ -8,6 +8,9 @@ const typeIcon = (type) => {
         case 'reaction': return '💛';
         case 'opinion': return '💬';
         case 'followup': return '❓';
+        case 'related': return '❓';
+        case 'opinion_seen': return '👀';
+        case 'helpful': return '💛';
         case 'admin': return '📢';
         default: return '🔔';
     }
@@ -58,6 +61,29 @@ function Notifications() {
 
         if (item.related_question_id) {
             navigate(`/questions?highlight=${item.related_question_id}`);
+        }
+    };
+
+    // 친구가 남긴 의견에 "도움이 됐어요"
+    const handleHelpful = async (e, item) => {
+        e.stopPropagation();
+        try {
+            await api.post(`/questions/opinions/${item.opinion_id}/helpful`);
+            setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, helpful: true } : n)));
+        } catch (err) {
+            alert(err.response?.data?.error || '눌러지지 않았어요. 잠시 뒤에 다시 해 주세요');
+        }
+    };
+
+    // 물음송이 AI가 쓴 의견 삭제 (내 질문에 달린 AI 의견만)
+    const handleDeleteAi = async (e, item) => {
+        e.stopPropagation();
+        if (!window.confirm('물음송이 AI가 쓴 의견을 지울까요?')) return;
+        try {
+            await api.delete(`/questions/opinions/${item.opinion_id}/ai`);
+            setNotifications((prev) => prev.filter((n) => n.opinion_id !== item.opinion_id));
+        } catch (err) {
+            alert(err.response?.data?.error || '지우지 못했어요. 잠시 뒤에 다시 해 주세요');
         }
     };
 
@@ -142,6 +168,36 @@ function Notifications() {
                             <span style={{ fontSize: '12px', color: '#999' }}>
                                 {timeAgo(item.created_at)}
                             </span>
+
+                            {item.type === 'opinion' && item.opinion_text && (
+                                <p style={{ margin: '8px 0 0', padding: '8px 10px', background: 'rgba(0,0,0,0.04)', borderRadius: '8px', fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
+                                    {item.opinion_text}
+                                </p>
+                            )}
+
+                            {item.type === 'opinion' && item.opinion_id && (
+                                <div style={{ marginTop: '8px' }}>
+                                    {item.actor_is_ai ? (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => handleDeleteAi(e, item)}
+                                            style={{ padding: '4px 12px', fontSize: '12px', border: '1px solid #ddd', background: 'white', color: '#888', borderRadius: '999px', cursor: 'pointer' }}
+                                        >
+                                            🗑 AI 의견 지우기
+                                        </button>
+                                    ) : item.helpful ? (
+                                        <span style={{ fontSize: '12px', color: '#d97706' }}>💛 도움이 됐어요</span>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => handleHelpful(e, item)}
+                                            style={{ padding: '4px 12px', fontSize: '12px', border: '1px solid #f59e0b', background: '#fffbeb', color: '#b45309', borderRadius: '999px', cursor: 'pointer' }}
+                                        >
+                                            👍 도움이 됐어요
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         {!item.is_read && (
                             <span style={{

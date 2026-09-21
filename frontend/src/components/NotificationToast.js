@@ -14,6 +14,9 @@ const typeIcon = (type) => {
         case 'reaction': return '💛';
         case 'opinion': return '💬';
         case 'followup': return '❓';
+        case 'related': return '❓';
+        case 'opinion_seen': return '👀';
+        case 'helpful': return '💛';
         case 'admin': return '📢';
         default: return '🔔';
     }

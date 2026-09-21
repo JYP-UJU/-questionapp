@@ -19,15 +19,41 @@ router.get('/', authenticateToken, async (req, res) => {
          n.is_read,
          n.created_at,
          u.id as actor_id,
-         COALESCE(u.name, u.username) as actor_name
+         COALESCE(u.name, u.username) as actor_name,
+         COALESCE(u.is_ai, FALSE) as actor_is_ai,
+         op.id as opinion_id,
+         LEFT(op.opinion, 150) as opinion_text
        FROM notifications n
        LEFT JOIN users u ON n.actor_id = u.id
+       LEFT JOIN LATERAL (
+         SELECT qo.id, qo.opinion FROM question_opinions qo
+         WHERE n.type = 'opinion'
+           AND qo.question_id = n.related_question_id
+           AND qo.user_id = n.actor_id
+         ORDER BY qo.created_at DESC LIMIT 1
+       ) op ON TRUE
        WHERE n.user_id = $1
        ORDER BY n.created_at DESC
        LIMIT 50`,
       [userId]
     );
-    res.json({ notifications: result.rows });
+
+    // 이미 "도움이 됐어요"를 누른 의견 표시 (테이블이 아직 없어도 알림 목록은 정상 동작하도록 따로 조회)
+    const rows = result.rows;
+    let helpfulSet = new Set();
+    const opinionIds = rows.map(r => r.opinion_id).filter(Boolean);
+    if (opinionIds.length > 0) {
+      try {
+        const h = await pool.query(
+          'SELECT opinion_id FROM opinion_helpful WHERE opinion_id = ANY($1::int[])',
+          [opinionIds]
+        );
+        helpfulSet = new Set(h.rows.map(r => r.opinion_id));
+      } catch (e) { /* 무시 */ }
+    }
+    rows.forEach(r => { r.helpful = r.opinion_id ? helpfulSet.has(r.opinion_id) : false; });
+
+    res.json({ notifications: rows });
   } catch (err) {
     console.error('알림 조회 오류:', err);
     res.status(500).json({ error: '서버 오류' });

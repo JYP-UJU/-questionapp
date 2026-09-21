@@ -529,18 +529,63 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
   }
 });
 
+// 로그인 정보가 있으면 사용자 id를, 없거나 잘못됐으면 에러 없이 null을 돌려준다 (로그인 없이도 열리는 API용)
+function getOptionalUserId(req) {
+  try {
+    const h = req.headers['authorization'];
+    const token = h && h.split(' ')[1];
+    if (!token) return null;
+    const jwt = require('jsonwebtoken');
+    const u = jwt.verify(token, process.env.JWT_SECRET);
+    return u.id || u.userId || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// 질문 주인이 의견을 열어 본 순간, 의견을 쓴 친구에게 "○○ 친구가 내 의견을 봤어요" 알림을 보낸다.
+// (의견 하나당 한 번만, AI 의견과 본인 의견은 제외. 실패해도 조용히 무시)
+async function markOpinionsSeen(ownerId, questionId, opinions) {
+  try {
+    const targets = opinions.filter(o => o.user_id !== ownerId && !o.is_ai);
+    if (targets.length === 0) return;
+    const nameRes = await pool.query('SELECT COALESCE(name, username) AS n FROM users WHERE id = $1', [ownerId]);
+    const ownerName = nameRes.rows[0]?.n || '친구';
+    for (const o of targets) {
+      const ins = await pool.query(
+        `INSERT INTO opinion_views (opinion_id, viewer_id) VALUES ($1, $2)
+         ON CONFLICT DO NOTHING RETURNING opinion_id`,
+        [o.id, ownerId]
+      );
+      if (ins.rowCount > 0) {
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, message, related_question_id, actor_id)
+           VALUES ($1, 'opinion_seen', $2, $3, $4)`,
+          [o.user_id, `${ownerName} 친구가 내 의견을 봤어요.`, parseInt(questionId, 10) || null, ownerId]
+        );
+      }
+    }
+  } catch (e) {
+    console.error('의견 열람 알림 생성 실패 (무시):', e.message);
+  }
+}
+
 // 의견 목록 조회
+// - 질문 주인이 열면: (1) 각 의견에 can_mark(도움이 됐어요를 누를 수 있음) 표시, (2) 열람 알림 발송
 router.get('/:id/opinions', async (req, res) => {
   try {
     const { id } = req.params;
     const questionType = req.query.type || 'user_question';
+    const viewerId = getOptionalUserId(req);
 
     const result = await pool.query(
-      `SELECT 
+      `SELECT
         qo.id,
         qo.opinion,
         qo.created_at,
-        u.username
+        qo.user_id,
+        u.username,
+        COALESCE(u.is_ai, FALSE) AS is_ai
        FROM question_opinions qo
        JOIN users u ON qo.user_id = u.id
        WHERE qo.question_id = $1 AND qo.question_type = $2
@@ -548,7 +593,45 @@ router.get('/:id/opinions', async (req, res) => {
       [id, questionType]
     );
 
-    res.json({ opinions: result.rows });
+    let opinions = result.rows;
+
+    // 질문 주인인지 확인 (사용자가 올린 질문일 때만)
+    let isOwner = false;
+    if (viewerId && questionType === 'user_question') {
+      try {
+        const own = await pool.query('SELECT user_id FROM user_questions WHERE id = $1', [id]);
+        isOwner = own.rows.length > 0 && own.rows[0].user_id === viewerId;
+      } catch (e) { /* 무시 */ }
+    }
+
+    // 이미 "도움이 됐어요"가 눌린 의견 표시 (테이블이 아직 없어도 화면은 정상 동작)
+    let helpfulSet = new Set();
+    if (opinions.length > 0) {
+      try {
+        const h = await pool.query(
+          'SELECT opinion_id FROM opinion_helpful WHERE opinion_id = ANY($1::int[])',
+          [opinions.map(o => o.id)]
+        );
+        helpfulSet = new Set(h.rows.map(r => r.opinion_id));
+      } catch (e) { /* 무시 */ }
+    }
+
+    opinions = opinions.map(o => ({
+      id: o.id,
+      opinion: o.opinion,
+      created_at: o.created_at,
+      username: o.username,
+      helpful: helpfulSet.has(o.id),
+      can_mark: isOwner && o.user_id !== viewerId && !o.is_ai,
+      can_delete: isOwner && o.is_ai
+    }));
+
+    res.json({ opinions });
+
+    // 응답을 보낸 뒤에 열람 알림 처리 (기다리지 않음)
+    if (isOwner) {
+      markOpinionsSeen(viewerId, id, result.rows);
+    }
 
   } catch (error) {
     console.error('의견 목록 조회 오류:', error);
@@ -556,7 +639,163 @@ router.get('/:id/opinions', async (req, res) => {
   }
 });
 
-// 관련질문 등록 (icebreaking/seed/quiz 포함 모든 타입 지원) + 5송이
+// "도움이 됐어요": 질문 주인이 받은 의견에 누르는 버튼. 의견 쓴 친구에게 1송이(하루 최대 10번) + 알림
+// - 질문 주인만, 남이 쓴 의견에만 가능. 의견 하나당 한 번만. AI 의견은 기록만 하고 송이/알림은 없음
+router.post('/opinions/:opinionId/helpful', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const opinionId = parseInt(req.params.opinionId, 10);
+    const userId = req.user.id || req.user.userId;
+    if (!opinionId) {
+      client.release();
+      return res.status(400).json({ error: '잘못된 요청이에요' });
+    }
+
+    await client.query('BEGIN');
+
+    const opRes = await client.query(
+      `SELECT qo.id, qo.user_id, qo.question_id, qo.question_type, COALESCE(u.is_ai, FALSE) AS is_ai
+       FROM question_opinions qo
+       JOIN users u ON qo.user_id = u.id
+       WHERE qo.id = $1`,
+      [opinionId]
+    );
+    if (opRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(404).json({ error: '의견을 찾을 수 없어요' });
+    }
+    const op = opRes.rows[0];
+
+    const qRes = op.question_type === 'user_question'
+      ? await client.query('SELECT user_id, title FROM user_questions WHERE id = $1', [op.question_id])
+      : { rows: [] };
+    if (qRes.rows.length === 0 || qRes.rows[0].user_id !== userId) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(403).json({ error: '내가 올린 질문에 달린 의견에만 누를 수 있어요' });
+    }
+    if (op.user_id === userId) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(400).json({ error: '내 의견에는 누를 수 없어요' });
+    }
+
+    const ins = await client.query(
+      `INSERT INTO opinion_helpful (opinion_id, user_id) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING RETURNING id`,
+      [opinionId, userId]
+    );
+
+    let songi = 0;
+    if (ins.rowCount > 0 && !op.is_ai) {
+      // 하루 최대 10번까지만 송이 지급 (서로 눌러주기로 송이 모으는 것 방지)
+      const cnt = await client.query(
+        `SELECT COUNT(*) FROM songi_transactions
+         WHERE user_id = $1 AND activity_type = 'helpful' AND amount > 0
+           AND created_at >= date_trunc('day', NOW())`,
+        [op.user_id]
+      );
+      if (parseInt(cnt.rows[0].count, 10) < 10) {
+        const grant = await client.query(
+          'UPDATE users SET songi_count = songi_count + 1 WHERE id = $1 AND is_admin IS NOT TRUE',
+          [op.user_id]
+        );
+        if (grant.rowCount > 0) songi = 1;
+      }
+      await client.query(
+        `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+         VALUES ($1, $2, 'helpful', '의견이 도움이 됐어요', $3, $4)`,
+        [op.user_id, songi, op.question_id, qRes.rows[0].title]
+      );
+
+      const nameRes = await client.query('SELECT COALESCE(name, username) AS n FROM users WHERE id = $1', [userId]);
+      const ownerName = nameRes.rows[0]?.n || '친구';
+      await client.query(
+        `INSERT INTO notifications (user_id, type, message, related_question_id, actor_id)
+         VALUES ($1, 'helpful', $2, $3, $4)`,
+        [
+          op.user_id,
+          `${ownerName} 친구가 내 의견이 도움이 됐대요!${songi > 0 ? ' 1송이를 받았어요 🌸' : ''}`,
+          op.question_id,
+          userId
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+    client.release();
+    res.json({ ok: true, alreadyMarked: ins.rowCount === 0 });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* 무시 */ }
+    client.release();
+    console.error('도움이 됐어요 처리 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했어요' });
+  }
+});
+
+// 내 질문에 달린 "물음송이 AI" 의견 삭제 (질문 주인만, AI가 쓴 의견만 삭제 가능)
+// - 친구가 쓴 의견은 여기서 지울 수 없다 (친구의 피드백은 도움이 됐어요로 응답)
+router.delete('/opinions/:opinionId/ai', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const opinionId = parseInt(req.params.opinionId, 10);
+    const userId = req.user.id || req.user.userId;
+    if (!opinionId) {
+      client.release();
+      return res.status(400).json({ error: '잘못된 요청이에요' });
+    }
+
+    await client.query('BEGIN');
+
+    const opRes = await client.query(
+      `SELECT qo.id, qo.user_id, qo.question_id, qo.question_type, COALESCE(u.is_ai, FALSE) AS is_ai
+       FROM question_opinions qo
+       JOIN users u ON qo.user_id = u.id
+       WHERE qo.id = $1`,
+      [opinionId]
+    );
+    if (opRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(404).json({ error: '이미 지워졌거나 없는 의견이에요' });
+    }
+    const op = opRes.rows[0];
+    if (!op.is_ai) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(403).json({ error: '물음송이 AI가 쓴 의견만 지울 수 있어요' });
+    }
+
+    const qRes = op.question_type === 'user_question'
+      ? await client.query('SELECT user_id FROM user_questions WHERE id = $1', [op.question_id])
+      : { rows: [] };
+    if (qRes.rows.length === 0 || qRes.rows[0].user_id !== userId) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(403).json({ error: '내가 올린 질문에 달린 AI 의견만 지울 수 있어요' });
+    }
+
+    await client.query('DELETE FROM question_opinions WHERE id = $1', [opinionId]);
+    // 그 AI 의견을 알리던 알림도 함께 정리
+    await client.query(
+      `DELETE FROM notifications
+       WHERE user_id = $1 AND actor_id = $2 AND related_question_id = $3 AND type = 'opinion'`,
+      [userId, op.user_id, op.question_id]
+    );
+
+    await client.query('COMMIT');
+    client.release();
+    res.json({ ok: true });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* 무시 */ }
+    client.release();
+    console.error('AI 의견 삭제 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했어요' });
+  }
+});
+
+// 관련질문 등록 (icebreaking/seed/quiz 포함 모든 타입 지원) + 6송이
 router.post('/:id/related', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
