@@ -59,7 +59,13 @@ router.get('/latest', authenticateToken, async (req, res) => {
            ELSE n.message
          END as message,
          n.related_question_id,
-         n.created_at
+         n.created_at,
+         -- 의견 알림이면 그 의견 내용 앞부분을 팝업에 미리 보여주기 위함
+         CASE WHEN n.type = 'opinion' THEN
+           (SELECT LEFT(qo.opinion, 120) FROM question_opinions qo
+            WHERE qo.question_id = n.related_question_id AND qo.user_id = n.actor_id
+            ORDER BY qo.created_at DESC LIMIT 1)
+         END AS preview
        FROM notifications n
        LEFT JOIN users u ON n.actor_id = u.id
        WHERE n.user_id = $1 AND n.id > $2 AND n.is_read = false

@@ -102,7 +102,11 @@ function NotificationToast() {
             zIndex: 9999,
             pointerEvents: 'none',
         }}>
-            <style>{`@keyframes toastIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+            <style>{`@keyframes toastIn {
+                0% { opacity: 0; transform: translateY(-40px) scale(0.95); }
+                60% { opacity: 1; transform: translateY(6px) scale(1.02); }
+                100% { opacity: 1; transform: translateY(0) scale(1); }
+            }`}</style>
             {toasts.map((t) => (
                 <div
                     key={t.id}
@@ -112,28 +116,46 @@ function NotificationToast() {
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'flex-start',
-                        gap: '10px',
+                        gap: '14px',
                         width: 'calc(100% - 24px)',
-                        maxWidth: '420px',
-                        background: 'white',
-                        border: '1px solid #cfe3ff',
-                        borderRadius: '14px',
-                        boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
-                        padding: '12px 14px',
-                        animation: 'toastIn 0.25s ease-out',
+                        maxWidth: '540px',
+                        background: 'linear-gradient(135deg, #3b82f6, #7c5cff)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '18px',
+                        boxShadow: '0 12px 32px rgba(59,90,246,0.45)',
+                        padding: '20px 22px',
+                        animation: 'toastIn 0.45s ease-out',
                     }}
                 >
-                    <span style={{ fontSize: '20px', flexShrink: 0 }}>{typeIcon(t.type)}</span>
+                    <span style={{ fontSize: '30px', flexShrink: 0 }}>{typeIcon(t.type)}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#333', lineHeight: 1.4 }}>
+                        <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'white', lineHeight: 1.5 }}>
                             {t.message}
                         </p>
-                        <span style={{ fontSize: '12px', color: '#3b82f6' }}>눌러서 보기</span>
+                        {t.preview && (
+                            <p style={{
+                                margin: '10px 0 0',
+                                padding: '10px 12px',
+                                background: 'rgba(255,255,255,0.18)',
+                                borderRadius: '10px',
+                                fontSize: '16px',
+                                lineHeight: 1.5,
+                                color: 'white',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                            }}>
+                                {t.preview}
+                            </p>
+                        )}
+                        <span style={{ fontSize: '15px', color: 'rgba(255,255,255,0.85)', display: 'inline-block', marginTop: '10px' }}>눌러서 보기 ›</span>
                     </div>
                     <button
                         onClick={(e) => { e.stopPropagation(); dismiss(t.id); }}
                         aria-label="닫기"
-                        style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '16px', cursor: 'pointer', padding: 0 }}
+                        style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', fontSize: '22px', cursor: 'pointer', padding: 0 }}
                     >
                         ✕
                     </button>
