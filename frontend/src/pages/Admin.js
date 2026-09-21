@@ -17,7 +17,8 @@ function downloadExcel(activities) {
   const headers = [
     '날짜', '사용자', '유형', '질문ID', '원본질문',
     'QST', 'REL', 'OPN', 'LIK', 'DIS',
-    'QIZ_선택', 'QIZ_정답', 'QIZ_정오'
+    'QIZ_선택', 'QIZ_정답', 'QIZ_정오',
+    'OLY_분야'
   ];
 
   const rows = activities.map(a => {
@@ -41,12 +42,15 @@ function downloadExcel(activities) {
       qizAnswer = parts[2] || '';
     }
 
+    // 올림픽(OLY): 질문ID = 최종 우승 질문의 ID, 원본질문 = 우승 질문 문장, 분야는 별도 열(OLY_분야)
+    const isOly = a.activity_type === 'olympic';
+
     return [
       dateStr,
       a.username,
       typeCode,
       a.question_ref || '',
-      a.question_text || '',
+      isOly ? (a.content || '') : (a.question_text || ''),
       typeCode === 'QST' ? (a.content || '') : '',
       typeCode === 'REL' ? (a.content || '') : '',
       typeCode === 'OPN' ? (a.content || '') : '',
@@ -54,7 +58,8 @@ function downloadExcel(activities) {
       typeCode === 'DIS' ? '1' : '',
       qizSelected,
       qizAnswer,
-      qizCorrect
+      qizCorrect,
+      isOly ? (a.question_text || '') : ''
     ];
   });
 
@@ -422,7 +427,18 @@ function Admin() {
       <div style={styles.header}>
         <button style={styles.backBtn} onClick={() => navigate('/setting')}>← 설정</button>
         <h1 style={styles.title}>🔧 관리자</h1>
-        <button style={styles.downloadBtn} onClick={() => downloadExcel(activities)}>⬇ CSV</button>
+        <button style={styles.downloadBtn} onClick={async () => {
+          // 화면 목록(최대 300개)이 아니라 서버에서 제한 없이 전부 받아서 CSV로 저장
+          try {
+            const params = { type: typeFilter, order, limit: 'all' };
+            if (selectedUser) params.user_id = selectedUser.id;
+            const res = await api.get('/admin/activities', { params });
+            downloadExcel(res.data.activities || []);
+          } catch (err) {
+            console.error('CSV 전체 조회 오류:', err);
+            downloadExcel(activities);
+          }
+        }}>⬇ CSV</button>
       </div>
 
       {/* 탭 */}

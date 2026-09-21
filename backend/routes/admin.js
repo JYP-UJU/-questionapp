@@ -115,8 +115,10 @@ router.get('/olympic-table', authenticateToken, requireAdmin, async (req, res) =
 // ===== 전체 활동 피드 (정렬 가능) =====
 router.get('/activities', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { type = 'all', user_id, order = 'desc' } = req.query;
+    const { type = 'all', user_id, order = 'desc', limit } = req.query;
     const orderDir = order === 'asc' ? 'ASC' : 'DESC';
+    // limit=all 이면 제한 없이 전부(CSV 다운로드용), 그 외에는 기본 300개
+    const maxRows = limit === 'all' ? Infinity : (parseInt(limit, 10) || 300);
     const userFilter = user_id ? `AND u.id = ${parseInt(user_id)}` : '';
 
     let rows = [];
@@ -263,7 +265,7 @@ router.get('/activities', authenticateToken, requireAdmin, async (req, res) => {
       return orderDir === 'DESC' ? -diff : diff;
     });
 
-    res.json({ activities: rows.slice(0, 300) }); // 최대 300개
+    res.json({ activities: maxRows === Infinity ? rows : rows.slice(0, maxRows) });
   } catch (err) {
     console.error('활동 피드 오류:', err);
     res.status(500).json({ error: '서버 오류' });
