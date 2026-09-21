@@ -306,20 +306,19 @@ router.get('/with-status', authenticateToken, async (req, res) => {
                WHERE qo.question_id = q.id AND qo.question_type = q.question_source
                  AND qo.opinion ILIKE ANY($7::text[])
              )
-          -- 이 질문에 달린 관련질문 제목 안에 검색어가 있어도 걸리게
-          OR (
-               q.question_source = 'user_question' AND EXISTS (
-                 SELECT 1 FROM user_questions rq
-                 WHERE rq.parent_question_id = q.id AND rq.is_deleted = false
-                   AND rq.title ILIKE ANY($7::text[])
+          -- 이 질문에 달린 관련질문(관련질문의 관련질문까지 모두) 제목 안에 검색어가 있어도 걸리게
+          OR EXISTS (
+               WITH RECURSIVE d AS (
+                 SELECT rq.id, rq.title FROM user_questions rq
+                 WHERE rq.is_deleted = false
+                   AND ( (q.question_source = 'user_question' AND rq.parent_question_id = q.id)
+                      OR (q.question_source = 'quiz' AND rq.related_seed_question_id = q.id) )
+                 UNION
+                 SELECT c.id, c.title FROM user_questions c
+                 JOIN d ON c.parent_question_id = d.id
+                 WHERE c.is_deleted = false
                )
-             )
-          OR (
-               q.question_source = 'quiz' AND EXISTS (
-                 SELECT 1 FROM user_questions rq
-                 WHERE rq.related_seed_question_id = q.id AND rq.is_deleted = false
-                   AND rq.title ILIKE ANY($7::text[])
-               )
+               SELECT 1 FROM d WHERE d.title ILIKE ANY($7::text[])
              )
        ORDER BY ${orderClause}
        LIMIT $5 OFFSET $6`,
@@ -350,19 +349,19 @@ router.get('/with-status', authenticateToken, async (req, res) => {
                WHERE qo.question_id = t.id AND qo.question_type = t.question_source
                  AND qo.opinion ILIKE ANY($1::text[])
              )
-          OR (
-               t.question_source = 'user_question' AND EXISTS (
-                 SELECT 1 FROM user_questions rq
-                 WHERE rq.parent_question_id = t.id AND rq.is_deleted = false
-                   AND rq.title ILIKE ANY($1::text[])
+          -- 이 질문에 달린 관련질문(관련질문의 관련질문까지 모두) 제목 안에 검색어가 있어도 걸리게
+          OR EXISTS (
+               WITH RECURSIVE d AS (
+                 SELECT rq.id, rq.title FROM user_questions rq
+                 WHERE rq.is_deleted = false
+                   AND ( (t.question_source = 'user_question' AND rq.parent_question_id = t.id)
+                      OR (t.question_source = 'quiz' AND rq.related_seed_question_id = t.id) )
+                 UNION
+                 SELECT c.id, c.title FROM user_questions c
+                 JOIN d ON c.parent_question_id = d.id
+                 WHERE c.is_deleted = false
                )
-             )
-          OR (
-               t.question_source = 'quiz' AND EXISTS (
-                 SELECT 1 FROM user_questions rq
-                 WHERE rq.related_seed_question_id = t.id AND rq.is_deleted = false
-                   AND rq.title ILIKE ANY($1::text[])
-               )
+               SELECT 1 FROM d WHERE d.title ILIKE ANY($1::text[])
              )`,
       [searchTokens]
     );

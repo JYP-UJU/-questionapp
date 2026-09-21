@@ -59,21 +59,34 @@ router.get('/random', authenticateToken, async (req, res) => {
         // 2. 나머지를 랜덤으로 채우기 (5개 목표, 보통 랜덤 1개)
         const needed = 5 - questions.length;
         if (needed > 0) {
-            const placeholders = usedIds.length > 0
-                ? `AND id NOT IN (${usedIds.map((_, i) => `$${i + 2}`).join(',')})`
-                : '';
-            const params = usedIds.length > 0 ? [needed, ...usedIds] : [needed];
+            // 아직 안 푼 문제 중에서 랜덤으로 채운다
             const fill = await pool.query(
                 `SELECT id, question, category, option_1, option_2, option_3, option_4, option_5
                  FROM seed_questions
                  WHERE option_1 IS NOT NULL
                  -- ⚠️ 검토 기간 동안 임시로 전체 노출. 9월 전 review_stage='final_reviewed' 필터 재적용 필요!
-                 ${placeholders}
+                 AND NOT (id = ANY($2::int[]))
                  ORDER BY RANDOM()
                  LIMIT $1`,
-                params
+                [needed, [...usedIds, ...answeredIds]]
             );
             questions.push(...fill.rows);
+            fill.rows.forEach(r => usedIds.push(r.id));
+        }
+
+        // 안 푼 문제가 모자라면(거의 다 푼 학생) 이미 푼 문제로 채운다
+        const stillNeeded = 5 - questions.length;
+        if (stillNeeded > 0) {
+            const fallback = await pool.query(
+                `SELECT id, question, category, option_1, option_2, option_3, option_4, option_5
+                 FROM seed_questions
+                 WHERE option_1 IS NOT NULL
+                 AND NOT (id = ANY($2::int[]))
+                 ORDER BY RANDOM()
+                 LIMIT $1`,
+                [stillNeeded, usedIds]
+            );
+            questions.push(...fallback.rows);
         }
 
         if (questions.length === 0) {
