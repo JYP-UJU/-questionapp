@@ -176,6 +176,11 @@ function Notifications() {
                                     {item.opinion_text}
                                 </p>
                             )}
+                            {item.type === 'opinion' && item.opinion_text && item.actor_is_ai && (
+                                <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#999' }}>
+                                    AI가 쓴 글이에요. 틀릴 수 있어요.
+                                </p>
+                            )}
 
                             {((item.type === 'opinion' && item.opinion_id) || (item.type === 'related' && item.related_id)) && (
                                 <div style={{ marginTop: '8px' }}>

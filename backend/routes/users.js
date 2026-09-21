@@ -35,7 +35,8 @@ const STOPWORDS = new Set([
 
   // ── 흔한 부사 — 조사가 아니라 단어 자체라 조사 제거로는 안 걸러짐
   '많이', '많은', '많아', '조금', '자주', '항상', '매우', '너무', '정말', '진짜',
-  '다시', '그냥', '아직', '이미', '벌써', '계속', '서로', '모두', '다들', '우리', '저희'
+  '다시', '그냥', '아직', '이미', '벌써', '계속', '서로', '모두', '다들', '우리', '저희',
+  '심지어', '특히', '만약', '혹시', '과연', '하지만', '그래서', '그러면', '아니면', '또는', '오히려', '별로', '거의', '가끔', '때로', '처음', '보통', '대체'
 ]);
 
 function stripJosa(token) {
@@ -65,6 +66,35 @@ function extractTopKeywords(texts, n = 3) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, n)
     .map(([word]) => word);
+}
+
+// 동사·형용사 활용형(수입한다던데, 사용되고, 궁금하는지 …)처럼 검색어로 쓸 수 없는 어미로 끝나는지
+const VERB_ENDING = /(되고|되어|되며|되면|던데|는데|은데|한데|인데|하는|한다|된다|하고|하며|하면|해서|해요|할까|될까|나요|까요|네요|어서|아서|니까|지만|는지|으면|으니|이다|이야|예요|에요|었다|였다|했다|됐다|하다|되다|시다)$/;
+const PLAIN_DA = /..+다$/; // 3글자 이상이면서 '다'로 끝남 (바다처럼 2글자 명사는 살림)
+
+// 키워드 후보를 넉넉히(20개) 뽑아 어미 형태를 거르고, 실제로 검색 결과가 1건 이상 나오는 것만 3개 고른다.
+async function pickSearchableKeywords(texts, n = 3) {
+  const candidates = extractTopKeywords(texts, 20)
+    .filter(w => !VERB_ENDING.test(w) && !PLAIN_DA.test(w));
+  if (candidates.length === 0) return [];
+
+  let hits = new Map();
+  try {
+    const r = await pool.query(
+      `SELECT k.kw,
+              (SELECT COUNT(*) FROM user_questions uq
+                WHERE uq.is_deleted = false
+                  AND (uq.title ILIKE '%' || k.kw || '%' OR uq.content ILIKE '%' || k.kw || '%')) AS cnt
+       FROM unnest($1::text[]) AS k(kw)`,
+      [candidates]
+    );
+    hits = new Map(r.rows.map(x => [x.kw, parseInt(x.cnt, 10) || 0]));
+  } catch (e) {
+    console.error('키워드 검색 가능 여부 확인 실패 (무시):', e.message);
+    return candidates.slice(0, n);
+  }
+  const ok = candidates.filter(w => (hits.get(w) || 0) > 0);
+  return ok.slice(0, n);
 }
 
 // 내 정보 조회
@@ -451,7 +481,7 @@ router.get('/me/keywords', authenticateToken, async (req, res) => {
 
     // 키워드는 AI가 아니라 빈도 기반으로 직접 계산 (검색이 확실히 되도록,
     // 그리고 AI 호출 비용/변동성 없이 빠르게)
-    const keywords = extractTopKeywords([...myTitles, ...likedTitles, ...opinionTexts], 3);
+    const keywords = await pickSearchableKeywords([...myTitles, ...likedTitles, ...opinionTexts], 3);
 
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('ANTHROPIC_API_KEY가 설정되지 않았습니다');
