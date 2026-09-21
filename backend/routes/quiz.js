@@ -11,6 +11,18 @@ router.get('/random', authenticateToken, async (req, res) => {
         const questions = [];
         const usedIds = [];
 
+        // 이미 푼 문제는 다시 내지 않는다 (새로고침/재도전 시 같은 4강 문제가 반복되던 문제 수정)
+        let answeredIds = [];
+        try {
+            const answered = await pool.query(
+                'SELECT DISTINCT question_id FROM quiz_responses WHERE user_id = $1',
+                [userId]
+            );
+            answeredIds = answered.rows.map(r => r.question_id);
+        } catch (e) {
+            console.error('푼 문제 조회 오류:', e.message);
+        }
+
         // 1. 직전 올림픽 세션에서 4강에 올라온 질문 4개 뽑기
         //    (선택 여부 관계없이 round_number=1에 노출된 것 전부)
         try {
@@ -31,8 +43,9 @@ router.get('/random', authenticateToken, async (req, res) => {
                      WHERE or2.session_id = $1
                        AND or2.round_number = 2
                        AND sq.option_1 IS NOT NULL
+                       AND NOT (sq.id = ANY($2::int[]))
                      LIMIT 4`,
-                    [sessionId]
+                    [sessionId, answeredIds]
                 );
                 for (const row of semifinalQ.rows) {
                     questions.push(row);
