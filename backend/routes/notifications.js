@@ -59,13 +59,8 @@ router.get('/latest', authenticateToken, async (req, res) => {
            ELSE n.message
          END as message,
          n.related_question_id,
-         n.created_at,
-         -- 의견 알림이면 그 의견 내용 앞부분을 팝업에 미리 보여주기 위함
-         CASE WHEN n.type = 'opinion' THEN
-           (SELECT LEFT(qo.opinion, 120) FROM question_opinions qo
-            WHERE qo.question_id = n.related_question_id AND qo.user_id = n.actor_id
-            ORDER BY qo.created_at DESC LIMIT 1)
-         END AS preview
+         n.actor_id,
+         n.created_at
        FROM notifications n
        LEFT JOIN users u ON n.actor_id = u.id
        WHERE n.user_id = $1 AND n.id > $2 AND n.is_read = false
@@ -74,6 +69,24 @@ router.get('/latest', authenticateToken, async (req, res) => {
       [userId, afterId]
     );
     const maxId = result.rows.length ? result.rows[result.rows.length - 1].id : afterId;
+
+    // 의견 알림이면 그 의견 앞부분을 팝업에 미리 보여준다.
+    // 별도 조회로 분리해서, 이 부분이 실패해도 팝업 자체는 정상적으로 뜨게 한다.
+    for (const row of result.rows) {
+      if (row.type === 'opinion' && row.related_question_id && row.actor_id) {
+        try {
+          const op = await pool.query(
+            `SELECT LEFT(opinion, 120) AS preview FROM question_opinions
+             WHERE question_id = $1 AND user_id = $2
+             ORDER BY created_at DESC LIMIT 1`,
+            [row.related_question_id, row.actor_id]
+          );
+          row.preview = op.rows[0]?.preview || null;
+        } catch (e) {
+          row.preview = null;
+        }
+      }
+    }
     res.json({ max_id: maxId, notifications: result.rows });
   } catch (err) {
     console.error('최신 알림 조회 오류:', err);

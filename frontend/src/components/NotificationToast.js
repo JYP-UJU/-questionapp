@@ -6,7 +6,7 @@ import { notificationsAPI, getToken } from '../services/api';
 // - 화면이 보이는 동안 POLL_MS마다 "새로 도착한 알림"만 확인한다.
 // - 접속 직후에는 기준선(현재 최대 알림 id)만 잡고, 예전 알림은 팝업으로 띄우지 않는다.
 // - 접속하지 않은 사람은 기존처럼 종 아이콘의 빨간 숫자로 확인한다.
-const POLL_MS = 15 * 1000;
+const POLL_MS = 8 * 1000;
 const SHOW_MS = 7 * 1000;
 
 const typeIcon = (type) => {
@@ -25,6 +25,7 @@ function NotificationToast() {
     const [toasts, setToasts] = useState([]);
     const lastIdRef = useRef(null); // null = 아직 기준선 없음
     const busyRef = useRef(false);
+    const tickRef = useRef(null);
 
     const dismiss = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
@@ -58,6 +59,7 @@ function NotificationToast() {
             }
         };
 
+        tickRef.current = tick;
         tick();
         const timer = setInterval(tick, POLL_MS);
         const onVisible = () => {
@@ -70,6 +72,12 @@ function NotificationToast() {
             document.removeEventListener('visibilitychange', onVisible);
         };
     }, []);
+
+    // 화면(주소)이 바뀔 때마다 바로 한 번 확인한다.
+    // (로그인 직후처럼 기준선이 늦게 잡혀서 첫 알림을 놓치는 일을 줄이기 위함)
+    useEffect(() => {
+        if (tickRef.current) tickRef.current();
+    }, [location.pathname]);
 
     // 알림 화면에서는 팝업이 겹치지 않도록 숨김 (목록에서 바로 보이므로)
     if (location.pathname === '/login' || location.pathname === '/notifications') return null;
