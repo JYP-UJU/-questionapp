@@ -27,3 +27,16 @@ CREATE INDEX IF NOT EXISTS idx_opinion_helpful_opinion ON opinion_helpful(opinio
 -- 확인 (두 줄이 나오면 성공)
 SELECT table_name FROM information_schema.tables
 WHERE table_name IN ('opinion_helpful', 'opinion_views');
+
+-- ============================================
+-- [추가] 관련질문에도 "도움이 됐어요" (위 SQL을 이미 실행했어도, 아래만 따로 한 번 더 실행하면 됨)
+-- ============================================
+CREATE TABLE IF NOT EXISTS related_helpful (
+  id SERIAL PRIMARY KEY,
+  related_question_id INTEGER NOT NULL REFERENCES user_questions(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (related_question_id, user_id)
+);
+
+SELECT table_name FROM information_schema.tables WHERE table_name = 'related_helpful';

@@ -68,7 +68,9 @@ function Notifications() {
     const handleHelpful = async (e, item) => {
         e.stopPropagation();
         try {
-            await api.post(`/questions/opinions/${item.opinion_id}/helpful`);
+            await api.post(item.opinion_id
+                ? `/questions/opinions/${item.opinion_id}/helpful`
+                : `/questions/related/${item.related_id}/helpful`);
             setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, helpful: true } : n)));
         } catch (err) {
             alert(err.response?.data?.error || '눌러지지 않았어요. 잠시 뒤에 다시 해 주세요');
@@ -160,38 +162,38 @@ function Notifications() {
                             cursor: 'pointer',
                         }}
                     >
-                        <span style={{ fontSize: '20px', flexShrink: 0 }}>{typeIcon(item.type)}</span>
+                        <span style={{ fontSize: '24px', flexShrink: 0 }}>{typeIcon(item.type)}</span>
                         <div style={{ flex: 1 }}>
-                            <p style={{ margin: 0, fontSize: '14px', color: '#333', lineHeight: '1.4' }}>
+                            <p style={{ margin: 0, fontSize: '16px', color: '#333', lineHeight: '1.5' }}>
                                 {item.message}
                             </p>
-                            <span style={{ fontSize: '12px', color: '#999' }}>
+                            <span style={{ fontSize: '13px', color: '#999' }}>
                                 {timeAgo(item.created_at)}
                             </span>
 
                             {item.type === 'opinion' && item.opinion_text && (
-                                <p style={{ margin: '8px 0 0', padding: '8px 10px', background: 'rgba(0,0,0,0.04)', borderRadius: '8px', fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
+                                <p style={{ margin: '8px 0 0', padding: '8px 10px', background: 'rgba(0,0,0,0.04)', borderRadius: '8px', fontSize: '15px', color: '#444', lineHeight: 1.55 }}>
                                     {item.opinion_text}
                                 </p>
                             )}
 
-                            {item.type === 'opinion' && item.opinion_id && (
+                            {((item.type === 'opinion' && item.opinion_id) || (item.type === 'related' && item.related_id)) && (
                                 <div style={{ marginTop: '8px' }}>
-                                    {item.actor_is_ai ? (
+                                    {item.type === 'opinion' && item.actor_is_ai ? (
                                         <button
                                             type="button"
                                             onClick={(e) => handleDeleteAi(e, item)}
-                                            style={{ padding: '4px 12px', fontSize: '12px', border: '1px solid #ddd', background: 'white', color: '#888', borderRadius: '999px', cursor: 'pointer' }}
+                                            style={{ padding: '6px 14px', fontSize: '14px', border: '1px solid #ddd', background: 'white', color: '#888', borderRadius: '999px', cursor: 'pointer' }}
                                         >
                                             🗑 AI 의견 지우기
                                         </button>
                                     ) : item.helpful ? (
-                                        <span style={{ fontSize: '12px', color: '#d97706' }}>💛 도움이 됐어요</span>
+                                        <span style={{ fontSize: '14px', color: '#d97706' }}>💛 도움이 됐어요</span>
                                     ) : (
                                         <button
                                             type="button"
                                             onClick={(e) => handleHelpful(e, item)}
-                                            style={{ padding: '4px 12px', fontSize: '12px', border: '1px solid #f59e0b', background: '#fffbeb', color: '#b45309', borderRadius: '999px', cursor: 'pointer' }}
+                                            style={{ padding: '6px 14px', fontSize: '14px', border: '1px solid #f59e0b', background: '#fffbeb', color: '#b45309', borderRadius: '999px', cursor: 'pointer' }}
                                         >
                                             👍 도움이 됐어요
                                         </button>

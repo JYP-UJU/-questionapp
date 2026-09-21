@@ -529,6 +529,20 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
   }
 });
 
+// 이름 뒤에 붙는 조사 "이/가" 고르기 (예: 철수가, 민준이, 314pie가)
+function josaIGa(name) {
+  const s = String(name || '').trim();
+  if (!s) return '가';
+  const ch = s[s.length - 1];
+  const code = ch.charCodeAt(0);
+  let hasBatchim;
+  if (code >= 0xAC00 && code <= 0xD7A3) hasBatchim = (code - 0xAC00) % 28 !== 0;      // 한글: 받침 여부
+  else if (/[0-9]/.test(ch)) hasBatchim = '013678'.includes(ch);                       // 영,일,삼,육,칠,팔
+  else if (/[a-zA-Z]/.test(ch)) hasBatchim = 'lmnrLMNR'.includes(ch);                  // 엘,엠,엔,알
+  else hasBatchim = false;
+  return hasBatchim ? '이' : '가';
+}
+
 // 로그인 정보가 있으면 사용자 id를, 없거나 잘못됐으면 에러 없이 null을 돌려준다 (로그인 없이도 열리는 API용)
 function getOptionalUserId(req) {
   try {
@@ -561,7 +575,7 @@ async function markOpinionsSeen(ownerId, questionId, opinions) {
         await pool.query(
           `INSERT INTO notifications (user_id, type, message, related_question_id, actor_id)
            VALUES ($1, 'opinion_seen', $2, $3, $4)`,
-          [o.user_id, `${ownerName} 친구가 내 의견을 봤어요.`, parseInt(questionId, 10) || null, ownerId]
+          [o.user_id, `${ownerName}${josaIGa(ownerName)} 내 의견을 봤어요.`, parseInt(questionId, 10) || null, ownerId]
         );
       }
     }
@@ -716,7 +730,7 @@ router.post('/opinions/:opinionId/helpful', authenticateToken, async (req, res) 
          VALUES ($1, 'helpful', $2, $3, $4)`,
         [
           op.user_id,
-          `${ownerName} 친구가 내 의견이 도움이 됐대요!${songi > 0 ? ' 1송이를 받았어요 🌸' : ''}`,
+          `${ownerName}${josaIGa(ownerName)} 내 의견이 도움이 됐대요!${songi > 0 ? ' 1송이를 받았어요 🌸' : ''}`,
           op.question_id,
           userId
         ]
@@ -730,6 +744,96 @@ router.post('/opinions/:opinionId/helpful', authenticateToken, async (req, res) 
     try { await client.query('ROLLBACK'); } catch (e) { /* 무시 */ }
     client.release();
     console.error('도움이 됐어요 처리 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했어요' });
+  }
+});
+
+// 관련질문에 "도움이 됐어요": 내 질문에 친구가 단 관련질문에 누르는 버튼. 관련질문 쓴 친구에게 1송이(하루 최대 10번, 의견과 합산) + 알림
+// - 부모 질문의 주인만, 남이 쓴 관련질문에만 가능. 관련질문 하나당 한 번만
+router.post('/related/:relatedId/helpful', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const relatedId = parseInt(req.params.relatedId, 10);
+    const userId = req.user.id || req.user.userId;
+    if (!relatedId) {
+      client.release();
+      return res.status(400).json({ error: '잘못된 요청이에요' });
+    }
+
+    await client.query('BEGIN');
+
+    const rRes = await client.query(
+      `SELECT r.id, r.user_id, r.title, r.parent_question_id, p.user_id AS parent_owner
+       FROM user_questions r
+       JOIN user_questions p ON r.parent_question_id = p.id
+       WHERE r.id = $1 AND r.is_deleted = false`,
+      [relatedId]
+    );
+    if (rRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(404).json({ error: '관련질문을 찾을 수 없어요' });
+    }
+    const r = rRes.rows[0];
+    if (r.parent_owner !== userId) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(403).json({ error: '내가 올린 질문에 달린 관련질문에만 누를 수 있어요' });
+    }
+    if (r.user_id === userId) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(400).json({ error: '내가 쓴 관련질문에는 누를 수 없어요' });
+    }
+
+    const ins = await client.query(
+      `INSERT INTO related_helpful (related_question_id, user_id) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING RETURNING id`,
+      [relatedId, userId]
+    );
+
+    let songi = 0;
+    if (ins.rowCount > 0) {
+      const cnt = await client.query(
+        `SELECT COUNT(*) FROM songi_transactions
+         WHERE user_id = $1 AND activity_type = 'helpful' AND amount > 0
+           AND created_at >= date_trunc('day', NOW())`,
+        [r.user_id]
+      );
+      if (parseInt(cnt.rows[0].count, 10) < 10) {
+        const grant = await client.query(
+          'UPDATE users SET songi_count = songi_count + 1 WHERE id = $1 AND is_admin IS NOT TRUE',
+          [r.user_id]
+        );
+        if (grant.rowCount > 0) songi = 1;
+      }
+      await client.query(
+        `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+         VALUES ($1, $2, 'helpful', '관련질문이 도움이 됐어요', $3, $4)`,
+        [r.user_id, songi, relatedId, r.title]
+      );
+
+      const nameRes = await client.query('SELECT COALESCE(name, username) AS n FROM users WHERE id = $1', [userId]);
+      const ownerName = nameRes.rows[0]?.n || '친구';
+      await client.query(
+        `INSERT INTO notifications (user_id, type, message, related_question_id, actor_id)
+         VALUES ($1, 'helpful', $2, $3, $4)`,
+        [
+          r.user_id,
+          `${ownerName}${josaIGa(ownerName)} 내 관련질문이 도움이 됐대요!${songi > 0 ? ' 1송이를 받았어요 🌸' : ''}`,
+          r.parent_question_id,
+          userId
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+    client.release();
+    res.json({ ok: true, alreadyMarked: ins.rowCount === 0 });
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* 무시 */ }
+    client.release();
+    console.error('관련질문 도움이 됐어요 처리 오류:', error);
     res.status(500).json({ error: '서버 오류가 발생했어요' });
   }
 });

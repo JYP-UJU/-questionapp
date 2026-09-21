@@ -22,7 +22,8 @@ router.get('/', authenticateToken, async (req, res) => {
          COALESCE(u.name, u.username) as actor_name,
          COALESCE(u.is_ai, FALSE) as actor_is_ai,
          op.id as opinion_id,
-         LEFT(op.opinion, 150) as opinion_text
+         LEFT(op.opinion, 150) as opinion_text,
+         rq.id as related_id
        FROM notifications n
        LEFT JOIN users u ON n.actor_id = u.id
        LEFT JOIN LATERAL (
@@ -32,6 +33,14 @@ router.get('/', authenticateToken, async (req, res) => {
            AND qo.user_id = n.actor_id
          ORDER BY qo.created_at DESC LIMIT 1
        ) op ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT r.id FROM user_questions r
+         WHERE n.type = 'related'
+           AND r.parent_question_id = n.related_question_id
+           AND r.user_id = n.actor_id
+           AND r.is_deleted = false
+         ORDER BY r.created_at DESC LIMIT 1
+       ) rq ON TRUE
        WHERE n.user_id = $1
        ORDER BY n.created_at DESC
        LIMIT 50`,
@@ -51,7 +60,23 @@ router.get('/', authenticateToken, async (req, res) => {
         helpfulSet = new Set(h.rows.map(r => r.opinion_id));
       } catch (e) { /* 무시 */ }
     }
-    rows.forEach(r => { r.helpful = r.opinion_id ? helpfulSet.has(r.opinion_id) : false; });
+    // 관련질문 알림도 같은 방식으로 "도움이 됐어요" 표시 (related_helpful 테이블)
+    let relatedHelpfulSet = new Set();
+    const relatedIds = rows.map(r => r.related_id).filter(Boolean);
+    if (relatedIds.length > 0) {
+      try {
+        const rh = await pool.query(
+          'SELECT related_question_id FROM related_helpful WHERE related_question_id = ANY($1::int[])',
+          [relatedIds]
+        );
+        relatedHelpfulSet = new Set(rh.rows.map(r => r.related_question_id));
+      } catch (e) { /* 무시 */ }
+    }
+    rows.forEach(r => {
+      r.helpful = r.opinion_id ? helpfulSet.has(r.opinion_id)
+                : r.related_id ? relatedHelpfulSet.has(r.related_id)
+                : false;
+    });
 
     res.json({ notifications: rows });
   } catch (err) {
