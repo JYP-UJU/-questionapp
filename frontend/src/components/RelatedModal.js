@@ -8,9 +8,9 @@ import './OpinionModal.css';
  * - questionTitle: 원본 질문 제목
  * - onSubmit: (relatedTitle) => void
  * - onClose: () => void
- * - songi: 송이 포인트 (기본 5)
+ * - songi: 송이 포인트 (기본 6)
  */
-function RelatedModal({ questionTitle, onSubmit, onClose, songi = 5 }) {
+function RelatedModal({ questionTitle, onSubmit, onClose, songi = 6 }) {
     const [relatedTitle, setRelatedTitle] = useState('');
 
     const handleSubmit = () => {

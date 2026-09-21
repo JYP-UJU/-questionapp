@@ -33,11 +33,15 @@ function WeeklyReport() {
 
     const [weekOffset, setWeekOffset] = useState(0);
     const [weeklyHeroes, setWeeklyHeroes] = useState([]);
+    const [weeklyFriends, setWeeklyFriends] = useState([]);
 
     useEffect(() => {
         const { start, end } = getWeekRange(weekOffset);
         api.get(`/reports/weekly-leaderboard?start=${start}&end=${end}`)
-            .then(res => setWeeklyHeroes(res.data.leaderboard || []))
+            .then(res => {
+                setWeeklyHeroes(res.data.leaderboard || []);
+                setWeeklyFriends(res.data.friendly || []);
+            })
             .catch(err => console.error('이주의 영웅 로드 오류:', err));
     }, [weekOffset]);
 
@@ -236,6 +240,25 @@ function WeeklyReport() {
                                     <span style={{fontSize:'20px'}}>{['🥇','🥈','🥉'][i]}</span>
                                     <span style={{flex:1, fontWeight:600, color:'#333'}}>{h.name}</span>
                                     <span style={{color:'#f59e0b', fontWeight:700}}>{h.songi}송이</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ===== 다정한 친구 TOP 3 (친구 카드에 의견/관련질문을 가장 많이 남긴 친구) ===== */}
+                {weeklyFriends.length > 0 && (
+                    <div className="stats-card" style={{background:'linear-gradient(135deg, #eef6ff, #e0edff)'}}>
+                        <h3>💬 다정한 친구</h3>
+                        <div style={{fontSize:'12px', color:'#666', marginTop:'2px'}}>
+                            친구들의 카드에 의견과 관련질문을 가장 많이 남긴 친구예요
+                        </div>
+                        <div style={{display:'flex', flexDirection:'column', gap:'8px', marginTop:'8px'}}>
+                            {weeklyFriends.map((f, i) => (
+                                <div key={i} style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                                    <span style={{fontSize:'20px'}}>{['🥇','🥈','🥉'][i]}</span>
+                                    <span style={{flex:1, fontWeight:600, color:'#333'}}>{f.name}</span>
+                                    <span style={{color:'#3b82f6', fontWeight:700}}>{f.count}번</span>
                                 </div>
                             ))}
                         </div>

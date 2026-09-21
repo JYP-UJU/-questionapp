@@ -779,7 +779,7 @@ function Friends() {
                     questionTitle={relatedModal.title}
                     onSubmit={handleRelatedSubmit}
                     onClose={() => setRelatedModal(null)}
-                    songi={5}
+                    songi={6}
                 />
             )}
 

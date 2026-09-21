@@ -651,9 +651,9 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
       }
     }
 
-    // 5송이 지급 (관리자 계정은 제외)
+    // 6송이 지급 (관리자 계정은 제외) - 질문(5송이)보다 관련질문을 더 높게 보상
     const relatedGrantResult = await client.query(
-      'UPDATE users SET songi_count = songi_count + 5 WHERE id = $1 AND is_admin IS NOT TRUE',
+      'UPDATE users SET songi_count = songi_count + 6 WHERE id = $1 AND is_admin IS NOT TRUE',
       [userId]
     );
     const relatedSongiGranted = relatedGrantResult.rowCount > 0;
@@ -662,7 +662,7 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
     await client.query(
       `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
        VALUES ($1, $2, 'related', '관련질문 작성', $3, $4)`,
-      [userId, relatedSongiGranted ? 5 : 0, newQuestionId, title]
+      [userId, relatedSongiGranted ? 6 : 0, newQuestionId, title]
     );
 
     const userResult = await client.query(
@@ -673,10 +673,10 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: relatedSongiGranted ? '관련질문이 등록되었습니다! 5송이를 획득했어요 🌸' : '관련질문이 등록되었습니다!',
+      message: relatedSongiGranted ? '관련질문이 등록되었습니다! 6송이를 획득했어요 🌸' : '관련질문이 등록되었습니다!',
       relatedQuestion: insertResult.rows[0],
       songi_count: userResult.rows[0].songi_count,
-      songi_earned: relatedSongiGranted ? 5 : 0
+      songi_earned: relatedSongiGranted ? 6 : 0
     });
 
   } catch (error) {

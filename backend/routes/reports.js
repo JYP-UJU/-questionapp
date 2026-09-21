@@ -747,8 +747,43 @@ router.get('/weekly-leaderboard', authenticateToken, async (req, res) => {
       [weekStart, weekEnd]
     );
 
+    // 다정한 친구 TOP 3: 이번 주에 (내 카드가 아닌) 친구 카드에 의견 + 관련질문을 가장 많이 남긴 사람
+    // 별도로 조회해서, 이 부분이 실패해도 이주의 영웅은 정상적으로 나오게 한다. (관리자/AI 계정 제외)
+    let friendly = [];
+    try {
+      const friendlyResult = await pool.query(
+        `SELECT COALESCE(u.name, u.username) as display_name, COUNT(*) as total
+         FROM (
+           SELECT qo.user_id
+           FROM question_opinions qo
+           LEFT JOIN user_questions uq
+             ON qo.question_id = uq.id AND qo.question_type IN ('user_question', 'friend_question', 'user')
+           WHERE qo.created_at >= $1 AND qo.created_at <= $2
+             AND (uq.user_id IS NULL OR uq.user_id <> qo.user_id)
+           UNION ALL
+           SELECT r.user_id
+           FROM user_questions r
+           LEFT JOIN user_questions pq ON r.parent_question_id = pq.id
+           WHERE (r.parent_question_id IS NOT NULL OR r.related_seed_question_id IS NOT NULL)
+             AND r.is_deleted = false
+             AND r.created_at >= $1 AND r.created_at <= $2
+             AND (pq.user_id IS NULL OR pq.user_id <> r.user_id)
+         ) f
+         JOIN users u ON f.user_id = u.id
+         WHERE u.is_admin IS NOT TRUE AND COALESCE(u.is_ai, FALSE) = FALSE
+         GROUP BY u.id, u.username, u.name
+         ORDER BY total DESC, u.id ASC
+         LIMIT 3`,
+        [weekStart, weekEnd]
+      );
+      friendly = friendlyResult.rows.map(r => ({ name: r.display_name, count: parseInt(r.total, 10) }));
+    } catch (friendlyErr) {
+      console.error('다정한 친구 조회 오류 (무시):', friendlyErr.message);
+    }
+
     res.json({
-      leaderboard: result.rows.map(r => ({ name: r.display_name, songi: parseFloat(r.total) }))
+      leaderboard: result.rows.map(r => ({ name: r.display_name, songi: parseFloat(r.total) })),
+      friendly
     });
   } catch (error) {
     console.error('주간 영웅 조회 오류:', error);

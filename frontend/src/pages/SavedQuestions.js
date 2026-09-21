@@ -269,7 +269,7 @@ function SavedQuestions() {
     // 내가 쓴 관련질문 삭제 (송이도 함께 반납)
     const handleDeleteRelated = async (nodeId) => {
         const ok = window.confirm(
-            '이 관련질문을 지울까요?\n\n질문을 올릴 때 받았던 5송이도 함께 반납돼요.'
+            '이 관련질문을 지울까요?\n\n질문을 올릴 때 받았던 6송이도 함께 반납돼요.'
         );
         if (!ok) return;
 
@@ -672,7 +672,7 @@ function SavedQuestions() {
                     questionTitle={relatedModal.title}
                     onSubmit={handleRelatedSubmit}
                     onClose={() => setRelatedModal(null)}
-                    songi={5}
+                    songi={6}
                 />
             )}
 

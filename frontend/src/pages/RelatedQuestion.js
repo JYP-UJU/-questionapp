@@ -42,7 +42,7 @@ function RelatedQuestion() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            alert('관련질문이 등록되었습니다! 5송이를 획득했어요 🌸');
+            alert('관련질문이 등록되었습니다! 6송이를 획득했어요 🌸');
             navigate(-1);
         } catch (err) {
             console.error('Submit error:', err);
@@ -122,7 +122,7 @@ function RelatedQuestion() {
                                 disabled={loading}
                                 className="submit-btn"
                             >
-                                {loading ? '등록 중...' : '작성하기 + 5송이 🌸'}
+                                {loading ? '등록 중...' : '작성하기 + 6송이 🌸'}
                             </button>
                         </div>
                     </form>
