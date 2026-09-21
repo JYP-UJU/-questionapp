@@ -104,6 +104,7 @@ export const sessionsAPI = {
 export const notificationsAPI = {
     getAll: () => api.get('/notifications'),
     getUnreadCount: () => api.get('/notifications/unread-count'),
+    getLatest: (afterId) => api.get('/notifications/latest', { params: afterId == null ? {} : { after_id: afterId } }),
     markAllRead: () => api.put('/notifications/read-all'),
     markRead: (id) => api.put(`/notifications/${id}/read`),
 };

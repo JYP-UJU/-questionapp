@@ -34,6 +34,47 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// 팝업용: after_id 이후에 새로 도착한 읽지 않은 알림만 (최대 5개)
+// - after_id가 없으면 "기준선"만 잡아준다(현재 최대 id 반환, 알림 목록은 비어 있음)
+//   → 접속 직후 예전 알림이 한꺼번에 팝업으로 쏟아지지 않게 하기 위함
+router.get('/latest', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const afterId = parseInt(req.query.after_id, 10);
+
+    if (Number.isNaN(afterId)) {
+      const base = await pool.query(
+        'SELECT COALESCE(MAX(id), 0) AS max_id FROM notifications WHERE user_id = $1',
+        [userId]
+      );
+      return res.json({ max_id: parseInt(base.rows[0].max_id), notifications: [] });
+    }
+
+    const result = await pool.query(
+      `SELECT
+         n.id,
+         n.type,
+         CASE
+           WHEN u.id IS NOT NULL THEN REPLACE(n.message, '누군가', COALESCE(u.name, u.username))
+           ELSE n.message
+         END as message,
+         n.related_question_id,
+         n.created_at
+       FROM notifications n
+       LEFT JOIN users u ON n.actor_id = u.id
+       WHERE n.user_id = $1 AND n.id > $2 AND n.is_read = false
+       ORDER BY n.id ASC
+       LIMIT 5`,
+      [userId, afterId]
+    );
+    const maxId = result.rows.length ? result.rows[result.rows.length - 1].id : afterId;
+    res.json({ max_id: maxId, notifications: result.rows });
+  } catch (err) {
+    console.error('최신 알림 조회 오류:', err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 // 읽지 않은 알림 개수
 router.get('/unread-count', authenticateToken, async (req, res) => {
   try {

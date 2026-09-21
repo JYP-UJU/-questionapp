@@ -8,7 +8,6 @@ import Friends from './pages/Friends';
 import RelatedQuestion from './pages/RelatedQuestion';
 import Setting from './pages/Setting';
 import WeeklyReport from './pages/WeeklyReport';
-import SongiStatus from './pages/SongiStatus';
 import SongiHistory from './pages/SongiHistory';
 import { getToken } from './services/api';
 import Profile from './pages/Profile';
@@ -17,6 +16,7 @@ import QuizOlympics from './pages/QuizOlympics';
 import MonthlyReport from './pages/MonthlyReport';
 import SessionTracker from './components/SessionTracker';
 import Notifications from './pages/Notifications';
+import NotificationToast from './components/NotificationToast';
 
 // 보호된 라우트 컴포넌트
 function ProtectedRoute({ children }) {
@@ -36,6 +36,7 @@ function App() {
     return (
         <Router>
             <SessionTracker />
+            <NotificationToast />
             <Routes>
                 <Route path="/login" element={<Login />} />
 
@@ -51,7 +52,6 @@ function App() {
                 <Route path="/setting" element={<ProtectedRoute><Setting /></ProtectedRoute>} />
                 <Route path="/weekly-report" element={<ProtectedRoute><WeeklyReport /></ProtectedRoute>} />
                 <Route path="/monthly-report" element={<ProtectedRoute><MonthlyReport /></ProtectedRoute>} />
-                <Route path="/songi-status" element={<ProtectedRoute><SongiStatus /></ProtectedRoute>} />
                 <Route path="/songi-history" element={<ProtectedRoute><SongiHistory /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
