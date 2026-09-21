@@ -117,6 +117,17 @@ router.post('/', authenticateToken, async (req, res) => {
       myQuestionCount: parseInt(myQuestionCountResult.rows[0].count, 10) || 0
     });
 
+    // 물음송이 AI: 응답을 보낸 뒤 뒤에서 조용히 의견을 만든다 (기다리지 않음, 실패해도 무시됨)
+    // 최상위 질문에만 달고, ANTHROPIC_API_KEY 가 없으면 아무 일도 하지 않는다.
+    if (!parent_question_id) {
+      require('../services/aiOpinion').respondToQuestion({
+        id: question.id,
+        title: question.title,
+        content: question.content,
+        user_id: userId
+      });
+    }
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('질문 작성 오류:', error);

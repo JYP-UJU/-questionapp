@@ -418,7 +418,14 @@ function Friends() {
                                     <div key={i} className="preview-row preview-row-indent">
                                         <span className="preview-icon">💬</span>
                                         <span className="preview-author">{op.username}:</span>
-                                        <span className="preview-text">{op.opinion}</span>
+                                        <span className="preview-text">
+                                            {op.opinion}
+                                            {op.username === '물음송이 AI' && (
+                                                <span style={{ display: 'block', fontSize: '11px', color: '#999', marginTop: '2px' }}>
+                                                    🤖 AI가 쓴 글이에요. 틀릴 수 있어요.
+                                                </span>
+                                            )}
+                                        </span>
                                         {currentUser?.is_admin && (
                                             <button
                                                 className="preview-toggle-btn"
@@ -656,7 +663,14 @@ function Friends() {
                                             <div key={i} className="preview-row preview-row-indent">
                                                 <span className="preview-icon">💬</span>
                                                 <span className="preview-author">{op.username}:</span>
-                                                <span className="preview-text">{op.opinion}</span>
+                                                <span className="preview-text">
+                                            {op.opinion}
+                                            {op.username === '물음송이 AI' && (
+                                                <span style={{ display: 'block', fontSize: '11px', color: '#999', marginTop: '2px' }}>
+                                                    🤖 AI가 쓴 글이에요. 틀릴 수 있어요.
+                                                </span>
+                                            )}
+                                        </span>
                                                 {currentUser?.is_admin && (
                                                     <button
                                                         className="preview-toggle-btn"
