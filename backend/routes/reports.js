@@ -722,6 +722,33 @@ router.put('/reward-claims/:id/complete', authenticateToken, async (req, res) =>
   }
 });
 
+// ===== 주간 이야기(위인 스토리) 공통 순환용 헬퍼 (2026-09-22 추가) =====
+// 레일웨이 서버는 UTC로 도는데(learnings.md 참고), 이 이야기 로테이션은 "진짜 한국시간 기준 월요일"에
+// 넘어가야 해서 서버 타임존에 상관없이 KST 월~일 경계를 직접 계산함.
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+function getKstCalendarWeekBounds(date = new Date()) {
+  const kst = new Date(date.getTime() + KST_OFFSET_MS);
+  const dow = kst.getUTCDay(); // 0=일 ... 6=토 (KST 기준 요일)
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+
+  const kstMonday = new Date(kst);
+  kstMonday.setUTCDate(kst.getUTCDate() + mondayOffset);
+  kstMonday.setUTCHours(0, 0, 0, 0);
+
+  const kstSunday = new Date(kstMonday);
+  kstSunday.setUTCDate(kstMonday.getUTCDate() + 6);
+  kstSunday.setUTCHours(23, 59, 59, 999);
+
+  // DB 비교용으로 다시 실제 UTC 시각으로 되돌려서 반환
+  return {
+    monday: new Date(kstMonday.getTime() - KST_OFFSET_MS),
+    sunday: new Date(kstSunday.getTime() - KST_OFFSET_MS),
+  };
+}
+// 이야기 순환의 "1번(에디슨)"이 걸리는 기준 월요일(KST 00:00). 실제 학생들에게 배포하는 주가
+// 이 날짜와 다르면 이 값만 바꾸면 됨 — 2026-09-21(월)을 1번으로 잡음.
+const STORY_CYCLE_ANCHOR_MONDAY_KST = Date.UTC(2026, 8, 21, 0, 0, 0) - KST_OFFSET_MS;
+
 // 다정한 친구 TOP 3: 기간 안에 (내 카드가 아닌) 친구 카드에 의견 + 관련질문을 가장 많이 남긴 사람 (관리자/AI 제외)
 // 실패해도 영웅 목록은 정상적으로 나오도록 빈 배열을 돌려준다.
 async function getFriendlyTop3(start, end) {
@@ -758,12 +785,16 @@ async function getFriendlyTop3(start, end) {
   }
 }
 
-// ===== 주 1회 인앱 팝업 데이터 (개인별 주차 기준, 2026-09-13 대화에서 확정된 설계) =====
-// 주차 계산: 가입일(users.created_at)로부터 경과일 ÷ 7, 1주차부터 시작 (개인별로 다름)
-// 1주차 내용은 기존 "첫 로그인 안내"(FirstLoginGuide)가 그대로 담당하므로,
-// 이 팝업 자체는 프론트에서 weekNumber >= 2일 때만 띄움 (이 엔드포인트는 1주차에 불려도 정상 응답함)
-// 활동 요약은 "개인별 주차" 범위로 집계하고, 이주의 영웅/다정한 친구 랭킹은 원래 랭킹판이
-// 달력 기준 주(월~일)라 그 기준을 그대로 따름 — 서로 기준이 다를 수 있음을 알고 있는 설계.
+// ===== 주 1회 인앱 팝업 데이터 =====
+// (2026-09-13 최초 설계 → 2026-09-22 피오 피드백으로 "이야기" 부분만 구조 변경)
+// - 활동 요약/하이라이트 질문: 그대로 "개인별 주차"(가입일 기준 경과일 ÷ 7) 범위로 집계함 (안 바꿈)
+// - 이주의 영웅/다정한 친구 랭킹: 원래 랭킹판 기준인 달력 주(월~일)를 그대로 따름 (안 바꿈)
+// - 이번 주 이야기(위인 스토리): 개인 주차가 아니라 "진짜 이번 주"(한국시간 기준 달력 주)로 전체
+//   학생에게 동일하게 노출되도록 바꿈 — 가입일이 제각각이라 개인 주차로 돌리면, 뜨문뜨문 접속하는
+//   학생이 중간 주차 이야기들을 건너뛰고 못 보는 문제가 있었음. 이제는 신규 가입 학생도 별도 유예 없이
+//   가입 시점에 마침 진행 중인 이야기부터 바로 합류함 (weekNumber>=2 게이트 제거, 프론트에서도 제거함)
+// - 프론트의 "이번 주 봤는지" 중복 노출 방지는 이제 storyWeekKey(그 주 월요일 날짜, KST)로 함 —
+//   개인 weekNumber는 계속 내려주지만 그건 활동요약 계산용일 뿐, 팝업 중복 체크에는 더 이상 안 씀.
 router.get('/weekly-popup', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
@@ -853,8 +884,14 @@ router.get('/weekly-popup', authenticateToken, async (req, res) => {
       console.error('팝업용 랭킹 조회 오류 (무시):', e.message);
     }
 
-    // 이번 주 이야기: 17주 순환 (18주차부터는 다시 1번부터)
-    const story = WEEKLY_STORIES[(weekNumber - 1) % WEEKLY_STORIES.length];
+    // 이번 주 이야기: 17주 순환, 개인 주차가 아니라 "진짜 이번 주"(달력 기준, KST) 공통으로 노출
+    const { monday: storyWeekMonday } = getKstCalendarWeekBounds(now);
+    const weeksSinceAnchor = Math.floor(
+      (storyWeekMonday.getTime() - STORY_CYCLE_ANCHOR_MONDAY_KST) / (7 * DAY_MS)
+    );
+    const storyIndex = ((weeksSinceAnchor % WEEKLY_STORIES.length) + WEEKLY_STORIES.length) % WEEKLY_STORIES.length;
+    const story = WEEKLY_STORIES[storyIndex];
+    const storyWeekKey = storyWeekMonday.toISOString().slice(0, 10); // 프론트에서 "이번 주 이야기 봤는지" 체크용 키
 
     res.json({
       weekNumber,
@@ -868,6 +905,7 @@ router.get('/weekly-popup', authenticateToken, async (req, res) => {
       ranking: { weeklyHeroRank, friendlyRank },
       exchangeStatus,
       story,
+      storyWeekKey,
       tagline: DEWEY_TAGLINE,
       hasEmail: !!(user.email && user.email.trim()),
     });

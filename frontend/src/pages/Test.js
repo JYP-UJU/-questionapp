@@ -99,8 +99,13 @@ function Test() {
         setShowGuide(false);
     };
 
-    // 주 1회 인앱 팝업 (2주차부터, 1주차는 위 첫 로그인 안내가 담당) - 로그인 시점에 한 번만 확인
+    // 주 1회 인앱 팝업 - 로그인 시점에 한 번만 확인
     // 첫 로그인 안내가 뜨는 경우엔 같이 띄우지 않음 (동시에 두 개 뜨는 것 방지)
+    // (2026-09-22 변경) 이야기는 이제 개인 가입일 주차가 아니라 "진짜 이번 주"(달력 기준)로 전체
+    // 학생에게 동일하게 도는 콘텐츠라서, 신규 가입 학생도 유예 없이 바로 합류함(예전의 weekNumber>=2
+    // 체크 제거). 대신 "이번 주 이미 봤는지"는 개인 weekNumber가 아니라 서버가 내려주는
+    // storyWeekKey(그 주 월요일 날짜, KST)로 구분함 — 뜨문뜨문 접속하는 학생도 언제 오든
+    // "지금 진행 중인 이야기"를 놓치지 않고 볼 수 있음.
     const [weeklyPopupData, setWeeklyPopupData] = useState(null);
     const [showWeeklyPopup, setShowWeeklyPopup] = useState(false);
     useEffect(() => {
@@ -111,9 +116,9 @@ function Test() {
         weeklyPopupAPI.get()
             .then((res) => {
                 const data = res.data;
-                if (!data || data.weekNumber < 2) return; // 1주차는 첫 로그인 안내가 담당
-                const lastSeenWeek = parseInt(localStorage.getItem(`weeklyPopupWeek_${userId}`) || '0', 10);
-                if (lastSeenWeek !== data.weekNumber) {
+                if (!data) return;
+                const lastSeenWeekKey = localStorage.getItem(`weeklyPopupWeek_${userId}`);
+                if (lastSeenWeekKey !== data.storyWeekKey) {
                     setWeeklyPopupData(data);
                     setShowWeeklyPopup(true);
                 }
@@ -127,7 +132,7 @@ function Test() {
     const handleCloseWeeklyPopup = () => {
         const userId = getUserIdFromToken();
         if (userId && weeklyPopupData) {
-            localStorage.setItem(`weeklyPopupWeek_${userId}`, String(weeklyPopupData.weekNumber));
+            localStorage.setItem(`weeklyPopupWeek_${userId}`, weeklyPopupData.storyWeekKey);
         }
         setShowWeeklyPopup(false);
     };
