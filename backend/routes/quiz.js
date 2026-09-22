@@ -203,16 +203,18 @@ router.post('/submit', authenticateToken, async (req, res) => {
             }
         }
 
-        // 송이 지급 (+4송이, 관리자 계정은 제외, 기록은 항상 남김)
+        // 송이 지급 (+5송이, 관리자 계정은 제외, 기록은 항상 남김)
+        // 2026-09-22: 화면(Quiz.js의 "+5송이" 표시)과 실제 지급액(4)이 불일치했던 것을,
+        // 피오 결정에 따라 지급액을 5로 올려서 맞춤
         const quizGrantResult = await client.query(
-            'UPDATE users SET songi_count = songi_count + 4 WHERE id = $1 AND is_admin IS NOT TRUE',
+            'UPDATE users SET songi_count = songi_count + 5 WHERE id = $1 AND is_admin IS NOT TRUE',
             [userId]
         );
         const quizSongiGranted = quizGrantResult.rowCount > 0;
         await client.query(
             `INSERT INTO songi_transactions (user_id, amount, activity_type, description)
              VALUES ($1, $2, 'quiz', '퀴즈 완료')`,
-            [userId, quizSongiGranted ? 4 : 0]
+            [userId, quizSongiGranted ? 5 : 0]
         );
 
         const userResult = await client.query(
@@ -226,7 +228,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
         res.json({
             correctCount,
             totalCount: responses.length,
-            songiEarned: quizSongiGranted ? 4 : 0,
+            songiEarned: quizSongiGranted ? 5 : 0,
             currentSongi,
             results,
             savedCount: savedQuestions.length,

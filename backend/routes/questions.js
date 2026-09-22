@@ -471,9 +471,10 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
       [id, userId, opinion, questionType]
     );
 
-    // 2송이 지급 (관리자 계정은 제외)
+    // 3송이 지급 (관리자 계정은 제외) — 2026-09-22: 화면(OpinionModal의 "+3송이" 표시)과
+    // 실제 지급액(2)이 불일치했던 것을, 피오 결정에 따라 지급액을 3으로 올려서 맞춤
     const opinionGrantResult = await client.query(
-      'UPDATE users SET songi_count = songi_count + 2 WHERE id = $1 AND is_admin IS NOT TRUE',
+      'UPDATE users SET songi_count = songi_count + 3 WHERE id = $1 AND is_admin IS NOT TRUE',
       [userId]
     );
     const opinionSongiGranted = opinionGrantResult.rowCount > 0;
@@ -509,13 +510,13 @@ router.post('/:id/opinion', authenticateToken, async (req, res) => {
     await client.query(
       `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
        VALUES ($1, $2, 'opinion', '의견 작성', $3, $4)`,
-      [userId, opinionSongiGranted ? 2 : 0, opinionQId, opinion]
+      [userId, opinionSongiGranted ? 3 : 0, opinionQId, opinion]
     );
 
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: opinionSongiGranted ? '의견이 등록되었습니다! 2송이를 획득했어요 🌸' : '의견이 등록되었습니다!',
+      message: opinionSongiGranted ? '의견이 등록되었습니다! 3송이를 획득했어요 🌸' : '의견이 등록되었습니다!',
       opinion: result.rows[0]
     });
 
