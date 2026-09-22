@@ -858,6 +858,7 @@ router.get('/weekly-popup', authenticateToken, async (req, res) => {
 
     res.json({
       weekNumber,
+      username: user.username,
       period: { start: weekStart.toISOString(), end: weekEnd.toISOString() },
       summary: {
         questionsCreated: parseInt(questionsResult.rows[0].cnt),
