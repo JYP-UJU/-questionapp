@@ -302,6 +302,31 @@ router.put('/me', authenticateToken, async (req, res) => {
   }
 });
 
+// 이메일 등록/변경 (주간 팝업 "이메일로 받기" 기능용 — 회원가입 때 이미 입력했다면 보통 안 씀)
+router.put('/me/email', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: '이메일을 입력해주세요' });
+    }
+
+    const trimmed = email.trim();
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!EMAIL_RE.test(trimmed)) {
+      return res.status(400).json({ error: '올바른 이메일 형식이 아니에요' });
+    }
+
+    await pool.query('UPDATE users SET email = $1 WHERE id = $2', [trimmed, userId]);
+
+    res.json({ message: '이메일이 저장되었어요', email: trimmed });
+  } catch (error) {
+    console.error('이메일 저장 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
+
 // 비밀번호 변경
 router.put('/me/password', authenticateToken, async (req, res) => {
   try {

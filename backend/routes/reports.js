@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const authenticateToken = require('../middleware/auth');
+const { WEEKLY_STORIES, DEWEY_TAGLINE } = require('../data/weeklyStories');
 
 // ===== 주간 리포트 데이터 생성 (실시간 집계) =====
 router.get('/weekly', authenticateToken, async (req, res) => {
@@ -500,58 +501,64 @@ router.post('/monthly/reflection', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== 상품권 교환 자격 판정 (2026-09-14 기준 변경) =====
+// ===== 상품권 교환 자격 판정 로직 (2026-09-14 기준 변경) =====
 // 규칙: (1) 첫 지급(이 계정이 완료된 지급 이력이 없음): 누적 송이 50 이상, 일지 조건 없음
 //       (2) 2번째 지급부터: 직전 지급(완료) 시점 이후로 송이 100 이상 쌓이고,
 //           그 사이 기간에 일지(주간+월간 합쳐서)를 1개 이상 작성
 //       소급 적용 안 함 — 과거 지급 이력은 그대로 두고, "마지막 지급 시점"을 기준으로 판정
+// /exchange-status와 주간 팝업(/weekly-popup)이 같은 로직을 그대로 재사용하도록 함수로 분리함.
+async function computeExchangeStatus(userId) {
+  const FIRST_PAYOUT_THRESHOLD = 50;
+  const SUBSEQUENT_PAYOUT_THRESHOLD = 100;
+  const MIN_JOURNAL_COUNT = 1;
+
+  // 이 계정의 가장 최근 완료 지급 내역 (없으면 첫 지급 대상)
+  const lastClaimResult = await pool.query(
+    `SELECT completed_at FROM reward_claims
+     WHERE user_id = $1 AND status = 'completed'
+     ORDER BY completed_at DESC LIMIT 1`,
+    [userId]
+  );
+  const lastClaim = lastClaimResult.rows[0];
+  const isFirstPayout = !lastClaim;
+  const threshold = isFirstPayout ? FIRST_PAYOUT_THRESHOLD : SUBSEQUENT_PAYOUT_THRESHOLD;
+
+  // 일지 개수: 첫 지급은 조건 자체가 없어서 0 처리, 2번째부터는 직전 지급 이후로 작성한 것만 카운트
+  let journalCount = 0;
+  if (!isFirstPayout) {
+    const journalResult = await pool.query(
+      `SELECT COUNT(*) as cnt FROM songi_transactions
+       WHERE user_id = $1 AND activity_type IN ('weekly_journal', 'monthly_journal')
+         AND created_at > $2`,
+      [userId, lastClaim.completed_at]
+    );
+    journalCount = parseInt(journalResult.rows[0].cnt);
+  }
+
+  // 누적(현재 보유) 송이 — 지급 시 그만큼 차감되는 구조라 "직전 지급 이후 쌓인 양"과 항상 같음
+  const userResult = await pool.query('SELECT songi_count FROM users WHERE id = $1', [userId]);
+  const lifetimeSongi = parseFloat(userResult.rows[0]?.songi_count || 0);
+
+  const hasSongi = lifetimeSongi >= threshold;
+  const hasJournals = isFirstPayout || journalCount >= MIN_JOURNAL_COUNT;
+  const eligible = hasSongi && hasJournals;
+
+  return {
+    eligible,
+    lifetimeSongi,
+    threshold,
+    songiNeeded: Math.max(0, threshold - lifetimeSongi),
+    journalCount,
+    minJournalCount: isFirstPayout ? 0 : MIN_JOURNAL_COUNT,
+    isFirstPayout
+  };
+}
+
 router.get('/exchange-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id || req.user.userId;
-    const FIRST_PAYOUT_THRESHOLD = 50;
-    const SUBSEQUENT_PAYOUT_THRESHOLD = 100;
-    const MIN_JOURNAL_COUNT = 1;
-
-    // 이 계정의 가장 최근 완료 지급 내역 (없으면 첫 지급 대상)
-    const lastClaimResult = await pool.query(
-      `SELECT completed_at FROM reward_claims
-       WHERE user_id = $1 AND status = 'completed'
-       ORDER BY completed_at DESC LIMIT 1`,
-      [userId]
-    );
-    const lastClaim = lastClaimResult.rows[0];
-    const isFirstPayout = !lastClaim;
-    const threshold = isFirstPayout ? FIRST_PAYOUT_THRESHOLD : SUBSEQUENT_PAYOUT_THRESHOLD;
-
-    // 일지 개수: 첫 지급은 조건 자체가 없어서 0 처리, 2번째부터는 직전 지급 이후로 작성한 것만 카운트
-    let journalCount = 0;
-    if (!isFirstPayout) {
-      const journalResult = await pool.query(
-        `SELECT COUNT(*) as cnt FROM songi_transactions
-         WHERE user_id = $1 AND activity_type IN ('weekly_journal', 'monthly_journal')
-           AND created_at > $2`,
-        [userId, lastClaim.completed_at]
-      );
-      journalCount = parseInt(journalResult.rows[0].cnt);
-    }
-
-    // 누적(현재 보유) 송이 — 지급 시 그만큼 차감되는 구조라 "직전 지급 이후 쌓인 양"과 항상 같음
-    const userResult = await pool.query('SELECT songi_count FROM users WHERE id = $1', [userId]);
-    const lifetimeSongi = parseFloat(userResult.rows[0]?.songi_count || 0);
-
-    const hasSongi = lifetimeSongi >= threshold;
-    const hasJournals = isFirstPayout || journalCount >= MIN_JOURNAL_COUNT;
-    const eligible = hasSongi && hasJournals;
-
-    res.json({
-      eligible,
-      lifetimeSongi,
-      threshold,
-      songiNeeded: Math.max(0, threshold - lifetimeSongi),
-      journalCount,
-      minJournalCount: isFirstPayout ? 0 : MIN_JOURNAL_COUNT,
-      isFirstPayout
-    });
+    const status = await computeExchangeStatus(userId);
+    res.json(status);
   } catch (error) {
     console.error('교환 자격 판정 오류:', error);
     res.status(500).json({ error: '서버 오류가 발생했습니다' });
@@ -750,6 +757,124 @@ async function getFriendlyTop3(start, end) {
     return [];
   }
 }
+
+// ===== 주 1회 인앱 팝업 데이터 (개인별 주차 기준, 2026-09-13 대화에서 확정된 설계) =====
+// 주차 계산: 가입일(users.created_at)로부터 경과일 ÷ 7, 1주차부터 시작 (개인별로 다름)
+// 1주차 내용은 기존 "첫 로그인 안내"(FirstLoginGuide)가 그대로 담당하므로,
+// 이 팝업 자체는 프론트에서 weekNumber >= 2일 때만 띄움 (이 엔드포인트는 1주차에 불려도 정상 응답함)
+// 활동 요약은 "개인별 주차" 범위로 집계하고, 이주의 영웅/다정한 친구 랭킹은 원래 랭킹판이
+// 달력 기준 주(월~일)라 그 기준을 그대로 따름 — 서로 기준이 다를 수 있음을 알고 있는 설계.
+router.get('/weekly-popup', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+
+    const userResult = await pool.query(
+      'SELECT username, songi_count, created_at, email FROM users WHERE id = $1',
+      [userId]
+    );
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+    const user = userResult.rows[0];
+    const createdAt = new Date(user.created_at);
+    const now = new Date();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    const daysSinceSignup = Math.floor((now.getTime() - createdAt.getTime()) / DAY_MS);
+    const weekNumber = Math.max(1, Math.floor(daysSinceSignup / 7) + 1);
+
+    // 이번 개인 주차의 시작/끝 (가입일 기준, 달력 주가 아님)
+    const weekStart = new Date(createdAt.getTime() + (weekNumber - 1) * 7 * DAY_MS);
+    const weekEnd = new Date(createdAt.getTime() + weekNumber * 7 * DAY_MS);
+
+    const [questionsResult, opinionsResult, topQuestionResult, exchangeStatus] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*) as cnt FROM user_questions
+         WHERE user_id = $1 AND created_at >= $2 AND created_at < $3
+         AND parent_question_id IS NULL AND related_seed_question_id IS NULL`,
+        [userId, weekStart.toISOString(), weekEnd.toISOString()]
+      ),
+      pool.query(
+        `SELECT COUNT(*) as cnt FROM question_opinions
+         WHERE user_id = $1 AND created_at >= $2 AND created_at < $3`,
+        [userId, weekStart.toISOString(), weekEnd.toISOString()]
+      ),
+      pool.query(
+        `SELECT uq.id, uq.title,
+           COALESCE(uq.likes_count, 0) as likes,
+           (SELECT COUNT(*) FROM question_opinions
+            WHERE question_id = uq.id
+            AND question_type IN ('user_question', 'user', 'my_question', 'friend_question')) as opinion_count
+         FROM user_questions uq
+         WHERE uq.user_id = $1 AND uq.created_at >= $2 AND uq.created_at < $3
+           AND uq.parent_question_id IS NULL AND uq.related_seed_question_id IS NULL
+         ORDER BY COALESCE(uq.likes_count, 0) +
+           (SELECT COUNT(*) FROM question_opinions
+            WHERE question_id = uq.id
+            AND question_type IN ('user_question', 'user', 'my_question', 'friend_question')) DESC
+         LIMIT 1`,
+        [userId, weekStart.toISOString(), weekEnd.toISOString()]
+      ),
+      computeExchangeStatus(userId)
+    ]);
+
+    // 이번 주(달력 기준) 이주의 영웅/다정한 친구 TOP 3 안에 이 학생이 들었는지만 확인
+    // (TOP 3 밖이면 이 팝업에서도 그냥 안 보여줌 — 랭킹판과 동일한 동작)
+    let weeklyHeroRank = null;
+    let friendlyRank = null;
+    try {
+      const nowCal = new Date();
+      const dayOfWeek = nowCal.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(nowCal);
+      monday.setDate(nowCal.getDate() + mondayOffset);
+      monday.setHours(0, 0, 0, 0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+
+      const heroResult = await pool.query(
+        `SELECT u.id, SUM(st.amount) as total
+         FROM songi_transactions st
+         JOIN users u ON st.user_id = u.id
+         WHERE st.amount > 0 AND st.created_at >= $1 AND st.created_at <= $2
+         GROUP BY u.id
+         ORDER BY total DESC
+         LIMIT 3`,
+        [monday.toISOString(), sunday.toISOString()]
+      );
+      const heroIdx = heroResult.rows.findIndex(r => String(r.id) === String(userId));
+      weeklyHeroRank = heroIdx >= 0 ? heroIdx + 1 : null;
+
+      const friendly = await getFriendlyTop3(monday.toISOString(), sunday.toISOString());
+      const friendlyIdx = friendly.findIndex(f => f.name === user.username);
+      friendlyRank = friendlyIdx >= 0 ? friendlyIdx + 1 : null;
+    } catch (e) {
+      console.error('팝업용 랭킹 조회 오류 (무시):', e.message);
+    }
+
+    // 이번 주 이야기: 17주 순환 (18주차부터는 다시 1번부터)
+    const story = WEEKLY_STORIES[(weekNumber - 1) % WEEKLY_STORIES.length];
+
+    res.json({
+      weekNumber,
+      period: { start: weekStart.toISOString(), end: weekEnd.toISOString() },
+      summary: {
+        questionsCreated: parseInt(questionsResult.rows[0].cnt),
+        opinionsGiven: parseInt(opinionsResult.rows[0].cnt),
+      },
+      highlightQuestion: topQuestionResult.rows[0] || null,
+      ranking: { weeklyHeroRank, friendlyRank },
+      exchangeStatus,
+      story,
+      tagline: DEWEY_TAGLINE,
+      hasEmail: !!(user.email && user.email.trim()),
+    });
+  } catch (error) {
+    console.error('주간 팝업 데이터 조회 오류:', error);
+    res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  }
+});
 
 // ===== 이주의 영웅 TOP 3 (start/end 쿼리로 특정 주차 지정 가능, 없으면 이번 주) =====
 router.get('/weekly-leaderboard', authenticateToken, async (req, res) => {

@@ -92,6 +92,12 @@ export const rankingAPI = {
 // 사용자 API
 export const usersAPI = {
     getProfile: () => api.get('/users/me'),
+    updateEmail: (email) => api.put('/users/me/email', { email }),
+};
+
+// 주 1회 인앱 팝업(활동 요약 + 위인 이야기 + 상품권 진행바) API
+export const weeklyPopupAPI = {
+    get: () => api.get('/reports/weekly-popup'),
 };
 
 // 세션(체류시간) API

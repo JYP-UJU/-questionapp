@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { questionsAPI, getToken } from '../services/api';
+import { questionsAPI, getToken, weeklyPopupAPI, usersAPI } from '../services/api';
 import './Test.css';
 import BottomNav from '../components/BottomNav';
 import TopHeader from '../components/TopHeader';
 import FirstLoginGuide from '../components/FirstLoginGuide';
+import WeeklyPopup from '../components/WeeklyPopup';
 
 // 토큰 안의 userId만 가볍게 꺼내옴 (서버 검증용이 아니라 "이 계정이 안내를 봤는지" 로컬 저장 키로만 씀)
 function getUserIdFromToken() {
@@ -82,11 +83,13 @@ function Test() {
 
     // 첫 로그인 안내(사용법) - 계정별로 한 번만, "다음에 또 보기"를 고르면 다음 로그인 때 다시 뜸
     const [showGuide, setShowGuide] = useState(false);
+    const [guideChecked, setGuideChecked] = useState(false); // 안내 노출 여부를 이미 판단했는지 (주간 팝업과 동시에 안 뜨게 순서를 맞추는 용도)
     useEffect(() => {
         const userId = getUserIdFromToken();
-        if (!userId) return;
+        if (!userId) { setGuideChecked(true); return; }
         const seen = localStorage.getItem(`guideSeen_${userId}`);
         if (!seen) setShowGuide(true);
+        setGuideChecked(true);
     }, []);
     const handleCloseGuide = (seeAgainNextTime) => {
         const userId = getUserIdFromToken();
@@ -94,6 +97,43 @@ function Test() {
             localStorage.setItem(`guideSeen_${userId}`, 'true');
         }
         setShowGuide(false);
+    };
+
+    // 주 1회 인앱 팝업 (2주차부터, 1주차는 위 첫 로그인 안내가 담당) - 로그인 시점에 한 번만 확인
+    // 첫 로그인 안내가 뜨는 경우엔 같이 띄우지 않음 (동시에 두 개 뜨는 것 방지)
+    const [weeklyPopupData, setWeeklyPopupData] = useState(null);
+    const [showWeeklyPopup, setShowWeeklyPopup] = useState(false);
+    useEffect(() => {
+        if (!guideChecked || showGuide) return;
+        const userId = getUserIdFromToken();
+        if (!userId) return;
+
+        weeklyPopupAPI.get()
+            .then((res) => {
+                const data = res.data;
+                if (!data || data.weekNumber < 2) return; // 1주차는 첫 로그인 안내가 담당
+                const lastSeenWeek = parseInt(localStorage.getItem(`weeklyPopupWeek_${userId}`) || '0', 10);
+                if (lastSeenWeek !== data.weekNumber) {
+                    setWeeklyPopupData(data);
+                    setShowWeeklyPopup(true);
+                }
+            })
+            .catch((err) => {
+                console.error('주간 팝업 데이터 조회 실패:', err);
+            });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [guideChecked, showGuide]);
+
+    const handleCloseWeeklyPopup = () => {
+        const userId = getUserIdFromToken();
+        if (userId && weeklyPopupData) {
+            localStorage.setItem(`weeklyPopupWeek_${userId}`, String(weeklyPopupData.weekNumber));
+        }
+        setShowWeeklyPopup(false);
+    };
+
+    const handleSaveWeeklyEmail = async (email) => {
+        await usersAPI.updateEmail(email);
     };
 
     const searchThumbnails = async (keyword) => {
@@ -174,6 +214,13 @@ function Test() {
     return (
         <div className="create-container">
             {showGuide && <FirstLoginGuide onClose={handleCloseGuide} />}
+            {showWeeklyPopup && (
+                <WeeklyPopup
+                    data={weeklyPopupData}
+                    onClose={handleCloseWeeklyPopup}
+                    onSaveEmail={handleSaveWeeklyEmail}
+                />
+            )}
             <TopHeader
                 icon="✏️"
                 title="내 질문하기"
