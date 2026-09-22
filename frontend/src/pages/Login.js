@@ -59,6 +59,27 @@ function Login() {
         });
     };
 
+    // 부모님께 동의서 링크(+코드)를 카카오톡 등으로 바로 보내기 (지원하지 않는 브라우저에서는 링크 복사)
+    const handleShareToParent = async () => {
+        const url = `${window.location.origin}/parent_consent.html`;
+        const text = `물음송이 연구 참여를 위한 부모님 동의서예요.${signupCode ? ` (코드: ${signupCode})` : ''}`;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: '물음송이 부모님 동의서', text, url });
+                return;
+            }
+        } catch (e) {
+            if (e && e.name === 'AbortError') return; // 사용자가 공유창을 닫음
+        }
+        try {
+            await navigator.clipboard.writeText(`${text}\n${url}`);
+            setCodeCopied(true);
+            setTimeout(() => setCodeCopied(false), 2000);
+        } catch (e) {
+            window.prompt('아래 내용을 복사해서 부모님께 전달해 주세요:', `${text}\n${url}`);
+        }
+    };
+
     const handleContinueAfterSignup = () => {
         navigate('/create');   // 가입 후 첫 화면 = 질문쓰기
     };
@@ -121,6 +142,17 @@ function Login() {
                                 }}
                             >
                                 {codeCopied ? '복사됐어요! ✓' : '코드 복사하기'}
+                            </button>
+                            <button
+                                onClick={handleShareToParent}
+                                style={{
+                                    display: 'block', width: '100%', marginTop: '12px',
+                                    padding: '12px 20px', border: '2px solid #16a34a', borderRadius: '8px',
+                                    background: '#fff', color: '#16a34a', fontWeight: 700,
+                                    fontSize: '15px', cursor: 'pointer'
+                                }}
+                            >
+                                📨 부모님께 동의서 보내기
                             </button>
                             <p style={{ fontSize: '12px', color: '#888', marginTop: '10px' }}>
                                 설정 &gt; 내 코드 다시 보기에서 언제든 확인할 수 있어요.

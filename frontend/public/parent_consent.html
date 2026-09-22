@@ -99,6 +99,19 @@
   /* footer */
   .page-footer{text-align:center;padding:20px 20px 32px;font-size:10px;color:#ccc;line-height:1.7;border-top:1px solid #eee;margin-top:48px;}
   @media(max-width:480px){.header-title{font-size:18px;}.section-title{font-size:15px;}.signature-row{flex-direction:column;}}
+  /* 핵심 요약 + 전체 설명서 접기 (설명서 본문은 그대로, 보여 주는 방식만 변경) */
+  .quick-summary{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:18px 20px;margin-top:20px;font-size:16px;line-height:1.8;color:var(--ink-light);}
+  .quick-summary .qs-title{font-family:'Noto Serif KR',serif;font-weight:700;font-size:17px;margin-bottom:8px;color:var(--ink);}
+  .quick-summary ul{list-style:none;margin:0;padding:0;}
+  .quick-summary li{padding:4px 0 4px 18px;position:relative;}
+  .quick-summary li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:700;}
+  .quick-summary .qs-note{margin-top:8px;font-size:14px;color:var(--ink-muted);}
+  details.full-doc{margin-top:16px;border:1px solid var(--rule);border-radius:8px;background:white;}
+  details.full-doc>summary{cursor:pointer;padding:16px 18px;font-size:16px;font-weight:600;color:var(--accent);list-style:none;}
+  details.full-doc>summary::-webkit-details-marker{display:none;}
+  details.full-doc>summary::after{content:' ▼';font-size:12px;}
+  details.full-doc[open]>summary::after{content:' ▲';}
+  details.full-doc>.full-doc-body{padding:0 18px 18px;}
 </style>
 </head>
 <body>
@@ -120,6 +133,21 @@
     저는 연구책임자인 박지영(목포대학교 문화와자연유산연구소)입니다. 이 연구는 연구재단의 지원으로 진행되는 연구의 일부입니다 (과제번호 NRF-2025S1A5A2A01010631). 궁금한 점이 있다면 언제든지 연락해 주십시오. (전화 010-9755-9655 / 이메일 on.jypark@gmail.com)
   </div>
 
+
+  <div class="quick-summary">
+    <div class="qs-title">먼저 핵심만 알려 드려요 (약 1분)</div>
+    <ul>
+      <li><strong>자녀가 하는 일</strong> — 2026년 9월~12월(약 4개월), 하루 약 5분 앱에서 과학 질문 올리기·퀴즈 풀기·친구 질문에 반응 남기기</li>
+      <li><strong>위험</strong> — 신체적·정서적 위험이 없는 교육 활동이며, 언제든 그만둘 수 있고 불이익이 없습니다</li>
+      <li><strong>개인정보</strong> — 닉네임(연구용 ID)으로 활동하고, 개인을 알아볼 수 없는 형태로 분석하며, 연구 종료 후 3년 보관 뒤 폐기합니다</li>
+      <li><strong>보상</strong> — 200송이를 모으면 1,000원 편의점 모바일 상품권 (주간일지 1회 이상 포함)</li>
+    </ul>
+    <div class="qs-note">위는 요약입니다. 전체 설명서(15개 항목)는 아래에서 펼쳐 보실 수 있습니다.</div>
+  </div>
+
+  <details class="full-doc" id="fullDoc">
+    <summary>📄 전체 설명서 보기 (15개 항목)</summary>
+    <div class="full-doc-body">
   <div class="section">
     <div class="section-num">01</div>
     <div class="section-title">연구의 배경과 목적</div>
@@ -282,6 +310,9 @@
       </div>
     </div>
   </div>
+
+    </div>
+  </details>
 
   <hr class="divider">
 
