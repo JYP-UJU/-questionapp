@@ -145,6 +145,9 @@ function Admin() {
   // 관리자 메세지 보내기 모달 (한 명 또는 전체)
   const [messageModal, setMessageModal] = useState(null); // { userId, username } - userId가 null이면 전체 사용자
   const [messageText, setMessageText] = useState('');
+  // 보낸 메세지함 (2026-09-23)
+  const [sentMessages, setSentMessages] = useState([]);
+  const [sentFilter, setSentFilter] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
 
@@ -240,13 +243,30 @@ function Admin() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const loadSentMessages = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/admin/messages');
+      setSentMessages(res.data.messages || []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        alert('관리자 권한이 없어요');
+        navigate('/setting');
+      }
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (tab === 'activities') loadActivities();
     else if (tab === 'users') loadUsers();
     else if (tab === 'sessions') loadSessionsSummary();
     else if (tab === 'reminders') loadReminderCandidates();
+    else if (tab === 'messages') loadSentMessages();
     else loadRewardClaims();
-  }, [tab, loadActivities, loadUsers, loadRewardClaims, loadSessionsSummary, loadReminderCandidates]);
+  }, [tab, loadActivities, loadUsers, loadRewardClaims, loadSessionsSummary, loadReminderCandidates, loadSentMessages]);
 
   // 클립보드 복사 (실패하면 alert로 값을 보여줘서 수동 복사라도 가능하게)
   const copyText = async (text) => {
@@ -386,6 +406,7 @@ function Admin() {
       alert(res.data?.message || '메세지를 보냈어요');
       setMessageModal(null);
       setMessageText('');
+      if (tab === 'messages') loadSentMessages();
     } catch (err) {
       alert(err.response?.data?.error || '메세지 전송에 실패했습니다');
     } finally {
@@ -464,6 +485,10 @@ function Admin() {
           {reminderCandidates.length > 0 && (
             <span style={styles.pendingBadge}>{reminderCandidates.length}</span>
           )}
+        </button>
+        <button style={{...styles.tab, ...(tab === 'messages' ? styles.tabActive : {})}}
+          onClick={() => setTab('messages')}>
+          💌 메세지함
         </button>
       </div>
 
@@ -601,10 +626,6 @@ function Admin() {
               value={userFilter}
               onChange={e => setUserFilter(e.target.value)}
             />
-            <button style={styles.broadcastBtn}
-              onClick={() => setMessageModal({ userId: null, username: '전체 사용자' })}>
-              📢 전체 사용자에게 메세지 보내기
-            </button>
           </div>
 
           {loading ? (
@@ -841,6 +862,68 @@ function Admin() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ===== 보낸 메세지함 탭 (2026-09-23) ===== */}
+      {tab === 'messages' && (
+        <div>
+          <div style={styles.filterBar}>
+            <input
+              style={styles.searchInput}
+              placeholder="받는 사람 닉네임이나 내용으로 찾기..."
+              value={sentFilter}
+              onChange={e => setSentFilter(e.target.value)}
+            />
+            <button style={styles.broadcastBtn}
+              onClick={() => setMessageModal({ userId: null, username: '전체 사용자' })}>
+              📢 전체 사용자에게 메세지 보내기
+            </button>
+            <p style={{margin: '8px 0 0', fontSize: 12, color: '#888', lineHeight: 1.5}}>
+              한 명에게 보내기는 '사용자 목록'에서 💌 버튼을 눌러요.
+            </p>
+          </div>
+
+          {loading ? (
+            <div style={styles.loading}>로딩 중...</div>
+          ) : (() => {
+            const f = sentFilter.trim().toLowerCase();
+            const list = sentMessages.filter(m => !f
+              || (m.recipient_name || '').toLowerCase().includes(f)
+              || (m.message || '').toLowerCase().includes(f));
+            if (list.length === 0) {
+              return <div style={styles.empty}>{f ? '찾는 메세지가 없어요' : '아직 보낸 메세지가 없어요'}</div>;
+            }
+            return (
+              <div style={{padding: '8px 12px'}}>
+                {list.map(m => {
+                  const isOne = m.recipient_count === 1;
+                  const sent = new Date(m.sent_at).toLocaleString('ko-KR', {
+                    timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                  });
+                  return (
+                    <div key={m.id} style={{background: 'white', borderRadius: 10, padding: '12px 14px',
+                      marginBottom: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.06)'}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6}}>
+                        <span style={{fontWeight: 700, fontSize: 14, color: '#1e3a8a'}}>
+                          {isOne ? `→ ${m.recipient_name}` : `📢 전체 ${m.recipient_count}명`}
+                        </span>
+                        <span style={{fontSize: 12, color: '#999', whiteSpace: 'nowrap'}}>{sent}</span>
+                      </div>
+                      <div style={{fontSize: 14, color: '#333', lineHeight: 1.5, whiteSpace: 'pre-wrap'}}>{m.message}</div>
+                      <div style={{marginTop: 6, fontSize: 12,
+                        color: (isOne ? m.read_count > 0 : false) ? '#16a34a' : '#999'}}>
+                        {isOne
+                          ? (m.read_count > 0 ? '✓ 읽었어요' : '아직 안 읽었어요')
+                          : `${m.recipient_count}명 중 ${m.read_count}명 읽음`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 

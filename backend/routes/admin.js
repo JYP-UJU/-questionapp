@@ -590,6 +590,36 @@ router.post('/message', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
+// ===== 보낸 메세지함 (2026-09-23 추가) =====
+// 관리자가 보낸 메세지(notifications.type='admin')를 최신순으로 보여줌.
+// 전체 발송은 사용자마다 한 줄씩 저장되므로, 같은 내용 + 같은 분(minute)에 보낸 것을 한 묶음으로 합침.
+// 한 명에게 보낸 메세지는 받는 사람 닉네임과 읽음 여부를 함께 보여줌.
+router.get('/messages', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        MIN(n.id) AS id,
+        n.message,
+        date_trunc('minute', n.created_at) AS sent_minute,
+        MIN(n.created_at) AS sent_at,
+        COUNT(*)::int AS recipient_count,
+        SUM(CASE WHEN n.is_read THEN 1 ELSE 0 END)::int AS read_count,
+        CASE WHEN COUNT(*) = 1 THEN MIN(n.user_id) END AS user_id,
+        CASE WHEN COUNT(*) = 1 THEN MIN(COALESCE(u.name, u.username)) END AS recipient_name
+      FROM notifications n
+      JOIN users u ON n.user_id = u.id
+      WHERE n.type = 'admin'
+      GROUP BY n.message, date_trunc('minute', n.created_at)
+      ORDER BY sent_at DESC
+      LIMIT 300
+    `);
+    res.json({ messages: result.rows });
+  } catch (err) {
+    console.error('보낸 메세지함 조회 오류:', err);
+    res.status(500).json({ error: '서버 오류' });
+  }
+});
+
 // ===== 리마인더 문자 대상자 목록 (2026-09-16 추가) =====
 // 초등학생(초5/초6) 중 전화번호가 있고, 수신거부하지 않았고,
 // 최근 10일간 접속(user_sessions)도 활동(songi_transactions)도 없는 사람.

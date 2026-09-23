@@ -258,8 +258,10 @@ function Friends() {
     };
 
     // 질문(최상위 또는 관련질문 노드) 삭제 - 본인 글 또는 관리자만 버튼이 보임
-    const handleDeleteQuestion = async (questionId, isAdminDelete) => {
-        const confirmMsg = isAdminDelete
+    const handleDeleteQuestion = async (questionId, isAdminDelete, isAi = false) => {
+        const confirmMsg = isAi
+            ? '물음송이 AI가 단 관련질문을 지울까요?'
+            : isAdminDelete
             ? '관리자 권한으로 이 글을 삭제할까요? (작성자에게 지급된 송이도 함께 회수돼요)'
             : '이 글을 삭제할까요? 지급된 송이도 함께 반납돼요.';
         if (!window.confirm(confirmMsg)) return;
@@ -463,6 +465,11 @@ function Friends() {
                                     : node.username}
                             </span>
                         </div>
+                        {node.is_ai && (
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                                🤖 물음송이 AI도 궁금해졌어요. AI가 쓴 질문이에요.
+                            </div>
+                        )}
 
                         {/* 의견 보기: 목록에서는 개수만 표시, 눌렀을 때만 실제 내용을 불러옴 (로딩 속도 개선) */}
                         {(node.opinionCount || 0) > 0 && (
@@ -535,10 +542,11 @@ function Friends() {
                                 <span className="btn-icon">❓</span>
                                 <span className="btn-label">관련질문</span>
                             </button>
-                            {(node.user_id === currentUser?.id || currentUser?.is_admin) && (
+                            {(node.user_id === currentUser?.id || currentUser?.is_admin
+                              || (node.is_ai && currentUser?.id !== undefined && node.parent_owner_id === currentUser?.id)) && (
                                 <button
                                     className="action-btn optional-btn"
-                                    onClick={() => handleDeleteQuestion(node.id, node.user_id !== currentUser?.id)}
+                                    onClick={() => handleDeleteQuestion(node.id, node.user_id !== currentUser?.id && !node.is_ai, node.is_ai)}
                                 >
                                     <span className="btn-icon">🗑️</span>
                                     <span className="btn-label">삭제</span>

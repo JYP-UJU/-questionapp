@@ -267,9 +267,10 @@ function SavedQuestions() {
     };
 
     // 내가 쓴 관련질문 삭제 (송이도 함께 반납)
-    const handleDeleteRelated = async (nodeId) => {
-        const ok = window.confirm(
-            '이 관련질문을 지울까요?\n\n질문을 올릴 때 받았던 6송이도 함께 반납돼요.'
+    const handleDeleteRelated = async (nodeId, isAi = false) => {
+        const ok = window.confirm(isAi
+            ? '물음송이 AI가 단 관련질문을 지울까요?'
+            : '이 관련질문을 지울까요?\n\n질문을 올릴 때 받았던 6송이도 함께 반납돼요.'
         );
         if (!ok) return;
 
@@ -324,6 +325,11 @@ function SavedQuestions() {
                                     : node.username}
                             </span>
                         </div>
+                        {node.is_ai && (
+                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                                🤖 물음송이 AI도 궁금해졌어요. AI가 쓴 질문이에요.
+                            </div>
+                        )}
 
                         {(node.opinionCount || 0) > 0 && (
                             <div className="preview-section">
@@ -384,10 +390,10 @@ function SavedQuestions() {
                                 <span className="btn-icon">❓</span>
                                 <span className="btn-label">관련질문</span>
                             </button>
-                            {myUserId !== null && node.user_id === myUserId && (
+                            {myUserId !== null && (node.user_id === myUserId || (node.is_ai && node.parent_owner_id === myUserId)) && (
                                 <button
                                     className="action-btn delete-btn"
-                                    onClick={() => handleDeleteRelated(node.id)}
+                                    onClick={() => handleDeleteRelated(node.id, node.is_ai)}
                                 >
                                     <span className="btn-icon">🗑️</span>
                                     <span className="btn-label">지우기</span>

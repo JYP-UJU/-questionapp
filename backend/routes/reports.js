@@ -868,7 +868,7 @@ router.get('/weekly-popup', authenticateToken, async (req, res) => {
         `SELECT u.id, SUM(st.amount) as total
          FROM songi_transactions st
          JOIN users u ON st.user_id = u.id
-         WHERE st.amount > 0 AND st.created_at >= $1 AND st.created_at <= $2
+         WHERE st.amount > 0 AND st.created_at >= $1 AND st.created_at <= $2 AND COALESCE(u.is_ai, FALSE) = FALSE
          GROUP BY u.id
          ORDER BY total DESC
          LIMIT 3`,
@@ -940,7 +940,7 @@ router.get('/weekly-leaderboard', authenticateToken, async (req, res) => {
       `SELECT COALESCE(u.name, u.username) as display_name, SUM(st.amount) as total
        FROM songi_transactions st
        JOIN users u ON st.user_id = u.id
-       WHERE st.amount > 0 AND st.created_at >= $1 AND st.created_at <= $2
+       WHERE st.amount > 0 AND st.created_at >= $1 AND st.created_at <= $2 AND COALESCE(u.is_ai, FALSE) = FALSE
        GROUP BY u.id, u.username, u.name
        ORDER BY total DESC
        LIMIT 3`,
@@ -976,7 +976,7 @@ router.get('/monthly-leaderboard', authenticateToken, async (req, res) => {
       `SELECT COALESCE(u.name, u.username) as display_name, SUM(st.amount) as total
        FROM songi_transactions st
        JOIN users u ON st.user_id = u.id
-       WHERE st.amount > 0 AND st.created_at >= $1 AND st.created_at <= $2
+       WHERE st.amount > 0 AND st.created_at >= $1 AND st.created_at <= $2 AND COALESCE(u.is_ai, FALSE) = FALSE
        GROUP BY u.id, u.username, u.name
        ORDER BY total DESC
        LIMIT 3`,

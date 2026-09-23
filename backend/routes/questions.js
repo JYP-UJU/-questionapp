@@ -1067,7 +1067,10 @@ router.get('/:id/related-tree', authenticateToken, async (req, res) => {
          (SELECT COUNT(*) FROM question_opinions
           WHERE question_id = thread.id AND (question_type = 'user_question' OR question_type IS NULL)) as opinion_count,
          (SELECT reaction_type FROM question_reactions
-          WHERE question_id = thread.id AND user_id = $2 AND question_type = 'user_question') as user_reaction
+          WHERE question_id = thread.id AND user_id = $2 AND question_type = 'user_question') as user_reaction,
+         -- 물음송이 AI가 단 관련질문인지 + 부모 질문 주인(AI 관련질문은 부모 주인이 지울 수 있음)
+         (SELECT COALESCE(au.is_ai, FALSE) FROM users au WHERE au.id = thread.user_id) as is_ai,
+         (SELECT p.user_id FROM user_questions p WHERE p.id = thread.parent_question_id) as parent_owner_id
        FROM thread
        ORDER BY created_at ASC`,
       [id, userId]
@@ -1543,7 +1546,21 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       );
       const isAdmin = adminCheck.rows.length > 0 && adminCheck.rows[0].is_admin === true;
 
-      if (!isAdmin) {
+      // 물음송이 AI가 단 관련질문은 부모 질문 주인도 지울 수 있음 (2026-09-23)
+      let isAiRelatedOnMyQuestion = false;
+      if (!isAdmin && row.parent_question_id) {
+        const aiCheck = await client.query(
+          `SELECT COALESCE(a.is_ai, FALSE) AS is_ai, p.user_id AS parent_owner
+           FROM users a, user_questions p
+           WHERE a.id = $1 AND p.id = $2`,
+          [row.user_id, row.parent_question_id]
+        );
+        isAiRelatedOnMyQuestion = aiCheck.rows.length > 0
+          && aiCheck.rows[0].is_ai === true
+          && aiCheck.rows[0].parent_owner === userId;
+      }
+
+      if (!isAdmin && !isAiRelatedOnMyQuestion) {
         await client.query('ROLLBACK');
         releaseOnce();
         return res.status(403).json({ error: '삭제 권한이 없습니다' });
