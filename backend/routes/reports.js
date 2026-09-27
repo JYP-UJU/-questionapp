@@ -539,12 +539,22 @@ async function computeExchangeStatus(userId) {
   const userResult = await pool.query('SELECT songi_count FROM users WHERE id = $1', [userId]);
   const lifetimeSongi = parseFloat(userResult.rows[0]?.songi_count || 0);
 
+  // 2026-09-27 추가 (피오 발견 버그 수정): 이미 접수돼서 처리 대기 중인(pending) 신청이 있으면
+  // 자격을 채웠어도 다시 신청 못 하게 막는다. 안 그러면 학생이 화면을 새로고침하거나
+  // 버튼을 여러 번 눌러서 같은 조건으로 중복 신청이 쌓임 (실제로 이렇게 중복 접수된 사례 있었음).
+  const pendingResult = await pool.query(
+    `SELECT 1 FROM reward_claims WHERE user_id = $1 AND status = 'pending' LIMIT 1`,
+    [userId]
+  );
+  const hasPendingClaim = pendingResult.rows.length > 0;
+
   const hasSongi = lifetimeSongi >= threshold;
   const hasJournals = isFirstPayout || journalCount >= MIN_JOURNAL_COUNT;
-  const eligible = hasSongi && hasJournals;
+  const eligible = hasSongi && hasJournals && !hasPendingClaim;
 
   return {
     eligible,
+    hasPendingClaim,
     lifetimeSongi,
     threshold,
     songiNeeded: Math.max(0, threshold - lifetimeSongi),
@@ -573,6 +583,17 @@ router.post('/claim-reward', authenticateToken, async (req, res) => {
 
     if (!name || !name.trim() || !phone || !phone.trim() || !store) {
       return res.status(400).json({ error: '이름, 휴대폰 번호, 편의점을 모두 입력해주세요' });
+    }
+
+    // 2026-09-27 추가 (피오 발견 버그 수정): 이미 처리 대기 중인 신청이 있으면 중복 접수 막기.
+    // (화면에서도 pending이면 신청 폼 자체를 숨기지만, 새로고침 타이밍 등으로 폼이 남아있을 수 있어
+    //  서버에서도 한 번 더 막아둠)
+    const pendingCheck = await pool.query(
+      `SELECT 1 FROM reward_claims WHERE user_id = $1 AND status = 'pending' LIMIT 1`,
+      [userId]
+    );
+    if (pendingCheck.rows.length > 0) {
+      return res.status(409).json({ error: '이미 접수된 신청이 처리 중이에요. 선생님 확인을 기다려주세요.' });
     }
 
     const userResult = await pool.query('SELECT username, songi_count FROM users WHERE id = $1', [userId]);

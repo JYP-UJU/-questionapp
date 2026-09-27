@@ -53,6 +53,7 @@ function Profile() {
         try {
             await api.post('/reports/claim-reward', { name: claimName, phone: claimPhone, store: claimStore });
             setClaimSubmitted(true);
+            loadExchangeStatus(); // hasPendingClaim 반영해서 재신청 못 하게 즉시 갱신
         } catch (err) {
             alert(err.response?.data?.error || '신청에 실패했어요');
         } finally {
@@ -169,13 +170,15 @@ function Profile() {
                     {!exchangeStatus ? (
                         <div style={{textAlign:'center', color:'#aaa', fontSize:'13px', padding:'12px 0'}}>불러오는 중...</div>
                     ) : (() => {
-                        const { lifetimeSongi, threshold, eligible, journalCount, minJournalCount, songiNeeded } = exchangeStatus;
+                        const { lifetimeSongi, threshold, eligible, hasPendingClaim, journalCount, minJournalCount, songiNeeded } = exchangeStatus;
                         const pct = Math.min((lifetimeSongi / threshold) * 100, 100);
                         const hasJournals = journalCount >= minJournalCount;
 
                         // 하단 안내 멘트: 막히는 이유만 짚어줌
                         let message;
-                        if (eligible) {
+                        if (hasPendingClaim) {
+                            message = '🎫 신청이 접수돼서 선생님 확인을 기다리고 있어요!';
+                        } else if (eligible) {
                             message = '🎉 교환 조건을 채웠어요! 선생님께 상품권 교환을 요청하세요!';
                         } else {
                             const parts = [];
@@ -267,18 +270,17 @@ function Profile() {
                         </div>
                     )}
 
-                    {/* 교환 자격을 채웠을 때만 신청 폼 표시 */}
-                    {exchangeStatus?.eligible && (
-                        claimSubmitted ? (
-                            <div style={{
-                                marginTop: '14px', padding: '14px', borderRadius: '10px',
-                                background: '#f0fdf4', textAlign: 'center',
-                            }}>
-                                <p style={{ margin: 0, color: '#16a34a', fontWeight: 600 }}>
-                                    ✓ 신청이 접수됐어요! 선생님이 곧 연락드릴게요
-                                </p>
-                            </div>
-                        ) : (
+                    {/* 교환 자격을 채웠을 때만 신청 폼 표시. 이미 접수(pending)했거나 방금 접수했으면 확인 문구만 */}
+                    {(exchangeStatus?.hasPendingClaim || claimSubmitted) ? (
+                        <div style={{
+                            marginTop: '14px', padding: '14px', borderRadius: '10px',
+                            background: '#f0fdf4', textAlign: 'center',
+                        }}>
+                            <p style={{ margin: 0, color: '#16a34a', fontWeight: 600 }}>
+                                ✓ 신청이 접수됐어요! 선생님이 곧 연락드릴게요
+                            </p>
+                        </div>
+                    ) : exchangeStatus?.eligible && (
                             <div style={{
                                 marginTop: '14px', padding: '14px', borderRadius: '10px',
                                 background: '#fefce8', border: '1px solid #fde68a',
@@ -343,7 +345,6 @@ function Profile() {
                                     {claimSubmitting ? '제출 중...' : '신청하기'}
                                 </button>
                             </div>
-                        )
                     )}
                 </div>
 
