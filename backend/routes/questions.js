@@ -410,6 +410,42 @@ router.get('/my', authenticateToken, async (req, res) => {
   }
 });
 
+// 새 질문 빨간 뱃지: "질문들" 화면을 마지막으로 본 시각 이후에 다른 사람이 올린 글(관련질문 포함) 수
+// ⚠️ DB에 users.last_questions_seen_at 컬럼이 필요함 (add_questions_seen.sql)
+router.get('/new-count', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    const seen = await pool.query('SELECT last_questions_seen_at FROM users WHERE id = $1', [userId]);
+    const lastSeen = seen.rows[0] && seen.rows[0].last_questions_seen_at;
+    if (!lastSeen) {
+      // 처음이면 지금을 기준선으로 잡고 뱃지는 없음 (가입 전 글이 전부 "새 글"로 잡히는 것 방지)
+      await pool.query('UPDATE users SET last_questions_seen_at = NOW() WHERE id = $1', [userId]);
+      return res.json({ count: 0 });
+    }
+    const result = await pool.query(
+      `SELECT COUNT(*) FROM user_questions
+       WHERE is_deleted = false AND user_id <> $1 AND created_at > $2`,
+      [userId, lastSeen]
+    );
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
+  } catch (error) {
+    console.error('새 질문 수 조회 오류:', error);
+    res.json({ count: 0 }); // 뱃지는 부가 기능이라 실패해도 화면을 막지 않음
+  }
+});
+
+// "질문들" 화면을 열었을 때 호출 - 마지막으로 본 시각을 지금으로 갱신
+router.post('/mark-seen', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user.userId;
+    await pool.query('UPDATE users SET last_questions_seen_at = NOW() WHERE id = $1', [userId]);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('질문 확인 시각 갱신 오류:', error);
+    res.json({ ok: false });
+  }
+});
+
 // 전체 질문 목록 (최신순/인기순)
 router.get('/', async (req, res) => {
   try {

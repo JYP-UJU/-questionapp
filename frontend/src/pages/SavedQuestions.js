@@ -6,6 +6,7 @@ import BottomNav from '../components/BottomNav';
 import TopHeader from '../components/TopHeader';
 import OpinionModal from '../components/OpinionModal';
 import RelatedModal from '../components/RelatedModal';
+import QuestionThread, { ActionIcons } from '../components/QuestionThread';
 
 function SavedQuestions() {
     const [savedQuestions, setSavedQuestions] = useState([]);
@@ -298,115 +299,23 @@ function SavedQuestions() {
         }
     };
 
-    // 관련질문 트리를 재귀적으로 렌더링 - 부모와 분리된 독립 카드, 깊이만큼 들여쓰기
-    const renderRelatedNode = (node, allNodes, depth) => {
-        const children = allNodes
-            .filter(n => n.parent_question_id === node.id)
-            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-        return (
-            <React.Fragment key={node.id}>
-                <div style={{
-                    marginLeft: `${(depth + 1) * 18}px`,
-                    marginTop: '8px',
-                }}>
-                    <div className="question-card" style={{
-                        background: (node.opinionCount || 0) > 0 ? 'rgba(239, 246, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
-                        border: '1px solid #dbeafe',
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                            <div className="question-title" style={{ fontSize: depth === 0 ? '16px' : '15px', flex: 1 }}>
-                                <span style={{ color: '#93c5fd', fontWeight: '700', marginRight: '6px' }}>┗━</span>
-                                {node.title}
-                            </div>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#333', flexShrink: 0, marginTop: '2px', whiteSpace: 'nowrap' }}>
-                                {myUserId !== null && node.user_id === myUserId
-                                    ? <>✏️ 나</>
-                                    : node.username}
-                            </span>
-                        </div>
-                        {node.is_ai && (
-                            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                                🤖 물음송이 AI도 궁금해졌어요. AI가 쓴 질문이에요.
-                            </div>
-                        )}
-
-                        {(node.opinionCount || 0) > 0 && (
-                            <div className="preview-section">
-                                <button
-                                    className="opinion-view-toggle"
-                                    onClick={() => handleToggleOpinions(node.id, 'user_question')}
-                                >
-                                    <span className="preview-icon">💬</span>
-                                    {expandedOpinions[node.id] ? '▲ 의견 접기' : `의견 ${node.opinionCount}개 보기 ▼`}
-                                </button>
-                                {expandedOpinions[node.id] && (allOpinions[node.id] || []).map((op, i) => (
-                                    <div key={i} className="preview-row preview-row-indent">
-                                        <span className="preview-icon">💬</span>
-                                        <span className="preview-author">{op.username}:</span>
-                                        <span className="preview-text">
-                                            {op.opinion}
-                                            {renderHelpful(op)}
-                                            {op.username === '물음송이 AI' && (
-                                                <span style={{ display: 'block', fontSize: '11px', color: '#999', marginTop: '2px' }}>
-                                                    🤖 AI가 쓴 글이에요. 틀릴 수 있어요.
-                                                </span>
-                                            )}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="action-bar">
-                            <button
-                                className={`action-btn required-btn ${node.userReaction === 'like' ? 'active-like' : ''}`}
-                                onClick={() => handleChildReaction(node.id, 'like')}
-                            >
-                                <span className="btn-icon">👍</span>
-                                <span className="btn-label">관심있음 {node.likesCount || 0}</span>
-                            </button>
-                            <button
-                                className={`action-btn required-btn ${node.userReaction === 'dislike' ? 'active-dislike' : ''}`}
-                                onClick={() => handleChildReaction(node.id, 'dislike')}
-                            >
-                                <span className="btn-icon">👎</span>
-                                <span className="btn-label">관심없음 {node.dislikesCount || 0}</span>
-                            </button>
-                            <button
-                                className="action-btn optional-btn"
-                                onClick={() => {
-                                    setSelectedQuestion(node.id);
-                                    setSelectedQuestionTitle(node.title);
-                                }}
-                            >
-                                <span className="btn-icon">💬</span>
-                                <span className="btn-label">의견쓰기</span>
-                            </button>
-                            <button
-                                className="action-btn optional-btn"
-                                onClick={() => setRelatedModal({ id: node.id, title: node.title, questionType: 'user_question' })}
-                            >
-                                <span className="btn-icon">❓</span>
-                                <span className="btn-label">관련질문</span>
-                            </button>
-                            {myUserId !== null && (node.user_id === myUserId || (node.is_ai && node.parent_owner_id === myUserId)) && (
-                                <button
-                                    className="action-btn delete-btn"
-                                    onClick={() => handleDeleteRelated(node.id, node.is_ai)}
-                                >
-                                    <span className="btn-icon">🗑️</span>
-                                    <span className="btn-label">지우기</span>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {children.map(child => renderRelatedNode(child, allNodes, depth + 1))}
-            </React.Fragment>
-        );
+    // 관련질문 줄(QuestionThread)에서 쓰는 핸들러
+    const handleNodeOpinion = (node) => {
+        setSelectedQuestion(node.id);
+        setSelectedQuestionTitle(node.title);
     };
+    const handleNodeRelated = (node) => setRelatedModal({ id: node.id, title: node.title, questionType: 'user_question' });
+    const renderOpinionRow = (op) => (
+        <>
+            <strong>{op.username}:</strong> {op.opinion}
+            {renderHelpful(op)}
+            {op.username === '물음송이 AI' && (
+                <span style={{ display: 'block', fontSize: '11px', color: '#999', marginTop: '2px' }}>
+                    🤖 AI가 쓴 글이에요. 틀릴 수 있어요.
+                </span>
+            )}
+        </>
+    );
 
     const handleOpinionSubmit = async (text) => {
         try {
@@ -608,19 +517,42 @@ function SavedQuestions() {
                                             <span className="question-time">{formatTime(saved.createdAt)}</span>
                                         </div>
 
-                                        {/* 질문 내용 */}
-                                        {saved.title && (
-                                            <div className="question-title">{saved.title}</div>
-                                        )}
-                                        {saved.content && saved.content !== saved.title && (
-                                            (saved.questionType === 'quiz' || saved.questionType === 'icebreaking' || saved.questionType === 'seed' || saved.questionType === 'olympic')
-                                                ? <span className="category-badge">{saved.content}</span>
-                                                : <div className="question-content">{saved.content}</div>
-                                        )}
+                                        {/* 질문 (왼쪽 6) + 아이콘 3개 (오른쪽 4) */}
+                                        <div className="qt-main-row">
+                                            <div className="qt-text">
+                                                {saved.title && (
+                                                    <div className="question-title">{saved.title}</div>
+                                                )}
+                                                {saved.content && saved.content !== saved.title && (
+                                                    (saved.questionType === 'quiz' || saved.questionType === 'icebreaking' || saved.questionType === 'seed' || saved.questionType === 'olympic')
+                                                        ? <span className="category-badge">{saved.content}</span>
+                                                        : <div className="question-content">{saved.content}</div>
+                                                )}
+                                            </div>
+                                            <ActionIcons
+                                                likes={saved.likesCount || 0}
+                                                opinions={saved.opinionCount || 0}
+                                                liked={saved.userReaction === 'like'}
+                                                onLike={() => handleReaction(saved.questionId, 'like')}
+                                                onOpinion={() => {
+                                                    setSelectedQuestion(saved.questionId);
+                                                    setSelectedQuestionTitle(saved.title);
+                                                }}
+                                                onRelated={() => setRelatedModal({ id: saved.questionId, title: saved.title || saved.question, questionType: saved.questionType })}
+                                                onDelete={
+                                                    saved.questionType === 'my_question'
+                                                        ? () => handleDeleteMyQuestion(saved.questionId)
+                                                        : !isSyntheticSaved(saved.savedId)
+                                                            ? () => handleRemove(saved.savedId)
+                                                            : null
+                                                }
+                                                deleteTitle={saved.questionType === 'my_question' ? '내 질문 삭제' : '목록에서 제거'}
+                                            />
+                                        </div>
 
                                         {/* 의견 보기: 목록에서는 개수만 표시, 눌렀을 때만 실제 내용을 불러옴 (로딩 속도 개선) */}
                                         {(saved.opinionCount || 0) > 0 && (
-                                            <div className="preview-section">
+                                            <div className="preview-section" style={{ marginTop: '8px' }}>
                                                 <button
                                                     className="opinion-view-toggle"
                                                     onClick={() => handleToggleOpinions(saved.questionId, saved.questionType)}
@@ -631,82 +563,30 @@ function SavedQuestions() {
                                                 {expandedOpinions[saved.questionId] && (allOpinions[saved.questionId] || []).map((op, i) => (
                                                     <div key={i} className="preview-row preview-row-indent">
                                                         <span className="preview-icon">💬</span>
-                                                        <span className="preview-author">{op.username}:</span>
-                                                        <span className="preview-text">
-                                            {op.opinion}
-                                            {renderHelpful(op)}
-                                            {op.username === '물음송이 AI' && (
-                                                <span style={{ display: 'block', fontSize: '11px', color: '#999', marginTop: '2px' }}>
-                                                    🤖 AI가 쓴 글이에요. 틀릴 수 있어요.
-                                                </span>
-                                            )}
-                                        </span>
+                                                        <span className="preview-text">{renderOpinionRow(op)}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
 
-                                        {/* 5버튼 액션바 — 담기 대신 제거 */}
-                                        <div className="action-bar">
-                                            <button
-                                                className={`action-btn required-btn ${saved.userReaction === 'like' ? 'active-like' : ''}`}
-                                                onClick={() => handleReaction(saved.questionId, 'like')}
-                                            >
-                                                <span className="btn-icon">👍</span>
-                                                <span className="btn-label">관심있음 {saved.likesCount || 0}</span>
-                                            </button>
-                                            <button
-                                                className={`action-btn required-btn ${saved.userReaction === 'dislike' ? 'active-dislike' : ''}`}
-                                                onClick={() => handleReaction(saved.questionId, 'dislike')}
-                                            >
-                                                <span className="btn-icon">👎</span>
-                                                <span className="btn-label">관심없음 {saved.dislikesCount || 0}</span>
-                                            </button>
-                                            <button
-                                                className="action-btn optional-btn"
-                                                onClick={() => {
-                                                    setSelectedQuestion(saved.questionId);
-                                                    setSelectedQuestionTitle(saved.title);
-                                                }}
-                                            >
-                                                <span className="btn-icon">💬</span>
-                                                <span className="btn-label">의견쓰기</span>
-                                            </button>
-                                            <button
-                                                className="action-btn optional-btn"
-                                                onClick={() => setRelatedModal({ id: saved.questionId, title: saved.title || saved.question, questionType: saved.questionType })}
-                                            >
-                                                <span className="btn-icon">❓</span>
-                                                <span className="btn-label">관련질문</span>
-                                            </button>
-                                            {saved.questionType === 'my_question' ? (
-                                                <button
-                                                    className="action-btn remove-btn"
-                                                    onClick={() => handleDeleteMyQuestion(saved.questionId)}
-                                                >
-                                                    <span className="btn-icon">🚫</span>
-                                                    <span className="btn-label">제거</span>
-                                                </button>
-                                            ) : !isSyntheticSaved(saved.savedId) ? (
-                                                <button
-                                                    className="action-btn remove-btn"
-                                                    onClick={() => handleRemove(saved.savedId)}
-                                                >
-                                                    <span className="btn-icon">🚫</span>
-                                                    <span className="btn-label">제거</span>
-                                                </button>
-                                            ) : null}
-                                        </div>
-
+                                        {/* 관련질문 전체 트리: 카드 없이 텍스트 줄로 죽 펼침 */}
+                                        {saved.relatedTree && saved.relatedTree.length > 0 && (
+                                            <QuestionThread
+                                                nodes={saved.relatedTree}
+                                                parentId={saved.questionId}
+                                                myUserId={myUserId}
+                                                isAdmin={false}
+                                                onLike={(n) => handleChildReaction(n.id, 'like')}
+                                                onOpinion={handleNodeOpinion}
+                                                onRelated={handleNodeRelated}
+                                                onDelete={(n) => handleDeleteRelated(n.id, n.is_ai)}
+                                                expandedOpinions={expandedOpinions}
+                                                allOpinions={allOpinions}
+                                                onToggleOpinions={(n) => handleToggleOpinions(n.id, 'user_question')}
+                                                renderOpinionRow={renderOpinionRow}
+                                            />
+                                        )}
                                     </div>
-
-                                    {/* 관련질문 전체 트리: 부모와 분리된 독립 카드로, 형제는 시간순, 자식은 그 아래 바로 */}
-                                    {saved.relatedTree && saved.relatedTree.length > 0 &&
-                                        saved.relatedTree
-                                            .filter(n => n.parent_question_id === null || n.parent_question_id === saved.questionId)
-                                            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-                                            .map(node => renderRelatedNode(node, saved.relatedTree, 0))
-                                    }
                                     </React.Fragment>
                                 );
                             })}

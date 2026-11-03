@@ -112,12 +112,13 @@ function Admin() {
   const [users, setUsers] = useState([]);
   const [claims, setClaims] = useState([]);
   const [sessionsSummary, setSessionsSummary] = useState([]);
+  const [openSessionIds, setOpenSessionIds] = useState({}); // 접속기록: 펼친 사용자 id
   const [loading, setLoading] = useState(true);
 
   // 리마인더 문자 (초등 비활성 대상자)
   const [reminderCandidates, setReminderCandidates] = useState([]);
   const [reminderTemplate, setReminderTemplate] = useState(
-    '물음송이는 잘 있어요. 시간 되실 때 둘러보세요. 그만 받고 싶으면 답장 주세요.'
+    '물음송이에서 찾고 있어요. 시간 되실 때 놀러오세요. https://queapp.up.railway.app/'
   );
   const [reminderBusyId, setReminderBusyId] = useState(null);
 
@@ -741,21 +742,27 @@ function Admin() {
           ) : (
             <div style={styles.list}>
               {sessionsSummary.length === 0 && <div style={styles.empty}>접속 기록이 없어요</div>}
-              {sessionsSummary.map(s => (
-                <div key={s.user_id} style={styles.userItem}>
-                  <div style={styles.userTop}>
-                    <div style={styles.userName}>{s.username}</div>
-                    <div style={styles.userSongi}>총 {s.session_count || 0}회 접속</div>
-                  </div>
-                  <div style={styles.userStats}>
-                    <span>⏱️ 평균 {formatDuration(s.avg_duration_seconds)}</span>
-                    <span>📊 누적 {formatDuration(s.total_duration_seconds)}</span>
-                  </div>
-                  <div style={styles.userBottom}>
-                    <span style={styles.userDate}>최근 접속 {formatDate(s.last_visit)}</span>
-                  </div>
-                </div>
-              ))}
+              {[...sessionsSummary]
+                .sort((a, b) => new Date(b.last_visit || 0) - new Date(a.last_visit || 0))
+                .map(s => {
+                  const open = !!openSessionIds[s.user_id];
+                  return (
+                    <div key={s.user_id} style={{ ...styles.userItem, cursor: 'pointer' }}
+                      onClick={() => setOpenSessionIds(prev => ({ ...prev, [s.user_id]: !prev[s.user_id] }))}>
+                      <div style={styles.userTop}>
+                        <div style={styles.userName}>{s.username}</div>
+                        <div style={styles.userSongi}>접속시간: {formatDate(s.last_visit)} {open ? '▲' : '▼'}</div>
+                      </div>
+                      {open && (
+                        <div style={styles.userStats}>
+                          <span>총 {s.session_count || 0}회 접속</span>
+                          <span>⏱️ 평균 {formatDuration(s.avg_duration_seconds)}</span>
+                          <span>📊 누적 {formatDuration(s.total_duration_seconds)}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>

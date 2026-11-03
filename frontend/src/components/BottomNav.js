@@ -82,6 +82,7 @@ function BottomNav() {
     const navigate = useNavigate();
     const location = useLocation();
     const [showJournalBadge, setShowJournalBadge] = useState(false);
+    const [showQuestionsBadge, setShowQuestionsBadge] = useState(false);
     // 주간일지 작성 화면에서는 하단의 "주간일지" 자리가 "월간일지"로, 그 반대도 마찬가지로 바뀜
     const isOnWeekly = location.pathname === '/weekly-report';
     const isOnMonthly = location.pathname === '/monthly-report';
@@ -116,6 +117,23 @@ function BottomNav() {
                 (monthlyCutoffReached && !monthlyDone);
             setShowJournalBadge(needsBadge);
         }).catch(err => console.error('일지 작성 상태 확인 오류:', err));
+    }, []);
+
+    // "질문들" 새 질문 뱃지: 마지막으로 "질문들"을 본 이후 다른 사람이 올린 글(관련질문 포함)이 있으면 표시
+    useEffect(() => {
+        if (location.pathname === '/questions') { setShowQuestionsBadge(false); return; }
+        let cancelled = false;
+        api.get('/questions/new-count')
+            .then(res => { if (!cancelled) setShowQuestionsBadge((res.data.count || 0) > 0); })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [location.pathname]);
+
+    // "질문들" 화면이 열리면서 확인 시각이 갱신되면 바로 뱃지를 끔
+    useEffect(() => {
+        const hide = () => setShowQuestionsBadge(false);
+        window.addEventListener('questions-seen', hide);
+        return () => window.removeEventListener('questions-seen', hide);
     }, []);
 
     return (
@@ -211,6 +229,18 @@ function BottomNav() {
                             minWidth: 0,
                         }}
                     >
+                        {rawMenu.path === '/questions' && showQuestionsBadge && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '2px',
+                                right: '6px',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                background: '#ef4444',
+                                border: '1.5px solid white',
+                            }} />
+                        )}
                         {rawMenu.key === 'journal' && showJournalBadge && (
                             <span style={{
                                 position: 'absolute',
