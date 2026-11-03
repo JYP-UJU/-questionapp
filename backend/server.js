@@ -30,6 +30,7 @@ const olympicRoutes = require('./routes/olympic');
 const notificationsRoutes = require('./routes/notifications');
 const sessionsRoutes = require('./routes/sessions');
 const consentRoutes = require('./routes/consent');
+const trackRoutes = require('./routes/track');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionsRoutes);
@@ -45,6 +46,7 @@ app.use('/api/olympic', olympicRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/sessions', sessionsRoutes);
 app.use('/api/consent', consentRoutes);
+app.use('/api/track', trackRoutes); // 로그인 전 익명 방문 기록
 
 // 기본 라우트
 app.get('/', (req, res) => {
@@ -79,16 +81,22 @@ app.use('/videos', express.static(path.join(__dirname, 'public', 'videos')));
 app.use('/docs', express.static(path.join(__dirname, 'public', 'docs')));
 
 // 짧은 링크 별칭 (안내 문구/문자 발송 시 이 짧은 경로로 안내하세요)
-app.get('/g', (req, res) => res.redirect('/land/muleumsongi-guide.html'));      // 안내 페이지
-app.get('/l', (req, res) => res.redirect('/land/muleumsongi-landing.html'));    // 랜딩 페이지
-app.get('/i', (req, res) => res.redirect('/land/muleumsongi-invite.html'));     // 초대장(카톡 발송용 링크 모음, 학부모용)
-app.get('/ik', (req, res) => res.redirect('/land/muleumsongi-invite-kids.html')); // 초대장(초등학생 친구들에게 직접 말 거는 버전)
-app.get('/c1', (req, res) => res.redirect('/consent/1_consent_minor.html'));               // 미성년자 동의
-app.get('/c2', (req, res) => res.redirect('/consent/2_consent_minor_interview.html'));     // 미성년자 인터뷰 동의
-app.get('/c3', (req, res) => res.redirect('/consent/3_consent_guardian.html' + (req.query.code ? ('?code=' + req.query.code) : ''))); // 보호자 동의
-app.get('/c4', (req, res) => res.redirect('/consent/4_consent_guardian_interview.html' + (req.query.code ? ('?code=' + req.query.code) : ''))); // 보호자 인터뷰 동의
-app.get('/c5', (req, res) => res.redirect('/consent/5_consent_adult.html'));               // 성인 동의
-app.get('/c6', (req, res) => res.redirect('/consent/6_consent_adult_interview.html'));     // 성인 인터뷰 동의
+// ?src=카페 처럼 뒤에 붙인 값(?code= 포함)은 그대로 이어서 전달됨 → 방문 기록의 유입 출처로 집계됨
+const qs = (req) => { const i = req.url.indexOf('?'); return i >= 0 ? req.url.slice(i) : ''; };
+const redirectTo = (to) => (req, res) => res.redirect(to + qs(req));
+app.get('/g', redirectTo('/land/muleumsongi-guide.html'));      // 안내 페이지
+app.get('/l', redirectTo('/land/muleumsongi-landing.html'));    // 랜딩 페이지
+app.get('/i', redirectTo('/land/muleumsongi-invite.html'));     // 초대장(카톡 발송용 링크 모음, 학부모용)
+app.get('/ik', redirectTo('/land/muleumsongi-invite-kids.html')); // 초대장(초등학생 친구들에게 직접 말 거는 버전)
+app.get('/c1', redirectTo('/consent/1_consent_minor.html'));               // 미성년자 동의
+app.get('/c2', redirectTo('/consent/2_consent_minor_interview.html'));     // 미성년자 인터뷰 동의
+app.get('/c3', redirectTo('/consent/3_consent_guardian.html'));            // 보호자 동의
+app.get('/c4', redirectTo('/consent/4_consent_guardian_interview.html'));  // 보호자 인터뷰 동의
+app.get('/c5', redirectTo('/consent/5_consent_adult.html'));               // 성인 동의
+app.get('/c6', redirectTo('/consent/6_consent_adult_interview.html'));     // 성인 인터뷰 동의
+
+// 익명 방문 기록용 스크립트 (랜딩/안내/초대장/동의서 화면이 불러감)
+app.get('/track.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'track.js')));
 
 app.get('/consent/student', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'student_info.html'));

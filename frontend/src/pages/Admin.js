@@ -104,6 +104,16 @@ const ACTIVITY_COLORS = {
   olympic: '#f97316'
 };
 
+const VISIT_PAGE_ORDER = ['muleumsongi-invite', 'muleumsongi-invite-kids', 'muleumsongi-landing', 'muleumsongi-guide',
+  '1_consent_minor', '3_consent_guardian', '5_consent_adult', '2_consent_minor_interview', '4_consent_guardian_interview', '6_consent_adult_interview', 'app_login'];
+const VISIT_PAGE_LABELS = {
+  'muleumsongi-invite': '초대장(학부모)', 'muleumsongi-invite-kids': '초대장(어린이)',
+  'muleumsongi-landing': '랜딩(가입 안내)', 'muleumsongi-guide': '앱 설명',
+  '1_consent_minor': '동의서-초중학생', '3_consent_guardian': '동의서-보호자', '5_consent_adult': '동의서-대학생',
+  '2_consent_minor_interview': '인터뷰동의-초중학생', '4_consent_guardian_interview': '인터뷰동의-보호자', '6_consent_adult_interview': '인터뷰동의-대학생',
+  'app_login': '로그인/회원가입',
+};
+
 function Admin() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('activities'); // 'activities' | 'users' | 'reward_claims' | 'sessions' | 'reminders'
@@ -113,6 +123,8 @@ function Admin() {
   const [claims, setClaims] = useState([]);
   const [sessionsSummary, setSessionsSummary] = useState([]);
   const [openSessionIds, setOpenSessionIds] = useState({}); // 접속기록: 펼친 사용자 id
+  const [visitSummary, setVisitSummary] = useState(null); // 로그인 전 방문 요약
+  const [visitDays, setVisitDays] = useState(7);
   const [loading, setLoading] = useState(true);
 
   // 리마인더 문자 (초등 비활성 대상자)
@@ -268,6 +280,14 @@ function Admin() {
     else if (tab === 'messages') loadSentMessages();
     else loadRewardClaims();
   }, [tab, loadActivities, loadUsers, loadRewardClaims, loadSessionsSummary, loadReminderCandidates, loadSentMessages]);
+
+  // 접속기록 탭: 로그인 전 방문 요약 (기간 버튼을 누를 때마다 다시 조회, 테이블이 없어도 나머지는 정상 표시)
+  useEffect(() => {
+    if (tab !== 'sessions') return;
+    api.get('/track/admin/summary', { params: { days: visitDays } })
+      .then(r => setVisitSummary(r.data))
+      .catch(() => setVisitSummary(null));
+  }, [tab, visitDays]);
 
   // 클립보드 복사 (실패하면 alert로 값을 보여줘서 수동 복사라도 가능하게)
   const copyText = async (text) => {
@@ -741,6 +761,68 @@ function Admin() {
             <div style={styles.loading}>로딩 중...</div>
           ) : (
             <div style={styles.list}>
+              {/* 로그인 전 방문 (랜딩/안내/초대장/동의서/로그인 화면) */}
+              <div style={{ ...styles.userItem }}>
+                <div style={{ ...styles.userTop, alignItems: 'center' }}>
+                  <div style={styles.userName}>🚪 로그인 전 방문</div>
+                  <div>
+                    {[7, 30].map(d => (
+                      <button key={d} onClick={() => setVisitDays(d)}
+                        style={{ marginLeft: 6, padding: '4px 10px', borderRadius: 12, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                 background: visitDays === d ? '#6b84c4' : '#e5e7eb', color: visitDays === d ? 'white' : '#666' }}>
+                        최근 {d}일
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {!visitSummary ? (
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 8 }}>
+                    아직 기록이 없거나, 방문 기록 테이블(page_visits)이 만들어지지 않았어요.
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 13, color: '#444', marginTop: 8 }}>
+                      전체 방문자 <b>{visitSummary.total?.visitors ?? 0}명</b>
+                      <span style={{ color: '#888' }}> (IP 기준 {visitSummary.total?.ip_visitors ?? 0}명)</span>
+                    </div>
+                    <div style={{ overflowX: 'auto', marginTop: 8 }}>
+                      <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 420 }}>
+                        <thead>
+                          <tr style={{ color: '#888', textAlign: 'right' }}>
+                            <th style={{ textAlign: 'left', padding: '4px 2px' }}>화면</th>
+                            <th>방문</th><th>사람</th><th>머문 시간</th><th>스크롤</th><th>바로 나감</th><th>링크 누름</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[...(visitSummary.pages || [])].sort((a, b) => {
+                            const ia = VISIT_PAGE_ORDER.indexOf(a.page), ib = VISIT_PAGE_ORDER.indexOf(b.page);
+                            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+                          }).map(p => (
+                            <tr key={p.page} style={{ borderTop: '1px solid #f0f0f0', textAlign: 'right' }}>
+                              <td style={{ textAlign: 'left', padding: '6px 2px', fontWeight: 600 }}>{VISIT_PAGE_LABELS[p.page] || p.page}</td>
+                              <td>{p.views}</td>
+                              <td>{p.visitors}</td>
+                              <td>{p.avg_seconds ? formatDuration(p.avg_seconds) : '-'}</td>
+                              <td>{p.avg_scroll != null ? `${p.avg_scroll}%` : '-'}</td>
+                              <td>{p.views ? Math.round((p.bounced / p.views) * 100) : 0}%</td>
+                              <td>{p.views ? Math.round((p.clicked / p.views) * 100) : 0}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {(visitSummary.pages || []).length === 0 && (
+                      <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>이 기간에 기록된 방문이 없어요</div>
+                    )}
+                    <div style={{ fontSize: 12, color: '#555', marginTop: 10, lineHeight: 1.7 }}>
+                      <div>📱 브라우저: {(visitSummary.browsers || []).map(b => `${b.name} ${b.n}`).join(' · ') || '-'}</div>
+                      <div>🔗 유입: {(visitSummary.sources || []).map(b => `${b.name} ${b.n}`).join(' · ') || '-'}</div>
+                      <div style={{ color: '#999' }}>링크 끝에 ?src=카페 처럼 붙이면 유입이 구분돼요. 내 방문은 주소 끝에 ?notrack=1 을 붙여 한 번 열면 빠져요.</div>
+                    </div>
+                  </>
+                )}
+              </div>
+
               {sessionsSummary.length === 0 && <div style={styles.empty}>접속 기록이 없어요</div>}
               {[...sessionsSummary]
                 .sort((a, b) => new Date(b.last_visit || 0) - new Date(a.last_visit || 0))

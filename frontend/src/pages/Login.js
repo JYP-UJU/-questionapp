@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { authAPI, setToken } from '../services/api';
+import { authAPI, setToken, getToken } from '../services/api';
+import { trackPage } from '../services/track';
 import './Auth.css';
 
 function Login() {
+    // 로그인 전 방문 익명 기록 (이미 로그인한 사람은 제외)
+    useEffect(() => {
+        if (getToken()) return;
+        return trackPage('app_login');
+    }, []);
+
     const [searchParams] = useSearchParams();
     // URL에 ?tab=signup 이 붙어 있으면 회원가입 탭을 기본으로 보여줌
     const [isLogin, setIsLogin] = useState(searchParams.get('tab') !== 'signup');
