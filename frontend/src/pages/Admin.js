@@ -130,7 +130,7 @@ function Admin() {
   // 리마인더 문자 (초등 비활성 대상자)
   const [reminderCandidates, setReminderCandidates] = useState([]);
   const [reminderTemplate, setReminderTemplate] = useState(
-    '물음송이에서 찾고 있어요. 시간 되실 때 놀러오세요. https://queapp.up.railway.app/'
+    '🌸 물음송이에서 찾고 있어요. 시간 되실 때 놀러오세요. https://queapp.up.railway.app/'
   );
   const [reminderBusyId, setReminderBusyId] = useState(null);
 

@@ -32,26 +32,27 @@
 .qt-highlight { box-shadow: 0 0 0 3px #fbbf24; background: #fffbeb; }
 
 .qt-title {
-    font-size: 15px;
+    font-size: 16px;          /* 원질문(.question-title)과 같은 크기·굵기 */
+    font-weight: bold;
     color: #333;
-    line-height: 1.45;
+    line-height: 1.4;
     word-break: break-word;
 }
 .qt-author {
-    margin-left: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b84c4;
+    margin-left: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #2f4fb3;
     white-space: nowrap;
 }
-.qt-ai { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+.qt-ai { font-size: 13px; color: #94a3b8; margin-top: 3px; font-weight: normal; }
 
 .qt-opinion-toggle {
     margin-top: 3px;
     padding: 0;
     background: none;
     border: none;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: #b45309;
     cursor: pointer;
@@ -62,7 +63,7 @@
     background: #fffbeb;
     border-left: 3px solid #f59e0b;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
     color: #78350f;
 }

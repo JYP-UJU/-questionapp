@@ -8,7 +8,7 @@ import OpinionModal from '../components/OpinionModal';
 import RelatedModal from '../components/RelatedModal';
 import ConfettiBurst from '../components/ConfettiBurst';
 import PostActivityGuide from '../components/PostActivityGuide';
-import QuestionThread, { ActionIcons } from '../components/QuestionThread';
+import QuestionThread from '../components/QuestionThread';
 
 function Friends() {
     const [questions, setQuestions] = useState([]);
@@ -600,28 +600,11 @@ function Friends() {
                                     <span className="question-time">{formatTime(q.latest_activity || q.created_at)}</span>
                                 </div>
 
-                                {/* 질문 (왼쪽 6) + 아이콘 3개 (오른쪽 4) */}
-                                <div className="qt-main-row">
-                                    <div className="qt-text">
-                                        <div className="question-title">{q.title}</div>
-                                        {q.content && !q.is_quiz && (
-                                            <div className="question-content">{q.content}</div>
-                                        )}
-                                    </div>
-                                    <ActionIcons
-                                        likes={q.likes_count || 0}
-                                        opinions={q.opinion_count || 0}
-                                        liked={q.user_reaction === 'like'}
-                                        onLike={() => handleReaction(q.id, 'like')}
-                                        onOpinion={() => {
-                                            setSelectedQuestion(q.id);
-                                            setSelectedQuestionTitle(q.title);
-                                            setSelectedQuestionType(q.question_source === 'quiz' ? 'quiz' : 'user_question');
-                                        }}
-                                        onRelated={() => setRelatedModal({ id: q.id, title: q.title, questionType: q.question_source === 'quiz' ? 'quiz' : 'user_question' })}
-                                        onDelete={(!q.is_quiz && (q.is_mine || currentUser?.is_admin)) ? () => handleDeleteQuestion(q.id, !q.is_mine) : null}
-                                    />
-                                </div>
+                                {/* 질문 제목 + 내용 */}
+                                <div className="question-title">{q.title}</div>
+                                {q.content && !q.is_quiz && (
+                                    <div className="question-content">{q.content}</div>
+                                )}
 
                                 {/* 의견 보기: 목록에서는 개수만 표시, 눌렀을 때만 실제 내용을 펼쳐서 보여줌 */}
                                 {(q.opinion_count || 0) > 0 && (
@@ -641,6 +624,44 @@ function Friends() {
                                         ))}
                                     </div>
                                 )}
+
+                                {/* 원질문은 라벨이 있는 큰 버튼 3개 (관련질문 줄은 아이콘만) */}
+                                <div className="action-bar">
+                                    <button
+                                        className={`action-btn required-btn ${q.user_reaction === 'like' ? 'active-like' : ''}`}
+                                        onClick={() => handleReaction(q.id, 'like')}
+                                    >
+                                        <span className="btn-icon">👍</span>
+                                        <span className="btn-label">관심있음{(q.likes_count || 0) > 0 ? ` ${q.likes_count}` : ''}</span>
+                                    </button>
+                                    <button
+                                        className="action-btn optional-btn"
+                                        onClick={() => {
+                                            setSelectedQuestion(q.id);
+                                            setSelectedQuestionTitle(q.title);
+                                            setSelectedQuestionType(q.question_source === 'quiz' ? 'quiz' : 'user_question');
+                                        }}
+                                    >
+                                        <span className="btn-icon">💬</span>
+                                        <span className="btn-label">의견쓰기{(q.opinion_count || 0) > 0 ? ` ${q.opinion_count}` : ''}</span>
+                                    </button>
+                                    <button
+                                        className="action-btn optional-btn"
+                                        onClick={() => setRelatedModal({ id: q.id, title: q.title, questionType: q.question_source === 'quiz' ? 'quiz' : 'user_question' })}
+                                    >
+                                        <span className="btn-icon">❓</span>
+                                        <span className="btn-label">관련질문</span>
+                                    </button>
+                                    {!q.is_quiz && (q.is_mine || currentUser?.is_admin) && (
+                                        <button
+                                            className="action-btn optional-btn"
+                                            onClick={() => handleDeleteQuestion(q.id, !q.is_mine)}
+                                        >
+                                            <span className="btn-icon">🗑️</span>
+                                            <span className="btn-label">삭제</span>
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* 관련질문 전체 트리: 카드 없이 텍스트 줄로 죽 펼침 (시간순, 깊이만큼 세로선 들여쓰기) */}
                                 {q.relatedTree && q.relatedTree.length > 0 && (

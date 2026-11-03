@@ -6,7 +6,7 @@ import BottomNav from '../components/BottomNav';
 import TopHeader from '../components/TopHeader';
 import OpinionModal from '../components/OpinionModal';
 import RelatedModal from '../components/RelatedModal';
-import QuestionThread, { ActionIcons } from '../components/QuestionThread';
+import QuestionThread from '../components/QuestionThread';
 
 function SavedQuestions() {
     const [savedQuestions, setSavedQuestions] = useState([]);
@@ -517,38 +517,15 @@ function SavedQuestions() {
                                             <span className="question-time">{formatTime(saved.createdAt)}</span>
                                         </div>
 
-                                        {/* 질문 (왼쪽 6) + 아이콘 3개 (오른쪽 4) */}
-                                        <div className="qt-main-row">
-                                            <div className="qt-text">
-                                                {saved.title && (
-                                                    <div className="question-title">{saved.title}</div>
-                                                )}
-                                                {saved.content && saved.content !== saved.title && (
-                                                    (saved.questionType === 'quiz' || saved.questionType === 'icebreaking' || saved.questionType === 'seed' || saved.questionType === 'olympic')
-                                                        ? <span className="category-badge">{saved.content}</span>
-                                                        : <div className="question-content">{saved.content}</div>
-                                                )}
-                                            </div>
-                                            <ActionIcons
-                                                likes={saved.likesCount || 0}
-                                                opinions={saved.opinionCount || 0}
-                                                liked={saved.userReaction === 'like'}
-                                                onLike={() => handleReaction(saved.questionId, 'like')}
-                                                onOpinion={() => {
-                                                    setSelectedQuestion(saved.questionId);
-                                                    setSelectedQuestionTitle(saved.title);
-                                                }}
-                                                onRelated={() => setRelatedModal({ id: saved.questionId, title: saved.title || saved.question, questionType: saved.questionType })}
-                                                onDelete={
-                                                    saved.questionType === 'my_question'
-                                                        ? () => handleDeleteMyQuestion(saved.questionId)
-                                                        : !isSyntheticSaved(saved.savedId)
-                                                            ? () => handleRemove(saved.savedId)
-                                                            : null
-                                                }
-                                                deleteTitle={saved.questionType === 'my_question' ? '내 질문 삭제' : '목록에서 제거'}
-                                            />
-                                        </div>
+                                        {/* 질문 내용 */}
+                                        {saved.title && (
+                                            <div className="question-title">{saved.title}</div>
+                                        )}
+                                        {saved.content && saved.content !== saved.title && (
+                                            (saved.questionType === 'quiz' || saved.questionType === 'icebreaking' || saved.questionType === 'seed' || saved.questionType === 'olympic')
+                                                ? <span className="category-badge">{saved.content}</span>
+                                                : <div className="question-content">{saved.content}</div>
+                                        )}
 
                                         {/* 의견 보기: 목록에서는 개수만 표시, 눌렀을 때만 실제 내용을 불러옴 (로딩 속도 개선) */}
                                         {(saved.opinionCount || 0) > 0 && (
@@ -568,6 +545,51 @@ function SavedQuestions() {
                                                 ))}
                                             </div>
                                         )}
+
+                                        {/* 원질문은 라벨이 있는 큰 버튼 3개 (관련질문 줄은 아이콘만) */}
+                                        <div className="action-bar">
+                                            <button
+                                                className={`action-btn required-btn ${saved.userReaction === 'like' ? 'active-like' : ''}`}
+                                                onClick={() => handleReaction(saved.questionId, 'like')}
+                                            >
+                                                <span className="btn-icon">👍</span>
+                                                <span className="btn-label">관심있음{(saved.likesCount || 0) > 0 ? ` ${saved.likesCount}` : ''}</span>
+                                            </button>
+                                            <button
+                                                className="action-btn optional-btn"
+                                                onClick={() => {
+                                                    setSelectedQuestion(saved.questionId);
+                                                    setSelectedQuestionTitle(saved.title);
+                                                }}
+                                            >
+                                                <span className="btn-icon">💬</span>
+                                                <span className="btn-label">의견쓰기{(saved.opinionCount || 0) > 0 ? ` ${saved.opinionCount}` : ''}</span>
+                                            </button>
+                                            <button
+                                                className="action-btn optional-btn"
+                                                onClick={() => setRelatedModal({ id: saved.questionId, title: saved.title || saved.question, questionType: saved.questionType })}
+                                            >
+                                                <span className="btn-icon">❓</span>
+                                                <span className="btn-label">관련질문</span>
+                                            </button>
+                                            {saved.questionType === 'my_question' ? (
+                                                <button
+                                                    className="action-btn optional-btn"
+                                                    onClick={() => handleDeleteMyQuestion(saved.questionId)}
+                                                >
+                                                    <span className="btn-icon">🗑️</span>
+                                                    <span className="btn-label">삭제</span>
+                                                </button>
+                                            ) : !isSyntheticSaved(saved.savedId) ? (
+                                                <button
+                                                    className="action-btn remove-btn"
+                                                    onClick={() => handleRemove(saved.savedId)}
+                                                >
+                                                    <span className="btn-icon">🚫</span>
+                                                    <span className="btn-label">제거</span>
+                                                </button>
+                                            ) : null}
+                                        </div>
 
                                         {/* 관련질문 전체 트리: 카드 없이 텍스트 줄로 죽 펼침 */}
                                         {saved.relatedTree && saved.relatedTree.length > 0 && (
