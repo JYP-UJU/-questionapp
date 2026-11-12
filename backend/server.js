@@ -98,6 +98,14 @@ app.get('/c6', redirectTo('/consent/6_consent_adult_interview.html'));     // �
 // 익명 방문 기록용 스크립트 (랜딩/안내/초대장/동의서 화면이 불러감)
 app.get('/track.js', (req, res) => res.sendFile(path.join(__dirname, 'public', 'track.js')));
 
+// 검색엔진 사이트 소유확인 파일 (네이버 서치어드바이저 / 구글 서치콘솔) — 2026-11-12
+// public/verify 폴더에 넣어두면 사이트 최상위 주소(/naverXXXX.html, /googleXXXX.html)로 접근 가능
+app.get(/^\/((?:naver|google)[0-9a-zA-Z]+\.html)$/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'verify', req.params[0]), (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+
 app.get('/consent/student', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'student_info.html'));
 });
