@@ -188,11 +188,12 @@ useEffect(() => {
     const handleRelatedSubmit = async (text) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.post(
+            const res = await axios.post(
                 `${API_BASE}/api/questions/${relatedModal.id}/related`,
                 { title: text, questionType: 'quiz' },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+            if (Number(res.data?.bonus_earned) > 0) alert(`🎁 또 와서 반가워요! +${res.data.bonus_earned}송이`);
             setRelatedMap(prev => ({
                 ...prev,
                 [relatedModal.id]: [...(prev[relatedModal.id] || []), { title: text }]

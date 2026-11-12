@@ -156,7 +156,8 @@ function Friends() {
 
     const handleRelatedSubmit = async (text) => {
         try {
-            await api.post(`/questions/${relatedModal.id}/related`, { title: text, questionType: 'friend_question' });
+            const res = await api.post(`/questions/${relatedModal.id}/related`, { title: text, questionType: 'friend_question' });
+            if (Number(res.data?.bonus_earned) > 0) alert(`🎁 또 와서 반가워요! +${res.data.bonus_earned}송이`);
             setRelatedModal(null);
             await loadQuestions();
         } catch (err) {

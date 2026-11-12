@@ -10,6 +10,7 @@ const ACTIVITY_LABELS = {
   opinion:        { label: '의견 작성',      icon: '&#128172;' },
   interest:       { label: '관심 표시',      icon: '&#10084;' },
   related:        { label: '관련질문 작성',  icon: '&#128279;' },
+  return_bonus:   { label: '또 와서 반가워요', icon: '&#127873;' },
   icebreaking:    { label: '질문고르기 완료', icon: '&#127381;' },
   quiz:           { label: '퀴즈 완료',      icon: '&#10067;' },
   weekly_journal: { label: '주간 일지 완료', icon: '&#128211;' },

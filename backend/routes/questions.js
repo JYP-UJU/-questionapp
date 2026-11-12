@@ -28,6 +28,45 @@ async function getThumbnail(query) {
   }
 }
 
+// ===== 다시 찾아온 보너스 (2026-11-12) =====
+// 1~3일 전(한국 날짜 기준)에 접속한 기록이 있는 사용자가 오늘 처음으로 질문/관련질문을 올리면 +2송이.
+// - 하루 한 번만 지급. 같은 날 다시 들어온 것은 재방문으로 치지 않음. 관리자 계정은 제외.
+// - 날짜는 DB 세션 시간대가 UTC라는 전제로 +9시간 해서 한국 날짜로 계산.
+// - 반드시 호출한 쪽의 트랜잭션(client) 안에서 실행. 지급한 송이 수(0 또는 2)를 돌려줌.
+const RETURN_BONUS = 2;
+async function grantReturnBonus(client, userId, questionId, title) {
+  const check = await client.query(
+    `SELECT
+       EXISTS (
+         SELECT 1 FROM user_sessions
+         WHERE user_id = $1
+           AND (started_at + INTERVAL '9 hours')::date <  (NOW() + INTERVAL '9 hours')::date
+           AND (started_at + INTERVAL '9 hours')::date >= (NOW() + INTERVAL '9 hours')::date - 3
+       ) AS came_recently,
+       EXISTS (
+         SELECT 1 FROM songi_transactions
+         WHERE user_id = $1 AND activity_type = 'return_bonus'
+           AND (created_at + INTERVAL '9 hours')::date = (NOW() + INTERVAL '9 hours')::date
+       ) AS already_today`,
+    [userId]
+  );
+  const { came_recently, already_today } = check.rows[0];
+  if (!came_recently || already_today) return 0;
+
+  const grant = await client.query(
+    'UPDATE users SET songi_count = songi_count + $1 WHERE id = $2 AND is_admin IS NOT TRUE',
+    [RETURN_BONUS, userId]
+  );
+  if (grant.rowCount === 0) return 0;
+
+  await client.query(
+    `INSERT INTO songi_transactions (user_id, amount, activity_type, description, question_id, question_text)
+     VALUES ($1, $2, 'return_bonus', '또 와서 반가워요', $3, $4)`,
+    [userId, RETURN_BONUS, questionId, title]
+  );
+  return RETURN_BONUS;
+}
+
 // ===== 고정 경로 먼저 (/:id 보다 앞에 와야 함) =====
 
 // 질문 작성 + 5송이 지급
@@ -92,6 +131,9 @@ router.post('/', authenticateToken, async (req, res) => {
       [userId, songiGranted ? 5 : 0, '질문 작성', question.id, title]
     );
 
+    // 다시 찾아온 보너스 (+2송이, 하루 한 번)
+    const bonusEarned = songiGranted ? await grantReturnBonus(client, userId, question.id, title) : 0;
+
     // 업데이트된 송이 개수 조회
     const userResult = await client.query(
       'SELECT songi_count FROM users WHERE id = $1',
@@ -109,10 +151,15 @@ router.post('/', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: songiGranted ? '질문이 등록되었습니다! 5송이를 획득했어요 🌸' : '질문이 등록되었습니다!',
+      message: songiGranted
+        ? (bonusEarned > 0
+            ? `질문이 등록되었습니다! 5송이를 획득했어요 🌸 또 와서 반가워요, ${bonusEarned}송이 더 드려요 🎁`
+            : '질문이 등록되었습니다! 5송이를 획득했어요 🌸')
+        : '질문이 등록되었습니다!',
       question,
       songi_count: userResult.rows[0].songi_count,
       songi_earned: songiGranted ? 5 : 0,
+      bonus_earned: bonusEarned,
       feedback: { matchCount, typeTag },
       myQuestionCount: parseInt(myQuestionCountResult.rows[0].count, 10) || 0
     });
@@ -1044,6 +1091,9 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
       [userId, relatedSongiGranted ? 6 : 0, newQuestionId, title]
     );
 
+    // 다시 찾아온 보너스 (+2송이, 하루 한 번) — 관련질문도 질문과 똑같이 지급
+    const relatedBonusEarned = relatedSongiGranted ? await grantReturnBonus(client, userId, newQuestionId, title) : 0;
+
     const userResult = await client.query(
       'SELECT songi_count FROM users WHERE id = $1',
       [userId]
@@ -1052,10 +1102,15 @@ router.post('/:id/related', authenticateToken, async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: relatedSongiGranted ? '관련질문이 등록되었습니다! 6송이를 획득했어요 🌸' : '관련질문이 등록되었습니다!',
+      message: relatedSongiGranted
+        ? (relatedBonusEarned > 0
+            ? `관련질문이 등록되었습니다! 6송이를 획득했어요 🌸 또 와서 반가워요, ${relatedBonusEarned}송이 더 드려요 🎁`
+            : '관련질문이 등록되었습니다! 6송이를 획득했어요 🌸')
+        : '관련질문이 등록되었습니다!',
       relatedQuestion: insertResult.rows[0],
       songi_count: userResult.rows[0].songi_count,
-      songi_earned: relatedSongiGranted ? 6 : 0
+      songi_earned: relatedSongiGranted ? 6 : 0,
+      bonus_earned: relatedBonusEarned
     });
 
   } catch (error) {
@@ -1632,6 +1687,15 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     let reversedAmount = 0;
     if (tx.rows.length > 0) reversedAmount = parseFloat(tx.rows[0].amount);
+
+    // 이 질문으로 받은 '다시 찾아온 보너스'가 있으면 함께 회수 (올렸다 지우며 보너스만 챙기는 것 방지)
+    const bonusTx = await client.query(
+      `SELECT amount FROM songi_transactions
+       WHERE question_id = $1 AND activity_type = 'return_bonus' AND user_id = $2
+       ORDER BY created_at DESC LIMIT 1`,
+      [id, ownerId]
+    );
+    if (bonusTx.rows.length > 0) reversedAmount += parseFloat(bonusTx.rows[0].amount);
 
     if (reversedAmount > 0) {
       await client.query(
